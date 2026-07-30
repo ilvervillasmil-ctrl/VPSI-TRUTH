@@ -193,5 +193,17 @@
     "rate": 100.0,
     "previo": 2,
     "estado": "STABLE"
+  },
+  {
+    "utc": "2026-07-30T22:38:05.228554+00:00",
+    "sha": "2d7cc13d0b3e",
+    "ref": "refs/heads/main",
+    "total": 61,
+    "passed": 33,
+    "failed": 0,
+    "skipped": 28,
+    "rate": 54.1,
+    "previo": 2,
+    "estado": "IMPROVEMENT"
   }
 ]
