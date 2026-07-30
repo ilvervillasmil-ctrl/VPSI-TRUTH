@@ -558,8 +558,6 @@ class Engine:
     # ---------------- CÁLCULOS AUXILIARES ----------------
     def _calcular_L7(self, factores: Dict[str, Fraction]) -> Fraction:
         """Calcula L7 (Integración Total) como el producto de Li * (1 - φi)."""
-        # Valores de fricción por capa (L0-L6)
-        # Si no se proporcionan L0-L6, se asume que C, L, K corresponden a L3, L4, L5
         L = [
             Fraction(95, 100),  # L0
             Fraction(90, 100),  # L1
@@ -569,10 +567,12 @@ class Engine:
             Fraction(95, 100),  # L5
             Fraction(95, 100),  # L6
         ]
+        friction = [Fraction(10, 100), Fraction(2, 100), Fraction(5, 100),
+                    Fraction(3, 100), Fraction(1, 100), Fraction(1, 100),
+                    Fraction(0, 100)]
         L7 = Fraction(1)
         for i, li in enumerate(L):
-            phi = Fraction([10, 2, 5, 3, 1, 1, 0][i], 100)  # Fricciones por capa
-            L7 *= li * (Fraction(1) - phi)
+            L7 *= li * (Fraction(1) - friction[i])
         return L7
 
     def _calcular_H(self, tru_total: Fraction) -> Fraction:
@@ -653,7 +653,7 @@ MetaCon=0.95 | Agency=0.00
         elif tru_float >= 0.400:
             return "1111: SEMILLA DE UNIDAD"
         elif tru_float >= 0.100:
-            return "0000: ENTROPÍA TERMINAL
+            return "0000: ENTROPÍA TERMINAL"
         else:
             return "0000: COLAPSO ESTRUCTURAL"
 
