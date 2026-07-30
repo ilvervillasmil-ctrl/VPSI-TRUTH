@@ -1,5 +1,4 @@
-        
-           """
+"""
 VPSI-TRUTH / axiomas/correlacion.py
 
 Declaraciones del Teorema de Inferencia Causal Estructural.
@@ -26,7 +25,7 @@ DECLARACIONES = [
         "tipo": "definicion",
         "sujeto": "Espacio de niveles indexado",
         "relacion": "definido_como",
-        "objeto": "Λ = (ℓ₀, ℓ₁, ..., ℓ₁₅)",
+        "objeto": "Λ = (ℓ₀, ℓ₁, ..., ℓ₂₀)",
         "polaridad": True,
         "cota": None,
         "depende_de": [],
@@ -406,7 +405,7 @@ DECLARACIONES = [
         "tipo": "corolario",
         "sujeto": "Correspondencia con las seis capas",
         "relacion": "corresponde_a",
-        "objeto": "Materia → ℓ₀, Programación → ℓ₁, Procesamiento → ℓ₅-ℓ₈, Dirección → ℓ₂-ℓ₄, Interferencia → ℓ₁₀-ℓ₁₂, Propósito → ℓ₁₃-ℓ₁₄",
+        "objeto": "Materia → ℓ₀, Programación → ℓ₁, Procesamiento → ℓ₅-ℓ₈, Dirección → ℓ₂-ℓ₄, Interferencia → ℓ₁₀-ℓ₁₂y, Propósito → ℓ₁₃-ℓ₁₄",
         "polaridad": True,
         "cota": None,
         "depende_de": [],
@@ -425,9 +424,7 @@ DECLARACIONES = [
         "gobierna": ["inferencia_causal"],
         "enunciado": "Si un sistema declara metaconciencia, entonces la partición Π₄ (acceso a estados internos) queda identificada como Cs.",
     },
-]
-
-    # --- Corolarios adicionales ---
+    # --- Corolarios adicionales integrados ---
     {
         "id": "C-1.34",
         "tipo": "corolario",
@@ -457,7 +454,7 @@ DECLARACIONES = [
         "tipo": "corolario",
         "sujeto": "Confusión sin retracción",
         "relacion": "implica",
-        "objeto": "Si Eₘ contiene φᵢ y φⱼ mutuamente contradictorias ⇒ la contradicción degrada C o L en Λ_V",
+        "objeto": "Esquema de emisiones mutuamente contradictorias",
         "polaridad": True,
         "cota": None,
         "depende_de": ["T-1.24"],
