@@ -183,7 +183,7 @@ def build_report() -> str:
         [
             ["Engine (core.engine)", auditoria["estado_engine"], "Autoridad de ejecución y descubrimiento"],
             ["Consistencia Axiomática", estado_coherencia, f"Choques encontrados: {len(auditoria['choques'])}"],
-            ["Constantes Activas", f"ALPHA = {ALPHA}, BETA = {BETA}", "Restricción estructural exacta (ALPHA + BETA = 1)"],
+            ["Constantes Activas", f"ALPHA = {ALPHA:.4f}, BETA = {BETA:.4f}", "Restricción estructural (ALPHA + BETA = 1)"],
         ],
     ))
     lines.append("")
@@ -260,8 +260,16 @@ def save_report(report: str) -> Path:
     return output_path
 
 def main() -> None:
-    print("Running Omega Report (VPSI-TRUTH Engine & Axiom Audit)...")
+    print("Running Omega Report (VPSI-TRUTH Engine & Axiom Audit)...\n")
+    
+    # Generar el reporte
     report = build_report()
+    
+    # IMPRIMIR EL REPORTE EN LA CONSOLA PARA VERLO EN GITHUB ACTIONS
+    print(report)
+    print("\n" + "="*80 + "\n")
+    
+    # Guardar en archivos
     output_path = save_report(report)
     print(f"Report saved to: {output_path}")
 
