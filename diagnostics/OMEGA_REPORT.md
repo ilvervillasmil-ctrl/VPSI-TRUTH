@@ -1,7 +1,7 @@
 # OMEGA REPORT — AUDITORÍA AXIOMÁTICA Y DE MÓDULOS
-**Generated:** 2026-07-30 06:38:13 UTC
+**Generated:** 2026-07-30 06:41:58 UTC
 **Framework:** VPSI-TRUTH
-**Commit:** `bd24e0d`
+**Commit:** `bc210fe`
 
 ---
 
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | Engine (core.engine) | ACTIVO Y OPERATIVO | Autoridad de ejecución y descubrimiento |
 | Consistencia Axiomática | ✅ AXIOMATIZACIÓN COHERENTE (Sin choques) | Choques encontrados: 0 |
-| Constantes Activas | ALPHA = 0.9629629629629629, BETA = 0.037037037037037035 | Restricción estructural exacta (ALPHA + BETA = 1) |
+| Constantes Activas | ALPHA = 0.9630, BETA = 0.0370 | Restricción estructural (ALPHA + BETA = 1) |
 
 ## Módulos Descubiertos por el Engine
 
