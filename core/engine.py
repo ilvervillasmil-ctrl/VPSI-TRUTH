@@ -130,16 +130,9 @@ def normalizar(valor, etiqueta: str) -> Fraction:
         raise DominioError(f"{etiqueta} viola dominio [0,1]: {f}")
     return f
 
-# ===============================================================
-# SEGMENTO 5 --- CONSTANTES GLOBALES
-# ===============================================================
-
-# Valores por defecto (por si el contenedor CONSTANTE no los define)
-AGENCY = Fraction(0)
-C_DEAD = Fraction(123, 280)  # ≈ 0.438626
 
 # ===============================================================
-# SEGMENTO 6 --- REGISTRO DE CONTENEDORES
+# SEGMENTO 5 --- REGISTRO DE CONTENEDORES
 # ===============================================================
 
 CLAVES_CONTENEDOR = ("nombre", "rol", "version")
@@ -282,7 +275,7 @@ class Registro:
         }
 
 # ===============================================================
-# SEGMENTO 7 --- INVOCACIÓN AISLADA
+# SEGMENTO 6 --- INVOCACIÓN AISLADA
 # ===============================================================
 
 class Invocador:
@@ -328,7 +321,7 @@ class Invocador:
             return UNDEFINED
 
 # ===============================================================
-# SEGMENTO 8 --- COMPOSICIÓN
+# SEGMENTO 7 --- COMPOSICIÓN
 # ===============================================================
 
 class Compositor:
@@ -396,7 +389,7 @@ class Compositor:
         return min(n for n, v in f.items() if v == m)
 
 # ===============================================================
-# SEGMENTO 9 --- ENGINE
+# SEGMENTO 8 --- ENGINE
 # ===============================================================
 
 class Engine:
