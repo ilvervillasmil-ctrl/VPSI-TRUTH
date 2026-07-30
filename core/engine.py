@@ -728,3 +728,65 @@ MetaCon=0.95 | Agency=0.00
                 except Exception as e:
                     inv["contenido"][c.nombre] = {"error": str(e)}
         return inv
+            # ---------------- CENTINELA ----------------
+    @property
+    def centinela(self):
+        """Centinela del despacho. Se construye una vez y se reutiliza."""
+        if getattr(self, "_centinela", None) is None:
+            from core.centinela import Centinela
+            self._centinela = Centinela(self.registro, self.informe_axiomas)
+        return self._centinela
+
+    def censo(self) -> Dict:
+        """
+        Rol declarado contra rol ejercido. No lanza: informa.
+        Sirve para saber en que punto de la construccion esta el sistema.
+        """
+        cen = self.centinela
+        censo = cen.censo()
+        listo, faltan = cen.puede_evaluar()
+        return {
+            "censo": censo,
+            "puede_evaluar": listo,
+            "roles_pendientes": [
+                r for r, d in censo.items() if d["estado"] == "PENDIENTE"
+            ],
+            "contratos_rotos": [
+                r for r, d in censo.items() if d["estado"] == "CONTRATO_ROTO"
+            ],
+            "bloquean_evaluacion": faltan,
+            "fase": "OPERATIVO" if listo else "EN CONSTRUCCION",
+        }
+
+    def inventario_vigilado(self) -> Dict:
+        """inventario() mas el censo del centinela."""
+        inv = self.inventario()
+        inv["centinela"] = self.censo()
+        return inv
+
+    def evaluar_vigilado(self, peticion: Dict) -> Dict:
+        """
+        Puerta unica de evaluacion.
+
+        Un rol no montado devuelve un resultado PENDIENTE con el rol nombrado,
+        en vez de recorrer la cadena y romperse mas adelante. Un contrato roto
+        si propaga: eso es defecto, no fase de construccion.
+        """
+        from core.centinela import PiezaPendiente
+        try:
+            self.centinela.franquear(
+                peticion, self.informe_axiomas, self._AUTORIZADO
+            )
+        except PiezaPendiente as e:
+            return {
+                "estado": "PENDIENTE",
+                "detenido_en": "centinela",
+                "rol_pendiente": e.rol,
+                "razon": str(e),
+                "factores": {},
+                "tru_ri": None,
+                "tru_total": None,
+                "fallos": [],
+            }
+        return self.evaluar(peticion)
+
