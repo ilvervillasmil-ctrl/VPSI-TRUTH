@@ -377,6 +377,54 @@ class Compositor:
         return min(n for n, v in f.items() if v == m)
 
 # ===============================================================
+# MÉTODO PARA MOSTRAR CONTRADICCIONES AXIOMÁTICAS (NUEVO)
+# ===============================================================
+
+def _mostrar_contradicciones(self, informe: Dict) -> str:
+    """
+    Formatea el informe de contradicciones axiomáticas para mostrarlo de manera clara.
+    """
+    mensaje_error = "CONTRADICCIÓN AXIOMÁTICA. El sistema no arranca.\n\n"
+    mensaje_error += "=" * 60 + "\n"
+    mensaje_error += "DETALLE DE CONTRADICCIONES AXIOMÁTICAS\n"
+    mensaje_error += "=" * 60 + "\n\n"
+
+    # Mostrar contradicciones
+    if informe.get("choques"):
+        mensaje_error += "--- CONTRADICCIONES DETECTADAS ---\n\n"
+        for idx, choque in enumerate(informe["choques"], 1):
+            mensaje_error += f"{idx}. **Tipo:** {choque['tipo'].upper()}\n"
+            if "tripleta" in choque:
+                mensaje_error += f"   **Tripleta:** {choque['tripleta']}\n"
+            elif "sujeto" in choque and "relacion" in choque:
+                mensaje_error += f"   **Contexto:** {choque['sujeto']} {choque['relacion']}\n"
+
+            mensaje_error += f"   **Mensaje:** {choque.get('mensaje', 'Sin mensaje')}\n\n"
+
+            # Declaración 1
+            mensaje_error += f"   **Declaración 1:**\n"
+            mensaje_error += f"      - ID: {choque['declaracion_1']['id']}\n"
+            mensaje_error += f"      - Ubicación: {choque['declaracion_1']['ubicacion']}\n"
+            mensaje_error += f"      - Enunciado: {choque['declaracion_1']['enunciado']}\n\n"
+
+            # Declaración 2
+            mensaje_error += f"   **Declaración 2:**\n"
+            mensaje_error += f"      - ID: {choque['declaracion_2']['id']}\n"
+            mensaje_error += f"      - Ubicación: {choque['declaracion_2']['ubicacion']}\n"
+            mensaje_error += f"      - Enunciado: {choque['declaracion_2']['enunciado']}\n\n"
+            mensaje_error += "-" * 60 + "\n\n"
+
+    # Mostrar errores de declaración
+    if informe.get("errores"):
+        mensaje_error += "--- ERRORES DE DECLARACIÓN ---\n\n"
+        for error in informe["errores"]:
+            mensaje_error += f"- **{error.get('archivo', error.get('modulo', 'Desconocido'))}:** {error['error']}\n"
+        mensaje_error += "\n"
+
+    mensaje_error += "=" * 60 + "\n"
+    return mensaje_error
+    
+# ===============================================================
 # SEGMENTO 8 --- ENGINE
 # ===============================================================
 
