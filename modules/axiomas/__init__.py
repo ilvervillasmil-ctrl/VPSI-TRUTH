@@ -1,20 +1,4 @@
-"""
-VPSI-TRUTH / modules/axiomas
-
-Contenedor de axiomas. Rol AX.
-
-QUE ES ESTE MÓDULO:
-  La definición de lo que es un axioma, un lema, un teorema y un
-  corolario, y la vigilancia sobre ellos. No pertenece a ninguna teoría
-  y no conoce ninguna. Vela por lo que se deje caer dentro.
-
-QUE VIGILA:
-  Una regla: no se contradicen entre sí.
-    - contradiccion_directa: misma tripleta, polaridad opuesta.
-    - contradiccion_de_cota: mismo sujeto y relación, dos cotas distintas.
-
-  Si hay contradicción, barrer() devuelve coherente=False y el sistema no arranca.
-"""
+# modules/axiomas/__init__.py
 
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
@@ -24,23 +8,18 @@ import sys
 # ===============================================================
 # METADATOS DEL CONTENEDOR
 # ===============================================================
-
 CONTENEDOR = {
     "nombre": "axiomas",
-    "rol": "AX",  # Rol obligatorio para el Engine
+    "rol": "AX", 
     "version": "1.0",
-    "requiere": [],  # No requiere claves externas
+    "requiere": [],
 }
 
 # ===============================================================
 # CARGA DE DECLARACIONES DESDE ARCHIVOS PLANOS
 # ===============================================================
-
 def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
-    """
-    Carga las declaraciones de un archivo .py en el directorio axiomas/.
-    Cada archivo debe definir una lista DECLARACIONES.
-    """
+    # ... (deja esta función exactamente como la tenías) ...
     if archivo.name.startswith("_"):
         return []
 
@@ -57,28 +36,55 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
     return declaraciones if isinstance(declaraciones, list) else []
 
 # ===============================================================
-# NORMALIZACIÓN DE DECLARACIONES
+# NORMALIZACIÓN DE DECLARACIONES (¡AQUÍ VA EL CAMBIO!)
 # ===============================================================
-
 OBLIGATORIOS = ("id", "tipo", "sujeto", "relacion", "objeto", "polaridad")
 TIPOS = ("axioma", "lema", "teorema", "corolario", "definicion")
 
-def normalizar(decl: Dict, cuerpo: str) -> Dict:
-    """Valida los campos obligatorios y completa el resto."""
-    if not isinstance(decl, dict):
+# Mapeo de llaves en inglés a español
+TRADUCCION_CLAVES = {
+    "type": "tipo",
+    "subject": "sujeto",
+    "relation": "relacion",
+    "object": "objeto",
+    "polarity": "polaridad",
+    "statement": "enunciado",
+    "depends_on": "depende_de",
+    "governs": "gobierna",
+    "cota": "cota"
+}
+
+def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
+    """Valida los campos obligatorios soportando inglés y español."""
+    if not isinstance(decl_original, dict):
         raise ValueError(f"{cuerpo}: declaración no es dict")
 
+    # 1. Traducir las llaves al español internamente
+    decl = {}
+    for clave, valor in decl_original.items():
+        clave_esp = TRADUCCION_CLAVES.get(clave, clave)
+        decl[clave_esp] = valor
+
+    # 2. Validar que no falten los campos obligatorios
     for k in OBLIGATORIOS:
         if k not in decl:
-            raise ValueError(f"{cuerpo}:{decl.get('id', '?')} sin clave '{k}'")
+            raise ValueError(f"{cuerpo}:{decl.get('id', '?')} sin clave obligatoria '{k}'")
 
+    # 3. Validar el tipo y la polaridad
     tipo = str(decl["tipo"]).lower()
+    if tipo == "axiom": tipo = "axioma"
+    if tipo == "theorem": tipo = "teorema"
+    if tipo == "corollary": tipo = "corolario"
+    if tipo == "lemma": tipo = "lema"
+    if tipo == "definition": tipo = "definicion"
+
     if tipo not in TIPOS:
         raise ValueError(f"{cuerpo}:{decl['id']} tipo '{tipo}' no válido. Admitidos: {TIPOS}")
 
     if not isinstance(decl["polaridad"], bool):
         raise ValueError(f"{cuerpo}:{decl['id']} polaridad debe ser bool")
 
+    # 4. Devolver estandarizado
     return {
         "id": str(decl["id"]),
         "cuerpo": cuerpo,
@@ -94,221 +100,21 @@ def normalizar(decl: Dict, cuerpo: str) -> Dict:
     }
 
 # ===============================================================
-# DETECCIÓN DE CONTRADICCIONES
+# DETECCIÓN DE CONTRADICCIONES Y BARRIDO (DEJA TODO ESTO IGUAL)
 # ===============================================================
-
-def clave(d: Dict) -> Tuple[str, str, str]:
-    """Tripleta canónica para comparación."""
-    return (
-        d["sujeto"].lower().strip(),
-        d["relacion"].lower().strip(),
-        d["objeto"].lower().strip(),
-    )
-
-def ref(d: Dict) -> str:
-    """Referencia a una declaración."""
-    return f"{d['cuerpo']}:{d['id']}"
-
-def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
-    """Misma tripleta, polaridad opuesta."""
-    grupos = {}
-    for d in decls:
-        grupos.setdefault(clave(d), []).append(d)
-
-    choques = []
-    for k, grupo in grupos.items():
-        afirman = [d for d in grupo if d["polaridad"]]
-        niegan = [d for d in grupo if not d["polaridad"]]
-        for a in afirman:
-            for n in niegan:
-                choques.append({
-                    "tipo": "contradiccion_directa",
-                    "tripleta": " - ".join(k),
-                    "declaracion_1": {
-                        "id": a["id"],
-                        "ubicacion": ref(a),
-                        "enunciado": a["enunciado"],
-                    },
-                    "declaracion_2": {
-                        "id": n["id"],
-                        "ubicacion": ref(n),
-                        "enunciado": n["enunciado"],
-                    },
-                    "mensaje": (
-                        f"Contradicción directa en la tripleta '{' - '.join(k)}':\n"
-                        f"  - {ref(a)} AFIRMA: {a['enunciado']}\n"
-                        f"  - {ref(n)} NIEGA: {n['enunciado']}"
-                    )
-                })
-    return choques
-
-def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
-    """Mismo sujeto y relación acotados a valores distintos."""
-    grupos = {}
-    for d in decls:
-        if d["cota"] is None:
-            continue
-        grupos.setdefault(
-            (d["sujeto"].lower().strip(), d["relacion"].lower().strip()), []
-        ).append(d)
-
-    choques = []
-    for (suj, rel), grupo in grupos.items():
-        porcota = {}
-        for d in grupo:
-            porcota.setdefault(d["cota"], []).append(ref(d))
-        if len(porcota) > 1:
-            for cota1, refs1 in porcota.items():
-                for cota2, refs2 in porcota.items():
-                    if cota1 != cota2:
-                        for r1 in refs1:
-                            for r2 in refs2:
-                                choques.append({
-                                    "tipo": "contradiccion_de_cota",
-                                    "sujeto": suj,
-                                    "relacion": rel,
-                                    "cota_1": cota1,
-                                    "cota_2": cota2,
-                                    "declaracion_1": {"ubicacion": r1},
-                                    "declaracion_2": {"ubicacion": r2},
-                                    "mensaje": (
-                                        f"Contradicción de cota en '{suj} {rel}':\n"
-                                        f"  - {r1} define cota = {cota1}\n"
-                                        f"  - {r2} define cota = {cota2}"
-                                    )
-                                })
-    return choques
+# ... (tu código de clave(), ref(), contradiccion_directa(), contradiccion_de_cota(), barrer()) ...
 
 # ===============================================================
-# BARRIDO AXIOMÁTICO
+# FUNCIÓN axiomas() PARA EL ENGINE (¡RECUERDA ESTE CAMBIO!)
 # ===============================================================
-
-def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
-    """
-    Entrada:
-        {nombre_de_modulo: [declaraciones]}
-
-    Salida:
-        coherente: False si hay contradicciones
-        choques: lista de contradicciones detalladas
-        errores: declaraciones mal formadas
-        declaraciones: total de declaraciones cargadas
-    """
-    # Cargar declaraciones desde archivos en este directorio
-    decls = []
-    errores = []
-    directorio = Path(__file__).parent
-
-    for archivo in sorted(directorio.glob("*.py")):
-        if archivo.name == "__init__.py":
-            continue
-
-        try:
-            declaraciones_archivo = _cargar_declaraciones_desde_archivo(archivo)
-            for decl in declaraciones_archivo:
-                decl_normalizada = normalizar(decl, archivo.stem)
-                decls.append(decl_normalizada)
-        except Exception as e:
-            errores.append({
-                "archivo": archivo.name,
-                "error": f"{type(e).__name__}: {e}",
-            })
-
-    # Añadir declaraciones externas (si las hay)
-    if declaraciones_externas:
-        for nombre, lista in declaraciones_externas.items():
-            if not isinstance(lista, list):
-                errores.append({
-                    "modulo": nombre,
-                    "error": "declaraciones externas no es lista",
-                })
-                continue
-            for d in lista:
-                try:
-                    decls.append(normalizar(d, nombre))
-                except ValueError as e:
-                    errores.append({
-                        "modulo": nombre,
-                        "error": str(e),
-                    })
-
-    # Detectar contradicciones
-    choques = contradiccion_directa(decls) + contradiccion_de_cota(decls)
-
-    return {
-        "coherente": not (choques or errores),
-        "choques": choques,
-        "errores": errores,
-        "declaraciones": len(decls),
-    }
-
-# ===============================================================
-# FUNCIÓN axiomas() PARA EL ENGINE
-# ===============================================================
-
 def axiomas() -> List[Dict]:
     """
-    Devuelve las declaraciones axiomáticas de este contenedor para el barrido axiomático.
+    Devuelve vacío para evitar la doble carga. 
+    El Engine ya lee directamente de DECLARACIONES en los archivos .py.
     """
-    decls = []
-    directorio = Path(__file__).parent
-
-    for archivo in sorted(directorio.glob("*.py")):
-        if archivo.name == "__init__.py":
-            continue
-        try:
-            declaraciones_archivo = _cargar_declaraciones_desde_archivo(archivo)
-            for decl in declaraciones_archivo:
-                decl_normalizada = normalizar(decl, archivo.stem)
-                decls.append(decl_normalizada)
-        except Exception:
-            continue
-
-    return decls
+    return []
 
 # ===============================================================
-# INVENTARIO
+# INVENTARIO Y EXPORTACIÓN (DEJA ESTO IGUAL)
 # ===============================================================
-
-def inventario() -> Dict:
-    """Devuelve el inventario de axiomas cargados."""
-    decls, errores = [], []
-    directorio = Path(__file__).parent
-
-    for archivo in sorted(directorio.glob("*.py")):
-        if archivo.name == "__init__.py":
-            continue
-        try:
-            declaraciones_archivo = _cargar_declaraciones_desde_archivo(archivo)
-            for decl in declaraciones_archivo:
-                decl_normalizada = normalizar(decl, archivo.stem)
-                decls.append(decl_normalizada)
-        except Exception as e:
-            errores.append({
-                "archivo": archivo.name,
-                "error": str(e),
-            })
-
-    return {
-        "contenedor": CONTENEDOR["nombre"],
-        "version": CONTENEDOR["version"],
-        "tipos": list(TIPOS),
-        "declaraciones": len(decls),
-        "por_tipo": {t: sum(1 for d in decls if d["tipo"] == t) for t in TIPOS},
-        "errores": errores,
-        "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
-    }
-
-# ===============================================================
-# EXPORTACIÓN
-# ===============================================================
-
-__all__ = [
-    "CONTENEDOR",
-    "barrer",
-    "axiomas",
-    "inventario",
-    "normalizar",
-    "contradiccion_directa",
-    "contradiccion_de_cota",
-]
+# ... (tu código de inventario() y __all__) ...
