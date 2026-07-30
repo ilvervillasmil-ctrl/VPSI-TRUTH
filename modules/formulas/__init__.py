@@ -93,4 +93,4 @@ def axiomas():
     ]
 
 # Exponer las funciones requeridas por el Engine
-__all__ = ["CONTENEDOR", "tru_ri", "tru_total", "inventario", "axiomas"]
+__all__ = ["CONTENEDOR", "tru_ri", "tru_total", "inventario", "axiomas", "teoremas", "corolarios"]
