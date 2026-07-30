@@ -1,4 +1,8 @@
-# modules/axiomas/__init__.py
+"""
+VPSI-TRUTH / modules/axiomas
+
+Contenedor de axiomas. Rol AX.
+"""
 
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
@@ -8,9 +12,10 @@ import sys
 # ===============================================================
 # METADATOS DEL CONTENEDOR
 # ===============================================================
+
 CONTENEDOR = {
     "nombre": "axiomas",
-    "rol": "AX", 
+    "rol": "AX",
     "version": "1.0",
     "requiere": [],
 }
@@ -18,8 +23,9 @@ CONTENEDOR = {
 # ===============================================================
 # CARGA DE DECLARACIONES DESDE ARCHIVOS PLANOS
 # ===============================================================
+
 def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
-    # ... (deja esta función exactamente como la tenías) ...
+    """Carga las declaraciones de un archivo .py en el directorio axiomas/."""
     if archivo.name.startswith("_"):
         return []
 
@@ -36,8 +42,9 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
     return declaraciones if isinstance(declaraciones, list) else []
 
 # ===============================================================
-# NORMALIZACIÓN DE DECLARACIONES (¡AQUÍ VA EL CAMBIO!)
+# NORMALIZACIÓN DE DECLARACIONES (CON TRADUCTOR)
 # ===============================================================
+
 OBLIGATORIOS = ("id", "tipo", "sujeto", "relacion", "objeto", "polaridad")
 TIPOS = ("axioma", "lema", "teorema", "corolario", "definicion")
 
@@ -100,21 +107,147 @@ def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
     }
 
 # ===============================================================
-# DETECCIÓN DE CONTRADICCIONES Y BARRIDO (DEJA TODO ESTO IGUAL)
+# DETECCIÓN DE CONTRADICCIONES
 # ===============================================================
-# ... (tu código de clave(), ref(), contradiccion_directa(), contradiccion_de_cota(), barrer()) ...
+
+def clave(d: Dict) -> Tuple[str, str, str]:
+    return (
+        d["sujeto"].lower().strip(),
+        d["relacion"].lower().strip(),
+        d["objeto"].lower().strip(),
+    )
+
+def ref(d: Dict) -> str:
+    return f"{d['cuerpo']}:{d['id']}"
+
+def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
+    grupos = {}
+    for d in decls:
+        grupos.setdefault(clave(d), []).append(d)
+
+    choques = []
+    for k, grupo in grupos.items():
+        afirman = [d for d in grupo if d["polaridad"]]
+        niegan = [d for d in grupo if not d["polaridad"]]
+        for a in afirman:
+            for n in niegan:
+                choques.append({
+                    "tipo": "contradiccion_directa",
+                    "tripleta": " - ".join(k),
+                    "declaracion_1": {"id": a["id"], "ubicacion": ref(a), "enunciado": a["enunciado"]},
+                    "declaracion_2": {"id": n["id"], "ubicacion": ref(n), "enunciado": n["enunciado"]},
+                    "mensaje": f"Contradicción en '{' - '.join(k)}': {ref(a)} AFIRMA vs {ref(n)} NIEGA"
+                })
+    return choques
+
+def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
+    grupos = {}
+    for d in decls:
+        if d["cota"] is None: continue
+        grupos.setdefault((d["sujeto"].lower().strip(), d["relacion"].lower().strip()), []).append(d)
+
+    choques = []
+    for (suj, rel), grupo in grupos.items():
+        porcota = {}
+        for d in grupo: porcota.setdefault(d["cota"], []).append(ref(d))
+        if len(porcota) > 1:
+            cota_keys = list(porcota.keys())
+            choques.append({
+                "tipo": "contradiccion_de_cota",
+                "sujeto": suj,
+                "relacion": rel,
+                "mensaje": f"Contradicción de cota en '{suj} {rel}'. Cotas: {cota_keys}"
+            })
+    return choques
 
 # ===============================================================
-# FUNCIÓN axiomas() PARA EL ENGINE (¡RECUERDA ESTE CAMBIO!)
+# BARRIDO AXIOMÁTICO
 # ===============================================================
+
+def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
+    decls = []
+    errores = []
+    directorio = Path(__file__).parent
+
+    for archivo in sorted(directorio.glob("*.py")):
+        if archivo.name == "__init__.py":
+            continue
+
+        try:
+            declaraciones_archivo = _cargar_declaraciones_desde_archivo(archivo)
+            for decl in declaraciones_archivo:
+                decl_normalizada = normalizar(decl, archivo.stem)
+                decls.append(decl_normalizada)
+        except Exception as e:
+            errores.append({"archivo": archivo.name, "error": f"{type(e).__name__}: {e}"})
+
+    if declaraciones_externas:
+        for nombre, lista in declaraciones_externas.items():
+            if not isinstance(lista, list):
+                errores.append({"modulo": nombre, "error": "declaraciones externas no es lista"})
+                continue
+            for d in lista:
+                try:
+                    decls.append(normalizar(d, nombre))
+                except ValueError as e:
+                    errores.append({"modulo": nombre, "error": str(e)})
+
+    choques = contradiccion_directa(decls) + contradiccion_de_cota(decls)
+
+    return {
+        "coherente": not (choques or errores),
+        "choques": choques,
+        "errores": errores,
+        "declaraciones": len(decls),
+    }
+
+# ===============================================================
+# FUNCIÓN axiomas() PARA EL ENGINE
+# ===============================================================
+
 def axiomas() -> List[Dict]:
-    """
-    Devuelve vacío para evitar la doble carga. 
-    El Engine ya lee directamente de DECLARACIONES en los archivos .py.
-    """
+    """Devuelve vacío para evitar duplicidad. El Engine lee los .py."""
     return []
 
 # ===============================================================
-# INVENTARIO Y EXPORTACIÓN (DEJA ESTO IGUAL)
+# INVENTARIO
 # ===============================================================
-# ... (tu código de inventario() y __all__) ...
+
+def inventario() -> Dict:
+    decls, errores = [], []
+    directorio = Path(__file__).parent
+
+    for archivo in sorted(directorio.glob("*.py")):
+        if archivo.name == "__init__.py":
+            continue
+        try:
+            declaraciones_archivo = _cargar_declaraciones_desde_archivo(archivo)
+            for decl in declaraciones_archivo:
+                decl_normalizada = normalizar(decl, archivo.stem)
+                decls.append(decl_normalizada)
+        except Exception as e:
+            errores.append({"archivo": archivo.name, "error": str(e)})
+
+    return {
+        "contenedor": CONTENEDOR["nombre"],
+        "version": CONTENEDOR["version"],
+        "tipos": list(TIPOS),
+        "declaraciones": len(decls),
+        "por_tipo": {t: sum(1 for d in decls if d["tipo"] == t) for t in TIPOS},
+        "errores": errores,
+        "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
+    }
+
+# ===============================================================
+# EXPORTACIÓN
+# ===============================================================
+
+__all__ = [
+    "CONTENEDOR",
+    "barrer",
+    "axiomas",
+    "inventario",
+    "normalizar",
+    "contradiccion_directa",
+    "contradiccion_de_cota",
+]
