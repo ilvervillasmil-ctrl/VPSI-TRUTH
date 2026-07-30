@@ -1,12 +1,20 @@
-"""
-VPSI-TRUTH / modules
+# modules/axiomas/__init__.py
 
-Container root. Holds no logic and calls nothing.
+CONTAINER = {
+    "name": "axiomas",
+    "role": "AX",
+    "version": "1.0",
+    "requires": []
+}
 
-Each subdirectory is a container: it declares CONTENEDOR with its
-role and exposes what that role requires. core/engine walks this
-directory, reads the declarations, and calls by role. It never sees
-what lives inside a container.
+def inventory() -> dict:
+    return {
+        "container": CONTAINER["name"],
+        "version": CONTAINER["version"],
+        "dependencies": CONTAINER["requires"]
+    }
 
-Dropping a container in here is enough. Nothing above needs editing.
-"""
+# IMPORTANTE: No incluyas ninguna función def axiomas(): aquí.
+# Deja que el Engine lea directamente de los archivos .py internos.
+
+__all__ = ["CONTAINER", "inventory"]
