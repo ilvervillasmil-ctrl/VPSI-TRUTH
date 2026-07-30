@@ -792,4 +792,57 @@ MetaCon=0.95 | Agency=0.00
                 "fallos": [],
             }
         return self.evaluar(peticion)
+        
+            # ---------------- VERIFICADOR AXIOMÁTICO ----------------
+    @property
+    def verificador_axiomatico(self):
+        """Verificador transversal del código y contenedores. Se construye una vez y se reutiliza."""
+        if getattr(self, "_verificador_axiomatico", None) is None:
+            vx = self.registro.por_rol("VX")
+            if vx is not None:
+                self._verificador_axiomatico = vx
+            else:
+                self._verificador_axiomatico = None
+        return self._verificador_axiomatico
 
+    def auditar_codigo_fuente(self, archivos_codigo: Dict[str, str]) -> Dict:
+        """
+        Ejecuta el auto-contraste axiomático sobre todo el código fuente y contenedores.
+        Si detecta contradicciones, detiene el flujo y emite el dictamen de error.
+        """
+        vx = self.verificador_axiomatico
+        if vx is None:
+            return {
+                "coherente": True,
+                "mensaje": "Módulo de verificación (VX) no montado. Auditoría omitida."
+            }
+
+        fn = vx.fn("auditar_sistema")
+        if not callable(fn):
+            return {
+                "coherente": False,
+                "error": "Contenedor VX no expone auditar_sistema()."
+            }
+
+        # Recopilar declaraciones axiomáticas del sistema
+        declaraciones = {}
+        for c in self.registro.contenedores.values():
+            g = c.fn("axiomas")
+            if callable(g):
+                declaraciones[c.nombre] = g()
+
+        peticion_auditoria = {
+            "codigo_fuente": archivos_codigo,
+            "declaraciones_axiomaticas": declaraciones,
+        }
+
+        informe = fn(peticion_auditoria)
+        
+        if not informe.get("coherente", True):
+            choques_str = "\n".join(f"  -> {ch}" for ch in informe.get("choques", []))
+            raise DominioError(
+                f"\n[PARO AXIOMÁTICO GENERAL]\n"
+                f"El código fuente contradice las leyes del framework:\n{choques_str}"
+            )
+
+        return informe
