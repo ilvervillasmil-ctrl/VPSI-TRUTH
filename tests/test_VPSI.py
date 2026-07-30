@@ -33,37 +33,32 @@ class VPSIAuditor:
         return 1 - (unsupported / total)
 
     def report(self):
-        print("=== VPSI AUDIT REPORT ===\n")
+        report_lines = ["=== VPSI AUDIT REPORT ===\n"]
 
         for c in self.claims:
-            print(f"- {c.name}: {c.type.upper()} → {c.description}")
+            report_lines.append(f"- {c.name}: {c.type.upper()} → {c.description}")
 
         A = self.anchoring_score()
-
-        print("\n-------------------------")
-        print(f"Anchoring Score A = {A:.3f}")
-
-        if A == 1:
-            print("STATUS: Fully Anchored (VPSI PASS)")
-        elif A > 0.5:
-            print("STATUS: Partially Anchored")
-        else:
-            print("STATUS: Weak Anchoring (VPSI FAIL)")
-
-        print("-------------------------\n")
+        return A
 
 
 # -----------------------------
-# Test concreto (tu caso Λ)
+# Test formal para Pytest
 # -----------------------------
 
-claims = [
-    Claim("beta", "β = 1/27", "invention"),
-    Claim("pi", "π appears in physics", "deduction"),
-    Claim("phi", "golden ratio φ", "invention"),
-    Claim("27pi", "structural exponent 27π", "invention"),
-    Claim("exp_form", "exponential structure", "hypothesis"),
-]
+def test_vpsi_auditor_score():
+    claims = [
+        Claim("beta", "β = 1/27", "invention"),
+        Claim("pi", "π appears in physics", "deduction"),
+        Claim("phi", "golden ratio φ", "invention"),
+        Claim("27pi", "structural exponent 27π", "invention"),
+        Claim("exp_form", "exponential structure", "hypothesis"),
+    ]
 
-auditor = VPSIAuditor(claims)
-auditor.report()
+    auditor = VPSIAuditor(claims)
+    score = auditor.anchoring_score()
+    
+    # Total claims = 5, inventions = 3 ("beta", "phi", "27pi")
+    # Unsupported ratio = 3/5 = 0.6
+    # Anchoring Score A = 1 - 0.6 = 0.4
+    assert score == 0.4
