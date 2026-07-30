@@ -36,7 +36,6 @@ ROLES = (
     ROL_CALCULATOR,
     ROL_CONTEXTO,
     ROL_TAXONOMIA,
-    ROL_EVIDENCIA,
 )
 
 # Contenedores obligatorios para arrancar
