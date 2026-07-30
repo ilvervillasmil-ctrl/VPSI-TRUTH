@@ -21,7 +21,7 @@ CONTENEDOR = {
 }
 
 # ===============================================================
-# CARGA DE DECLARACIONES DESDE ARCHIVOS PLANOS
+# CARGA DE DECLARACIONES DESDE ARCHIVOS PLANOS Y EL AXIOMA CERO (VPSI.py)
 # ===============================================================
 
 def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
@@ -38,7 +38,16 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
     sys.modules[nombre_mod] = mod
     spec.loader.exec_module(mod)
 
-    declaraciones = getattr(mod, "DECLARACIONES", [])
+    # 1. Intentar buscar atributo DECLARACIONES (correlacion.py, self.py)
+    declaraciones = getattr(mod, "DECLARACIONES", None)
+    
+    # 2. Si no existe, intentar buscar la función declaraciones() (VPSI.py)
+    if declaraciones is None and callable(getattr(mod, "declaraciones", None)):
+        try:
+            declaraciones = mod.declaraciones()
+        except Exception:
+            declaraciones = []
+
     return declaraciones if isinstance(declaraciones, list) else []
 
 # ===============================================================
@@ -68,8 +77,8 @@ def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
 
     # 1. Traducir las llaves al español internamente
     decl = {}
-    for clave, valor in decl_original.items():
-        clave_esp = TRADUCCION_CLAVES.get(clave, clave)
+    for clave_orig, valor in decl_original.items():
+        clave_esp = TRADUCCION_CLAVES.get(clave_orig, clave_orig)
         decl[clave_esp] = valor
 
     # 2. Validar que no falten los campos obligatorios
@@ -169,7 +178,19 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
     errores = []
     directorio = Path(__file__).parent
 
-    for archivo in sorted(directorio.glob("*.py")):
+    # Buscar tanto en la carpeta actual como en la raíz (para encontrar VPSI.py si está fuera)
+    archivos_a_procesar = list(directorio.glob("*.py"))
+    vpsi_raiz = directorio.parent.parent / "VPSI.py"
+    if not vpsi_raiz.exists():
+        vpsi_raiz = directorio.parent / "VPSI.py"
+    
+    # Si VPSI.py existe en la raíz, lo agregamos a la lista de escaneo
+    if vpsi_raiz.exists():
+        from types import SimpleNamespace
+        # Procesaremos VPSI.py de forma personalizada abajo o incluyéndolo
+        pass
+
+    for archivo in sorted(archivos_a_procesar):
         if archivo.name == "__init__.py":
             continue
 
@@ -180,6 +201,15 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
                 decls.append(decl_normalizada)
         except Exception as e:
             errores.append({"archivo": archivo.name, "error": f"{type(e).__name__}: {e}"})
+
+    # Cargar explícitamente VPSI desde la raíz si se encuentra ahí
+    if vpsi_raiz.exists():
+        try:
+            declaraciones_vpsi = _cargar_declaraciones_desde_archivo(vpsi_raiz)
+            for decl in declaraciones_vpsi:
+                decls.append(normalizar(decl, "VPSI"))
+        except Exception as e:
+            errores.append({"archivo": "VPSI.py", "error": f"{type(e).__name__}: {e}"})
 
     if declaraciones_externas:
         for nombre, lista in declaraciones_externas.items():
