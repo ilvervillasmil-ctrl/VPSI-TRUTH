@@ -28,6 +28,7 @@ ROL_CALCULATOR = "CA"   # Devuelve C, L, K
 ROL_CONTEXTO = "CX"     # Lógica del contexto
 ROL_TAXONOMIA = "TX"    # Anota tácticas (no puntúa)
 ROL_REALIDAD = "RE"     # Filtro de frontera y fuentes externas
+ROL_VERIFICACION = "VX" # Verificación y auto-auditoría transversal
 
 ROLES = (
     ROL_AXIOMAS,
@@ -37,7 +38,9 @@ ROLES = (
     ROL_CONTEXTO,
     ROL_TAXONOMIA,
     ROL_REALIDAD,
+    ROL_VERIFICACION,
 )
+
 
 
 # Contenedores obligatorios para arrancar
