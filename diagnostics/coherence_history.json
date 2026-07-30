@@ -9,5 +9,17 @@
     "skipped": 0,
     "rate": 100.0,
     "estado": "BASELINE"
+  },
+  {
+    "utc": "2026-07-30T03:59:25.705184+00:00",
+    "sha": "80832c6f42a4",
+    "ref": "refs/heads/main",
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "rate": 100.0,
+    "previo": 1,
+    "estado": "IMPROVEMENT"
   }
 ]
