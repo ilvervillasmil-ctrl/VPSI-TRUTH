@@ -330,3 +330,22 @@ jobs:
           git commit -m "ci: historia de coherencia [skip ci]"
           git pull --rebase -X ours origin main || true
           git push origin HEAD:main
+
+          - name: Auditar librería de axiomas
+          run: |
+          python - <<'EOF'
+          import sys, json
+          from pathlib import Path
+          sys.path.insert(0, ".")
+          
+          # Importamos directamente tu librería
+          from modules.axiomas import barrer
+          
+          print("============================================================")
+          print("AUDITORÍA PROFUNDA DE LA LIBRERÍA DE AXIOMAS")
+          print("============================================================")
+          
+          informe = barrer()
+          print(json.dumps(informe, indent=2, ensure_ascii=False))
+          EOF
+
