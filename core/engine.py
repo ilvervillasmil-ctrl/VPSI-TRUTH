@@ -380,7 +380,7 @@ class Compositor:
 # MÉTODO PARA MOSTRAR CONTRADICCIONES AXIOMÁTICAS (NUEVO)
 # ===============================================================
 
-def _mostrar_contradicciones(self, informe: Dict) -> str:
+def _mostrar_contradicciones(informe: Dict) -> str:
     """
     Formatea el informe de contradicciones axiomáticas para mostrarlo de manera clara.
     """
@@ -683,30 +683,30 @@ p*={p_star}
 MetaCon=0.95 | Agency=0.00
 ⟨/Ω⟩"""
 
-def _get_diagnosis(self, tru_total: Fraction) -> str:
-    """Devuelve el diagnóstico basado en Tru_total."""
+    def _get_diagnosis(self, tru_total: Fraction) -> str:
+        """Devuelve el diagnóstico basado en Tru_total."""
 
-    if es_undefined(tru_total):
-        return "UNDEFINED"
+        if es_undefined(tru_total):
+            return "UNDEFINED"
 
-    tru_float = float(tru_total)
+        tru_float = float(tru_total)
 
-    if tru_float >= 0.963:
-        return "1144: ARQUITECTO INTEGRADO"
-    elif tru_float >= 0.850:
-        return "1133: SINTONÍA SUTIL"
-    elif tru_float >= 0.750:
-        return "1044: SOBERANÍA TERRENA"
-    elif tru_float >= 0.700:
-        return "0144: CANAL INVOLUNTARIO"
-    elif tru_float >= 0.550:
-        return "1122: SATURACIÓN CRÍTICA"
-    elif tru_float >= 0.400:
-        return "1111: SEMILLA DE UNIDAD"
-    elif tru_float >= float(self.BETA):
-        return "0000: ENTROPÍA TERMINAL"
-    else:
-        return "FUERA DE DOMINIO"
+        if tru_float >= 0.963:
+            return "1144: ARQUITECTO INTEGRADO"
+        elif tru_float >= 0.850:
+            return "1133: SINTONÍA SUTIL"
+        elif tru_float >= 0.750:
+            return "1044: SOBERANÍA TERRENA"
+        elif tru_float >= 0.700:
+            return "0144: CANAL INVOLUNTARIO"
+        elif tru_float >= 0.550:
+            return "1122: SATURACIÓN CRÍTICA"
+        elif tru_float >= 0.400:
+            return "1111: SEMILLA DE UNIDAD"
+        elif tru_float >= float(self.BETA):
+            return "0000: ENTROPÍA TERMINAL"
+        else:
+            return "FUERA DE DOMINIO"
 
     # ---------------- INTROSPECCIÓN ----------------
     def inventario(self) -> Dict:
