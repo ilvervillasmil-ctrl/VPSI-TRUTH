@@ -27,14 +27,16 @@ ROL_FORMULAS = "FO"     # tru_ri, tru_total
 ROL_CALCULATOR = "CA"   # Devuelve C, L, K
 ROL_CONTEXTO = "CX"     # Lógica del contexto
 ROL_TAXONOMIA = "TX"    # Anota tácticas (no puntúa)
-
+ROL_REALIDAD = "RE"     # Canal de evidencia externa. Trae X, no juzga.
 ROLES = (
+    
     ROL_AXIOMAS,
     ROL_CONSTANTE,
     ROL_FORMULAS,
     ROL_CALCULATOR,
     ROL_CONTEXTO,
     ROL_TAXONOMIA,
+    ROL_EVIDENCIA,
 )
 
 # Contenedores obligatorios para arrancar
