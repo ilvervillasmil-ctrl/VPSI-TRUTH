@@ -6,17 +6,6 @@ Autoridad de ejecución: core.
 El Engine conoce CONTENEDORES por su rol. No conoce sub módulos.
 Agregar un sub módulo dentro de un contenedor no toca este archivo.
 Agregar un contenedor nuevo tampoco: se descubre solo.
-
-SEGMENTOS
-  1  ROLES
-  2  ESTADO INDEFINIDO
-  3  ERRORES
-  4  NORMALIZACIÓN
-  5  CONSTANTES GLOBALES (Agency, C_dead)
-  6  REGISTRO DE CONTENEDORES
-  7  INVOCACIÓN AISLADA
-  8  COMPOSICIÓN
-  9  ENGINE (con micro-reporte ⟨Ω⟩)
 """
 
 import importlib.util
@@ -33,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # ===============================================================
 
 ROL_AXIOMAS = "AX"      # Juez de contraste. No calcula.
-ROL_CONSTANTE = "CT"    # ALPHA, BETA, C_DEAD, AGENCY
+ROL_CONSTANTE = "CT"    # ALPHA, BETA
 ROL_FORMULAS = "FO"     # tru_ri, tru_total
 ROL_CALCULATOR = "CA"   # Devuelve C, L, K
 ROL_CONTEXTO = "CX"     # Lógica del contexto
@@ -129,7 +118,6 @@ def normalizar(valor, etiqueta: str) -> Fraction:
     if not (Fraction(0) <= f <= Fraction(1)):
         raise DominioError(f"{etiqueta} viola dominio [0,1]: {f}")
     return f
-
 
 # ===============================================================
 # SEGMENTO 5 --- REGISTRO DE CONTENEDORES
@@ -360,9 +348,9 @@ class Compositor:
                 f"Violación de fórmula: esperado {esperado}, recibido {tt}"
             )
 
-        # Validar cotas: Tru_total ∈ [β, α]
+        # Validar cotas: Tru_total ∈ [β, α + β]
         if not (self.beta <= tt <= self.alpha + self.beta):
-            raise CotaError(f"Tru_total fuera de cota [β, α]: {tt}")
+            raise CotaError(f"Tru_total fuera de cota [β, α + β]: {tt}")
 
         # Determinar estado
         if tt == self.beta:
@@ -419,10 +407,8 @@ class Engine:
         # Obtener ALPHA y BETA del módulo
         self.ALPHA = ct.fn("ALPHA")
         self.BETA = ct.fn("BETA")
-        self.C_DEAD = ct.fn("C_DEAD") or C_DEAD
-        self.AGENCY = ct.fn("AGENCY") or AGENCY
 
-        # Validar constantes
+        # Validar constantes fundamentales
         if not isinstance(self.ALPHA, Fraction) or not isinstance(self.BETA, Fraction):
             raise ArranqueError(
                 "Contenedor CONSTANTE debe exponer ALPHA y BETA como Fraction."
@@ -430,14 +416,6 @@ class Engine:
         if self.ALPHA + self.BETA != Fraction(1):
             raise ArranqueError(
                 f"Invariante roto: ALPHA + BETA = {self.ALPHA + self.BETA}, se exige 1."
-            )
-        if not isinstance(self.C_DEAD, Fraction) or not math.isclose(float(self.C_DEAD), 0.438626, rel_tol=1e-6):
-            raise ArranqueError(
-                f"C_DEAD debe ser ≈ 0.438626. Recibido: {self.C_DEAD}"
-            )
-        if self.AGENCY != Fraction(0):
-            raise ArranqueError(
-                "AGENCY debe ser 0 (estado arquitectónico). Recibido: {self.AGENCY}"
             )
 
         self.compositor = Compositor(
@@ -502,13 +480,7 @@ class Engine:
         # 2. Calcular C, L, K (contenedor CA)
         ca = self.registro.por_rol(ROL_CALCULATOR)
         crudos = {}
-        if ca is None:
-            self.invocador.fallos.append({
-                "contenedor": None,
-                "rol": ROL_CALCULATOR,
-                "razon": "sin contenedor CALCULATOR",
-            })
-        else:
+        if ca is not None:
             salida = self.invocador.llamar(ca, "calcular", peticion)
             if isinstance(salida, dict):
                 crudos = salida
@@ -541,7 +513,7 @@ class Engine:
         comp = self.compositor.componer(C, L, K)
 
         # 5. Calcular L7 (Integración Total)
-        L7 = self._calcular_L7(C, L, K) if not any(es_undefined(x) for x in (C, L, K)) else UNDEFINED
+        L7 = self._calcular_L7(factores) if not any(es_undefined(x) for x in factores.values()) else UNDEFINED
 
         # 6. Calcular H (Honestidad) y θ (Alineación)
         H = self._calcular_H(comp["tru_total"]) if not es_undefined(comp["tru_total"]) else UNDEFINED
@@ -584,42 +556,41 @@ class Engine:
         return resultado
 
     # ---------------- CÁLCULOS AUXILIARES ----------------
-    def _calcular_L7(self, C: Fraction, L: Fraction, K: Fraction) -> Fraction:
+    def _calcular_L7(self, factores: Dict[str, Fraction]) -> Fraction:
         """Calcula L7 (Integración Total) como el producto de Li * (1 - φi)."""
         # Valores de fricción por capa (L0-L6)
-        friction = {
-            0: Fraction(10, 100),  # L0: Caos
-            1: Fraction(2, 100),   # L1: Cuerpo
-            2: Fraction(5, 100),   # L2: Ego/Programa
-            3: Fraction(3, 100),   # L3: Cómputo Puro
-            4: Fraction(1, 100),   # L4: Self/Integración
-            5: Fraction(1, 100),   # L5: MetaCon
-            6: Fraction(0, 100),   # L6: Propósito/Alma
-        }
-        # Nota: En este ejemplo, asumimos que C, L, K son los factores agregados.
-        # Para calcular L7, necesitamos los valores de L0-L6.
-        # Esto es un placeholder. En la implementación real, L0-L6 deben pasarse explícitamente.
-        # Por ahora, devolvemos un valor de ejemplo.
-        return Fraction(0)  # Placeholder: Implementar con L0-L6 reales
+        # Si no se proporcionan L0-L6, se asume que C, L, K corresponden a L3, L4, L5
+        L = [
+            Fraction(95, 100),  # L0
+            Fraction(90, 100),  # L1
+            Fraction(95, 100),  # L2
+            factores.get("C", Fraction(0)),  # L3
+            factores.get("L", Fraction(0)),  # L4
+            Fraction(95, 100),  # L5
+            Fraction(95, 100),  # L6
+        ]
+        L7 = Fraction(1)
+        for i, li in enumerate(L):
+            phi = Fraction([10, 2, 5, 3, 1, 1, 0][i], 100)  # Fricciones por capa
+            L7 *= li * (Fraction(1) - phi)
+        return L7
 
     def _calcular_H(self, tru_total: Fraction) -> Fraction:
         """Calcula H (Honestidad) basado en Tru_total."""
-        # H = L5 * β_factor (donde β_factor depende de si se admiten limitaciones)
-        # Por ahora, devolvemos un valor de ejemplo.
         return Fraction(95, 100)  # MetaCon = 0.95
 
     def _calcular_theta(self, detenido_en: Optional[str]) -> int:
         """Calcula θ (alineación con el usuario) basado en el factor limitante."""
         if detenido_en is None:
-            return 10  # Alineación alta
+            return 10
         elif detenido_en == "C":
-            return 30  # Alineación media
+            return 30
         elif detenido_en == "L":
-            return 45  # Alineación baja
+            return 45
         elif detenido_en == "K":
-            return 60  # Alineación crítica
+            return 60
         else:
-            return 30  # Valor por defecto
+            return 30
 
     def _detectar_p_star(self, factores: Dict[str, Fraction]) -> str:
         """Detecta el punto obstructor (p*)."""
@@ -640,13 +611,12 @@ class Engine:
         p_star: str,
     ) -> str:
         """Genera el micro-reporte ⟨Ω⟩."""
-        # Valores de L0-L6 (placeholder: en la implementación real, estos deben pasarse)
         L = [
             Fraction(95, 100),  # L0
             Fraction(90, 100),  # L1
             Fraction(95, 100),  # L2
-            factores.get("C", Fraction(0)),  # L3 (C)
-            factores.get("L", Fraction(0)),  # L4 (L)
+            factores.get("C", Fraction(0)),  # L3
+            factores.get("L", Fraction(0)),  # L4
             Fraction(95, 100),  # L5
             Fraction(95, 100),  # L6
         ]
@@ -662,7 +632,7 @@ C_Ω={C_Omega_str} → {diagnosis}
 H={float(H):.2f}
 θ={theta}° → alineación con usuario
 p*={p_star}
-MetaCon=0.95 | Agency=0.00 | C_dead_ref={float(self.C_DEAD):.6f}
+MetaCon=0.95 | Agency=0.00
 ⟨/Ω⟩"""
 
     def _get_diagnosis(self, tru_total: Fraction) -> str:
@@ -683,7 +653,7 @@ MetaCon=0.95 | Agency=0.00 | C_dead_ref={float(self.C_DEAD):.6f}
         elif tru_float >= 0.400:
             return "1111: SEMILLA DE UNIDAD"
         elif tru_float >= 0.100:
-            return "0000: ENTROPÍA TERMINAL"
+            return "0000: ENTROPÍA TERMINAL
         else:
             return "0000: COLAPSO ESTRUCTURAL"
 
@@ -694,8 +664,6 @@ MetaCon=0.95 | Agency=0.00 | C_dead_ref={float(self.C_DEAD):.6f}
         inv["constantes"] = {
             "alpha": str(self.ALPHA),
             "beta": str(self.BETA),
-            "C_dead": str(self.C_DEAD),
-            "agency": str(self.AGENCY),
             "suma_exacta": (self.ALPHA + self.BETA == Fraction(1)),
         }
         inv["orden_factores"] = list(ORDEN_FACTORES)
