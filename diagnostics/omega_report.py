@@ -145,12 +145,20 @@ def compuerta_modulos(eng) -> Compuerta:
     c.datos["roles_vacios"] = vacios
     c.datos["rechazados"] = rechazados
 
+    # Cabecera de la tabla modular estructurada
+    c.nota("+" + "-" * 76 + "+")
+    c.nota(f"| {'ROL':<4} | {'ESTADO':<9} | {'MODULO ASOCIADO':<14} | {'DESCRIPCION / FUNCION':<37} |")
+    c.nota("+" + "-" * 76 + "+")
+
     for rol, desc in ROLES_ESPERADOS.items():
         if rol in roles:
-            c.nota(f"  {rol}  CARGADO   {roles[rol]:12s}  {desc}")
+            estado_str = "CARGADO"
+            mod_str = roles[rol]
         else:
-            marca = "AUSENTE" if rol in OBLIGATORIOS else "vacio"
-            c.nota(f"  {rol}  {marca:9s} {'-':12s}  {desc}")
+            estado_str = "AUSENTE" if rol in OBLIGATORIOS else "vacio"
+            mod_str = "-"
+        c.nota(f"| {rol:<4} | {estado_str:<9} | {mod_str:<14} | {desc:<37} |")
+    c.nota("+" + "-" * 76 + "+")
 
     for r in rechazados:
         c.nota(f"  RECHAZADO {r.get('ruta')}: {r.get('razon')}")
@@ -226,7 +234,6 @@ def compuerta_axiomas(eng) -> Compuerta:
                 ids_archivo.extend(str(d.get("id")) for d in decls if isinstance(d, dict))
                 c.nota(f"  archivo {archivo.name}: {len(decls)} via DECLARACIONES")
             else:
-                # busca funciones que devuelvan declaraciones pero no expongan la lista
                 alternativas = [
                     n for n in ("declaraciones", "declarations", "axiomas", "axioms")
                     if callable(getattr(mod, n, None))
@@ -321,7 +328,6 @@ def compuerta_axiomas(eng) -> Compuerta:
 # =============================================================================
 
 VECTORES = [
-    # (C, L, K, descripcion)
     (Fraction(1), Fraction(1), Fraction(1),        "sincronizacion total"),
     (Fraction(1), Fraction(1), Fraction(90, 100),  "una particion sin emision discriminante"),
     (Fraction(1), Fraction(1), Fraction(0),        "K colapsada: forma impecable, ancla rota"),
@@ -347,8 +353,9 @@ def compuerta_formulas(eng, ALPHA: Optional[Fraction], BETA: Optional[Fraction])
 
     c.nota("formula canonica: Tru_total = (C * L * K * ALPHA) + BETA")
     c.nota("")
-    c.nota("     C      L      K   |   Tru_Ri            Tru_total          estado")
-    c.nota("   " + "-" * 76)
+    c.nota("+" + "-" * 76 + "+")
+    c.nota(f"| {'C':<5} | {'L':<5} | {'K':<5} | {'Tru_Ri':<16} | {'Tru_total':<10} | {'ESTADO':<6} |")
+    c.nota("+" + "-" * 76 + "+")
 
     fallos = 0
     filas = []
@@ -372,7 +379,6 @@ def compuerta_formulas(eng, ALPHA: Optional[Fraction], BETA: Optional[Fraction])
         if not (BETA <= tt <= ALPHA + BETA):
             problemas.append(f"Tru_total fuera de cota [{BETA}, {ALPHA + BETA}]: {tt}")
 
-        # multiplicatividad: un factor nulo colapsa al piso
         if Fraction(0) in (C, L, K) and tt != BETA:
             problemas.append(f"factor nulo pero Tru_total = {tt}, se exige BETA = {BETA}")
 
@@ -388,16 +394,16 @@ def compuerta_formulas(eng, ALPHA: Optional[Fraction], BETA: Optional[Fraction])
         })
 
         c.nota(
-            f"   {float(C):5.2f}  {float(L):5.2f}  {float(K):5.2f}  |  "
-            f"{str(ri):16s}  {float(tt):.6f}   {estado}   {desc}"
+            f"| {float(C):5.2f} | {float(L):5.2f} | {float(K):5.2f} | "
+            f"{str(ri):16s} | {float(tt):10.6f} | {estado:<6} |"
         )
         for p in problemas:
             c.nota(f"        -> {p}")
 
+    c.nota("+" + "-" * 76 + "+")
     c.datos["vectores"] = filas
     c.nota("")
 
-    # piso y techo declarados
     piso = tru_total(Fraction(0), Fraction(0), Fraction(0))
     techo = tru_total(Fraction(1), Fraction(1), Fraction(1))
     c.datos["piso"] = str(piso)
@@ -561,7 +567,6 @@ def compuerta_tests() -> Compuerta:
     for n in nombres:
         c.nota(f"  {n}")
 
-    # que modulos del paquete tocan los tests
     tests_dir = REPO_ROOT / "tests"
     tocados = set()
     if tests_dir.exists():
