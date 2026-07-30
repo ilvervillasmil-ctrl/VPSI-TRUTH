@@ -320,4 +320,238 @@ def test_realidad_canal_como_contexto():
 @sin_realidad
 def test_realidad_canal_cerrado_no_obtiene():
     with pytest.raises(RuntimeError, match="cerrado"):
-        Canal().obtener("
+        Canal().obtener("https://ejemplo.invalido")
+
+
+@sin_realidad
+def test_realidad_tls_y_timeouts():
+    c = Canal()
+    assert c.verificar_tls is True
+    assert c.timeout_conexion > 0
+    assert c.timeout_lectura > 0
+
+
+# ----- inti: declaracion -----
+
+@sin_realidad
+def test_realidad_fuente_completa_entra():
+    Inti().declarar(dict(FUENTE))
+
+
+@sin_realidad
+def test_realidad_fuente_sin_alcance_no_entra():
+    with pytest.raises(FronteraRota):
+        Inti().declarar(dict(FUENTE, alcance=[]))
+
+
+@sin_realidad
+def test_realidad_fuente_vacia_no_entra():
+    """Piso de carga: una fuente vacia es coherente con todo."""
+    with pytest.raises(FronteraRota, match="vacuidad"):
+        Inti().declarar(dict(FUENTE, entradas=0))
+
+
+@sin_realidad
+def test_realidad_fuente_sin_version_no_entra():
+    with pytest.raises(FronteraRota):
+        Inti().declarar(dict(FUENTE, version=""))
+
+
+# ----- inti: sello -----
+
+@sin_realidad
+def test_realidad_no_se_consulta_sin_sellar():
+    i = Inti()
+    i.declarar(dict(FUENTE))
+    with pytest.raises(SelloAusente):
+        i.consultar("prueba", "x",
+                    {"estado": ENCONTRADO, "dato": "y", "procedencia": "prueba"})
+
+
+@sin_realidad
+def test_realidad_no_se_sella_sin_fuentes():
+    with pytest.raises(FronteraRota):
+        Inti().sellar(INSTANTE)
+
+
+@sin_realidad
+def test_realidad_huella_reproducible():
+    assert (_sellado().inventario()["sello"]["huella"]
+            == _sellado().inventario()["sello"]["huella"])
+
+
+@sin_realidad
+def test_realidad_respuesta_arrastra_el_sello():
+    i = _sellado()
+    r = i.consultar("prueba", "casa",
+                    {"estado": ENCONTRADO, "dato": "edificio",
+                     "procedencia": "prueba"})
+    assert r["instante"] == INSTANTE
+    assert r["sello"] == i.inventario()["sello"]["huella"]
+
+
+# ----- inti: respuesta -----
+
+@sin_realidad
+def test_realidad_tres_estados_no_dos():
+    assert len(ESTADOS) == 3
+    assert NO_EXISTE != FUERA_DE_ALCANCE
+
+
+@sin_realidad
+def test_realidad_fuera_de_alcance_es_valido():
+    r = _sellado().consultar("prueba", "andromeda",
+                             {"estado": FUERA_DE_ALCANCE, "dato": None,
+                              "procedencia": "prueba"})
+    assert r["estado"] == FUERA_DE_ALCANCE
+
+
+@sin_realidad
+def test_realidad_estado_invalido_se_rechaza():
+    with pytest.raises(FronteraRota):
+        _sellado().consultar("prueba", "x",
+                             {"estado": "QUIZA", "dato": "y",
+                              "procedencia": "prueba"})
+
+
+@sin_realidad
+def test_realidad_sin_procedencia_se_rechaza():
+    with pytest.raises(FronteraRota, match="procedencia"):
+        _sellado().consultar("prueba", "x",
+                             {"estado": ENCONTRADO, "dato": "y"})
+
+
+@sin_realidad
+def test_realidad_veredicto_se_rechaza():
+    """REALIDAD es Ri, no R: entrega dato y origen, nunca juicio."""
+    with pytest.raises(FronteraRota, match="juicio"):
+        _sellado().consultar("prueba", "x",
+                             {"estado": ENCONTRADO, "dato": "y",
+                              "procedencia": "prueba", "correcto": True})
+
+
+@sin_realidad
+def test_realidad_factores_se_rechazan():
+    with pytest.raises(FronteraRota, match="juicio"):
+        _sellado().consultar("prueba", "x",
+                             {"estado": ENCONTRADO, "dato": "y",
+                              "procedencia": "prueba", "K": F(1)})
+
+
+@sin_realidad
+def test_realidad_encontrado_exige_dato():
+    with pytest.raises(FronteraRota):
+        _sellado().consultar("prueba", "x",
+                             {"estado": ENCONTRADO, "dato": None,
+                              "procedencia": "prueba"})
+
+
+@sin_realidad
+def test_realidad_no_encontrado_exige_dato_vacio():
+    with pytest.raises(FronteraRota):
+        _sellado().consultar("prueba", "x",
+                             {"estado": NO_EXISTE, "dato": "algo",
+                              "procedencia": "prueba"})
+
+
+@sin_realidad
+def test_realidad_fuente_no_declarada_se_rechaza():
+    with pytest.raises(FronteraRota):
+        _sellado().consultar("otra", "x",
+                             {"estado": ENCONTRADO, "dato": "y",
+                              "procedencia": "otra"})
+
+
+# ----- inti: invariancia -----
+
+@sin_realidad
+def test_realidad_misma_consulta_misma_respuesta():
+    i = _sellado()
+    r = {"estado": ENCONTRADO, "dato": "edificio", "procedencia": "prueba"}
+    i.consultar("prueba", "casa", dict(r))
+    i.consultar("prueba", "casa", dict(r))
+
+
+@sin_realidad
+def test_realidad_dos_respuestas_rompen_invariancia():
+    i = _sellado()
+    i.consultar("prueba", "casa",
+                {"estado": ENCONTRADO, "dato": "uno", "procedencia": "prueba"})
+    with pytest.raises(FronteraRota, match="invariancia"):
+        i.consultar("prueba", "casa",
+                    {"estado": ENCONTRADO, "dato": "otro",
+                     "procedencia": "prueba"})
+
+
+# ----- inti: disponibilidad y barrido -----
+
+@sin_realidad
+def test_realidad_indisponible_no_se_sustituye():
+    i = _sellado()
+    i.marcar_indisponible("prueba", "sin conexion")
+    with pytest.raises(FuenteIndisponible):
+        i.consultar("prueba", "x",
+                    {"estado": ENCONTRADO, "dato": "y",
+                     "procedencia": "prueba"})
+
+
+@sin_realidad
+def test_realidad_barrer_sin_fuentes_no_pasa():
+    b = Inti().barrer()
+    assert b["pasa"] is False
+    assert "ninguna fuente declarada" in b["faltas"]
+
+
+@sin_realidad
+def test_realidad_barrer_sellado_pasa():
+    b = _sellado().barrer()
+    assert b["pasa"] is True
+    assert b["faltas"] == []
+
+
+@sin_realidad
+def test_realidad_barrer_con_indisponible_no_pasa():
+    i = _sellado()
+    i.marcar_indisponible("prueba", "sin conexion")
+    assert i.barrer()["pasa"] is False
+
+
+@sin_realidad
+def test_realidad_axiomas_tienen_forma():
+    for d in RE.axiomas():
+        for clave in CLAVES_DECLARACION:
+            assert clave in d, d.get("id")
+
+
+# ===============================================================
+# SEGMENTO 6 --- ESTADO DE CONSTRUCCION
+# ===============================================================
+#
+# Lo que falta debe ser visible. Estas pruebas no exigen que el
+# sistema este completo: exigen que lo incompleto se declare.
+
+def test_construccion_roles_pendientes_son_visibles():
+    vacios = motor().registro.resumen()["roles_vacios"]
+    assert isinstance(vacios, list)
+    for rol in vacios:
+        assert rol not in ("AX", "CT", "FO"), f"{rol} deberia estar montado"
+
+
+def test_construccion_evaluar_sin_calculador_no_finge():
+    """
+    Sin rol CA no hay C, L, K. Lo unico inaceptable seria que
+    evaluar() devolviera un numero como si lo hubiera calculado.
+    Cuando CA se monte, esta prueba se salta sola.
+    """
+    e = motor()
+    if "CA" in e.registro.resumen()["roles"]:
+        pytest.skip("CA montado: esta prueba cubre la fase de construccion")
+
+    try:
+        r = e.evaluar({"mensaje": "sonda", "contexto": "Octx"})
+    except Exception:
+        return  # aborta: aceptable, no finge nada
+
+    assert r.get("tru_total") in (None, "UNDEFINED"), (
+        f"sin CA no puede haber Tru_total: {r.get('tru_total')}"
+    )
