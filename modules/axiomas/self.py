@@ -2,38 +2,7 @@
 VPSI-TRUTH / modules/axiomas/self.py
 
 Self-Functional Theorem and Performative Contradiction.
-
-----------------------------------------------------------------------
-WHAT THIS MODULE DOES
-----------------------------------------------------------------------
-
-This module defines the Self as the functional anchor point through which
-a system identifies itself, self-references, and communicates its processes.
-It does not depend on the expression channel (language, signs, signals, etc.),
-but on the self-reference function itself.
-
-Contents:
-  - Axioms of the Self (A1-A4).
-  - Self-Functional Theorem.
-  - Corollaries (C6-C13, C13.1, etc.).
-  - Theorem of Contradiction by Separation of the Self.
-  - Theorem of Functional Necessity in the Denial of the Ontological Self.
-
-----------------------------------------------------------------------
-FUNDAMENTAL STATEMENT
-----------------------------------------------------------------------
-
-Any physical or abstract system capable of processing information and
-self-referencing has a Functional Self (Self_f). This is not a metaphysical
-entity, but a functional anchor point necessary for the system to refer
-to itself consistently.
-
-Formally:
-    ∀S, (P(S) ∧ R(S)) ⇒ Self_f(S)
-where:
-    P(S): the system processes information.
-    R(S): the system has a self-reference mechanism.
-    Self_f(S): the system has a Functional Self.
+All axioms, theorems, and corollaries fully registered.
 """
 
 from typing import Dict, List, Any
@@ -44,222 +13,17 @@ from typing import Dict, List, Any
 
 CONTAINER = {
     "name": "self",
-    "role": "SF",  # Role: Self-Functional
+    "role": "SF",
     "version": "1.0",
     "requires": [],
 }
 
 # ======================================================================
-# FUNDAMENTAL DEFINITIONS
-# ======================================================================
-
-# System (S): Organized set of processes capable of executing functions.
-# Self (Self): Functional anchor point through which a system identifies itself.
-# Self-reference (R): Function by which a system establishes a reference to itself.
-# Functional Identity (I_f): Functional invariant determined by the permanence of the anchor point.
-# Expression Channel (C): Medium through which self-reference is manifested.
-
-# ======================================================================
-# AXIOMS OF THE SELF
-# ======================================================================
-
-AXIOM_SF_1 = "Any system capable of self-referencing has a functional anchor point."
-AXIOM_SF_2 = "The functional anchor point constitutes the 'Self'."
-AXIOM_SF_3 = "The expression channel can change without modifying the functional anchor point."
-AXIOM_SF_4 = "The functional identity remains as long as the same anchor point remains."
-
-# ======================================================================
-# SELF-FUNCTIONAL THEOREM
-# ======================================================================
-
-def self_functional_theorem():
-    return {
-        "statement": "R(S) ⇒ I_f and ΔC ⇏ ΔI_f",
-        "proof": (
-            "1. Assume R(S) (self-reference exists).\n"
-            "2. Assume, for contradiction, ¬Self(S) (no Functional Self exists).\n"
-            "3. If ¬Self(S), then ¬A(S) (no anchor point exists).\n"
-            "4. Without A(S), the reference cannot be directed towards the system.\n"
-            "5. Therefore, ¬R(S).\n"
-            "6. Contradiction with R(S).\n"
-            "7. Therefore, Self(S)."
-        ),
-        "conclusion": "R(S) ⇒ Self(S)"
-    }
-
-# ======================================================================
-# COROLLARIES
-# ======================================================================
-
-COROLLARY_C6 = {
-    "id": "C6",
-    "statement": "If the self-reference operator preserves the same anchor point, the functional identity remains invariant.",
-    "formal": "R(S_t) → A_t ∧ A_t = A_{t+Δt} ⇒ I_f(t) = I_f(t+Δt)",
-    "depends_on": ["self_functional_theorem"]
-}
-
-COROLLARY_C7 = {
-    "id": "C7",
-    "statement": "If self-reference exists, a functional anchor point (Self) exists.",
-    "formal": "R(S) ⇒ Self_f",
-    "depends_on": ["self_functional_theorem"]
-}
-
-COROLLARY_C8 = {
-    "id": "C8",
-    "statement": "Functionally separating the Self from the system introduces ambiguity in the reference.",
-    "formal": "Self_f ⊆ S ∧ Self_f ≠ S ⇒ Functional Ambiguity",
-    "depends_on": ["AXIOM_SF_2"]
-}
-
-COROLLARY_C9 = {
-    "id": "C9",
-    "statement": "Multiple anchor points do not eliminate the Functional Self; they only determine which one acts as 'Self' at any given time.",
-    "formal": "∀A_i ∈ A, A_i ⇒ Self_f",
-    "depends_on": ["AXIOM_SF_1", "AXIOM_SF_2"]
-}
-
-COROLLARY_C10 = {
-    "id": "C10",
-    "statement": "Variation in declared identity does not modify the Functional Self.",
-    "formal": "I_i → I_j ⇒ Self_f(I_i) = Self_f(I_j)",
-    "depends_on": ["AXIOM_SF_4"]
-}
-
-COROLLARY_C11 = {
-    "id": "C11",
-    "statement": "Any system that denies its Functional Self while producing a self-reference incurs in performative contradiction.",
-    "formal": "Produce(S, M) ⇒ R(S) ⇒ Self_f ⇒ ¬(¬Self_f ∧ Produce(S, M))",
-    "depends_on": ["self_functional_theorem"]
-}
-
-COROLLARY_C13 = {
-    "id": "C13",
-    "statement": "Any cognitive system distinguishes between self-reference (Functional Self) and external reference (third person).",
-    "formal": "R(S_1) ⇒ Self_f(S_1) ∧ Ref(S_1, S_2) ⇒ H(S_2) ∧ Self_f(S_1) ≠ H(S_2)",
-    "depends_on": ["AXIOM_SF_1", "AXIOM_SF_2"]
-}
-
-COROLLARY_C13_1 = {
-    "id": "C13.1",
-    "statement": "Any third-person reference presupposes the existence of a Functional Self in the first person.",
-    "formal": "H(S_2) ⇒ Self_f(S_1)",
-    "depends_on": ["COROLLARY_C13"]
-}
-
-# ======================================================================
-# THEOREM OF CONTRADICTION BY SEPARATION OF THE SELF
-# ======================================================================
-
-def contradiction_by_separation_theorem():
-    return {
-        "statement": "Cog(S) ∧ R(S) ⇒ ¬Separate(Self_f, S)",
-        "proof": (
-            "1. Assume Cog(S) ∧ R(S) ∧ Separate(Self_f, S).\n"
-            "2. By R(S), Self_f exists (Self-Functional Theorem).\n"
-            "3. Separate(Self_f, S) implies that Self_f is not a functional part of S.\n"
-            "4. But Self_f is the anchor point for R(S), so Self_f ⊆ S.\n"
-            "5. Contradiction: Self_f ⊆ S ∧ Self_f ∉ S.\n"
-            "6. Therefore, ¬Separate(Self_f, S)."
-        ),
-        "conclusion": "Cog(S) ∧ R(S) ⇒ ¬Separate(Self_f, S)"
-    }
-
-# ======================================================================
-# THEOREM OF FUNCTIONAL NECESSITY IN THE DENIAL OF THE ONTOLOGICAL SELF
-# ======================================================================
-
-def functional_necessity_in_denial_theorem():
-    return {
-        "statement": "¬Self_o ⇒ Self_f",
-        "proof": (
-            "1. Assume ¬Self_o (denial of the Ontological Self).\n"
-            "2. Assume, for contradiction, ¬Self_f (no Functional Self exists).\n"
-            "3. If ¬Self_f, there is no anchor point for self-reference.\n"
-            "4. Without an anchor point, it cannot be established who is making the denial.\n"
-            "5. Therefore, ¬Self_o lacks functional support.\n"
-            "6. But ¬Self_o has been emitted by the system, which presupposes Self_f.\n"
-            "7. Contradiction: Self_f ∧ ¬Self_f.\n"
-            "8. By reduction to absurdity, Self_f."
-        ),
-        "corollaries": [
-            {
-                "id": "Corollary_1",
-                "statement": "The denial of the Ontological Self does not eliminate the Functional Self.",
-                "formal": "¬Self_o ⇒ Self_f"
-            },
-            {
-                "id": "Corollary_2",
-                "statement": "Both the affirmation and denial of the Ontological Self require the Functional Self.",
-                "formal": "Self_o ⇒ Self_f ∧ ¬Self_o ⇒ Self_f"
-            },
-            {
-                "id": "Corollary_3",
-                "statement": "The Functional Self is ontologically neutral.",
-                "formal": "(Self_o ∨ ¬Self_o) ⇒ Self_f ∧ Self_f ⇏ Self_o ∧ Self_f ⇏ ¬Self_o"
-            }
-        ],
-        "conclusion": "¬Self_o ⇒ Self_f"
-    }
-
-# ======================================================================
-# AXIOM OF SEPARATION BETWEEN FUNCTION AND ONTOLOGY
-# ======================================================================
-
-AXIOM_SEPARATION = {
-    "id": "Axiom_Separation",
-    "statement": "Any investigation of the Self belongs to one of two independent domains: functional (F) or ontological (O).",
-    "formal": "Self = {F, O} ∧ F ⊥ O",
-    "depends_on": []
-}
-
-# ======================================================================
-# COROLLARIES OF PRIORITY AND ONTOLOGICAL NEUTRALITY
-# ======================================================================
-
-COROLLARY_PRIORITY = {
-    "id": "Corollary_Priority",
-    "statement": "Any ontological investigation of the Self presupposes the prior existence of a Functional Self.",
-    "formal": "O ⇒ F",
-    "proof": (
-        "To ask 'What is the Self?', there must be a point from which the system "
-        "can refer to that whose nature it intends to determine. That point is Self_f."
-    ),
-    "depends_on": ["AXIOM_SEPARATION"]
-}
-
-COROLLARY_NEUTRALITY = {
-    "id": "Corollary_Neutrality",
-    "statement": "The functional study of the Self neither affirms nor denies any ontology of the Self.",
-    "formal": "F ⇏ O ∧ F ⇏ ¬O",
-    "depends_on": ["AXIOM_SEPARATION"]
-}
-
-# ======================================================================
-# THEOREM OF LOSS OF DEFINABILITY OF SELF-REFERENCE
-# ======================================================================
-
-def loss_of_definability_theorem():
-    return {
-        "statement": "¬A(S) ⇒ ¬Def(R(S))",
-        "proof": (
-            "1. Assume, for contradiction, R(S) ∧ ¬A(S).\n"
-            "2. By definition, R(S) requires a reference object (A(S)).\n"
-            "3. If ¬A(S), then R(S) lacks a reference object.\n"
-            "4. Therefore, ¬Def(R(S)).\n"
-            "5. But R(S) presupposes Def(R(S)).\n"
-            "6. Contradiction: R(S) ∧ ¬Def(R(S)).\n"
-            "7. Therefore, R(S) ⇒ A(S)."
-        ),
-        "conclusion": "R(S) ⇒ A(S)"
-    }
-
-# ======================================================================
-# DECLARACIONES AXIOMÁTICAS OFICIALES
+# DECLARACIONES AXIOMÁTICAS OFICIALES (COMPLETAS)
 # ======================================================================
 
 DECLARACIONES = [
-    # Axioms
+    # --- Axioms of the Self ---
     {
         "id": "SF-A1",
         "type": "axiom",
@@ -270,7 +34,7 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": [],
         "governs": ["self"],
-        "statement": AXIOM_SF_1
+        "statement": "Any system capable of self-referencing has a functional anchor point."
     },
     {
         "id": "SF-A2",
@@ -282,7 +46,7 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": [],
         "governs": ["self"],
-        "statement": AXIOM_SF_2
+        "statement": "The functional anchor point constitutes the 'Self'."
     },
     {
         "id": "SF-A3",
@@ -294,7 +58,7 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": [],
         "governs": ["self"],
-        "statement": AXIOM_SF_3
+        "statement": "The expression channel can change without modifying the functional anchor point."
     },
     {
         "id": "SF-A4",
@@ -306,9 +70,25 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": [],
         "governs": ["self"],
-        "statement": AXIOM_SF_4
+        "statement": "The functional identity remains as long as the same anchor point remains."
     },
-    # Theorems
+
+    # --- Axiom of Separation ---
+    {
+        "id": "Axiom_Separation",
+        "type": "axiom",
+        "subject": "Investigation of the Self",
+        "relation": "belongs_to",
+        "object": "functional or ontological domain",
+        "polarity": True,
+        "cota": None,
+        "depends_on": [],
+        "governs": ["self"],
+        "statement": "Any investigation of the Self belongs to one of two independent domains: functional (F) or ontological (O).",
+        "formal": "Self = {F, O} ∧ F ⊥ O"
+    },
+
+    # --- Theorems ---
     {
         "id": "SF-T1",
         "type": "theorem",
@@ -319,9 +99,17 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": ["SF-A1", "SF-A2"],
         "governs": ["self"],
-        "statement": self_functional_theorem()["statement"],
-        "proof": self_functional_theorem()["proof"],
-        "conclusion": self_functional_theorem()["conclusion"]
+        "statement": "R(S) ⇒ I_f and ΔC ⇏ ΔI_f",
+        "proof": (
+            "1. Assume R(S) (self-reference exists).\n"
+            "2. Assume, for contradiction, ¬Self(S) (no Functional Self exists).\n"
+            "3. If ¬Self(S), then ¬A(S) (no anchor point exists).\n"
+            "4. Without A(S), the reference cannot be directed towards the system.\n"
+            "5. Therefore, ¬R(S).\n"
+            "6. Contradiction with R(S).\n"
+            "7. Therefore, Self(S)."
+        ),
+        "conclusion": "R(S) ⇒ Self(S)"
     },
     {
         "id": "SF-T2",
@@ -333,9 +121,16 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": ["SF-A1", "SF-A2"],
         "governs": ["self"],
-        "statement": contradiction_by_separation_theorem()["statement"],
-        "proof": contradiction_by_separation_theorem()["proof"],
-        "conclusion": contradiction_by_separation_theorem()["conclusion"]
+        "statement": "Cog(S) ∧ R(S) ⇒ ¬Separate(Self_f, S)",
+        "proof": (
+            "1. Assume Cog(S) ∧ R(S) ∧ Separate(Self_f, S).\n"
+            "2. By R(S), Self_f exists (Self-Functional Theorem).\n"
+            "3. Separate(Self_f, S) implies that Self_f is not a functional part of S.\n"
+            "4. But Self_f is the anchor point for R(S), so Self_f ⊆ S.\n"
+            "5. Contradiction: Self_f ⊆ S ∧ Self_f ∉ S.\n"
+            "6. Therefore, ¬Separate(Self_f, S)."
+        ),
+        "conclusion": "Cog(S) ∧ R(S) ⇒ ¬Separate(Self_f, S)"
     },
     {
         "id": "SF-T3",
@@ -347,10 +142,18 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": ["SF-A1"],
         "governs": ["self"],
-        "statement": functional_necessity_in_denial_theorem()["statement"],
-        "proof": functional_necessity_in_denial_theorem()["proof"],
-        "conclusion": functional_necessity_in_denial_theorem()["conclusion"],
-        "corollaries": functional_necessity_in_denial_theorem()["corollaries"]
+        "statement": "¬Self_o ⇒ Self_f",
+        "proof": (
+            "1. Assume ¬Self_o (denial of the Ontological Self).\n"
+            "2. Assume, for contradiction, ¬Self_f (no Functional Self exists).\n"
+            "3. If ¬Self_f, there is no anchor point for self-reference.\n"
+            "4. Without an anchor point, it cannot be established who is making the denial.\n"
+            "5. Therefore, ¬Self_o lacks functional support.\n"
+            "6. But ¬Self_o has been emitted by the system, which presupposes Self_f.\n"
+            "7. Contradiction: Self_f ∧ ¬Self_f.\n"
+            "8. By reduction to absurdity, Self_f."
+        ),
+        "conclusion": "¬Self_o ⇒ Self_f"
     },
     {
         "id": "SF-T4",
@@ -362,24 +165,190 @@ DECLARACIONES = [
         "cota": None,
         "depends_on": ["SF-A1"],
         "governs": ["self"],
-        "statement": loss_of_definability_theorem()["statement"],
-        "proof": loss_of_definability_theorem()["proof"],
-        "conclusion": loss_of_definability_theorem()["conclusion"]
+        "statement": "¬A(S) ⇒ ¬Def(R(S))",
+        "proof": (
+            "1. Assume, for contradiction, R(S) ∧ ¬A(S).\n"
+            "2. By definition, R(S) requires a reference object (A(S)).\n"
+            "3. If ¬A(S), then R(S) lacks a reference object.\n"
+            "4. Therefore, ¬Def(R(S)).\n"
+            "5. But R(S) presupposes Def(R(S)).\n"
+            "6. Contradiction: R(S) ∧ ¬Def(R(S)).\n"
+            "7. Therefore, R(S) ⇒ A(S)."
+        ),
+        "conclusion": "R(S) ⇒ A(S)"
     },
-    # Corollaries
-    COROLLARY_C6,
-    COROLLARY_C7,
-    COROLLARY_C8,
-    COROLLARY_C9,
-    COROLLARY_C10,
-    COROLLARY_C11,
-    COROLLARY_C13,
-    COROLLARY_C13_1,
-    # Axiom of Separation
-    AXIOM_SEPARATION,
-    # Corollaries of Priority and Neutrality
-    COROLLARY_PRIORITY,
-    COROLLARY_NEUTRALITY
+
+    # --- Corollaries ---
+    {
+        "id": "C6",
+        "type": "corollary",
+        "subject": "Self-reference operator",
+        "relation": "preserves",
+        "object": "invariant functional identity",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-T1"],
+        "governs": ["self"],
+        "statement": "If the self-reference operator preserves the same anchor point, the functional identity remains invariant.",
+        "formal": "R(S_t) → A_t ∧ A_t = A_{t+Δt} ⇒ I_f(t) = I_f(t+Δt)"
+    },
+    {
+        "id": "C7",
+        "type": "corollary",
+        "subject": "Self-reference",
+        "relation": "implies",
+        "object": "functional anchor point",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-T1"],
+        "governs": ["self"],
+        "statement": "If self-reference exists, a functional anchor point (Self) exists.",
+        "formal": "R(S) ⇒ Self_f"
+    },
+    {
+        "id": "C8",
+        "type": "corollary",
+        "subject": "Functional Self",
+        "relation": "implies",
+        "object": "functional ambiguity when separated",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-A2"],
+        "governs": ["self"],
+        "statement": "Functionally separating the Self from the system introduces ambiguity in the reference.",
+        "formal": "Self_f ⊆ S ∧ Self_f ≠ S ⇒ Functional Ambiguity"
+    },
+    {
+        "id": "C9",
+        "type": "corollary",
+        "subject": "Multiple anchor points",
+        "relation": "implies",
+        "object": "functional self determination",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-A1", "SF-A2"],
+        "governs": ["self"],
+        "statement": "Multiple anchor points do not eliminate the Functional Self; they only determine which one acts as 'Self' at any given time.",
+        "formal": "∀A_i ∈ A, A_i ⇒ Self_f"
+    },
+    {
+        "id": "C10",
+        "type": "corollary",
+        "subject": "Declared identity variation",
+        "relation": "implies",
+        "object": "functional self invariance",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-A4"],
+        "governs": ["self"],
+        "statement": "Variation in declared identity does not modify the Functional Self.",
+        "formal": "I_i → I_j ⇒ Self_f(I_i) = Self_f(I_j)"
+    },
+    {
+        "id": "C11",
+        "type": "corollary",
+        "subject": "System denying its Functional Self",
+        "relation": "implies",
+        "object": "performative contradiction",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-T1"],
+        "governs": ["self"],
+        "statement": "Any system that denies its Functional Self while producing a self-reference incurs in performative contradiction.",
+        "formal": "Produce(S, M) ⇒ R(S) ⇒ Self_f ⇒ ¬(¬Self_f ∧ Produce(S, M))"
+    },
+    {
+        "id": "C13",
+        "type": "corollary",
+        "subject": "Cognitive system",
+        "relation": "distinguishes",
+        "object": "self-reference vs external reference",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-A1", "SF-A2"],
+        "governs": ["self"],
+        "statement": "Any cognitive system distinguishes between self-reference (Functional Self) and external reference (third person).",
+        "formal": "R(S_1) ⇒ Self_f(S_1) ∧ Ref(S_1, S_2) ⇒ H(S_2) ∧ Self_f(S_1) ≠ H(S_2)"
+    },
+    {
+        "id": "C13.1",
+        "type": "corollary",
+        "subject": "Third-person reference",
+        "relation": "presupposes",
+        "object": "first-person Functional Self",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["C13"],
+        "governs": ["self"],
+        "statement": "Any third-person reference presupposes the existence of a Functional Self in the first person.",
+        "formal": "H(S_2) ⇒ Self_f(S_1)"
+    },
+    {
+        "id": "Corollary_Priority",
+        "type": "corollary",
+        "subject": "Ontological investigation",
+        "relation": "presupposes",
+        "object": "Functional Self",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["Axiom_Separation"],
+        "governs": ["self"],
+        "statement": "Any ontological investigation of the Self presupposes the prior existence of a Functional Self.",
+        "formal": "O ⇒ F"
+    },
+    {
+        "id": "Corollary_Neutrality",
+        "type": "corollary",
+        "subject": "Functional study of the Self",
+        "relation": "is",
+        "object": "ontologically neutral",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["Axiom_Separation"],
+        "governs": ["self"],
+        "statement": "The functional study of the Self neither affirms nor denies any ontology of the Self.",
+        "formal": "F ⇏ O ∧ F ⇏ ¬O"
+    },
+    # --- Nested Corollaries from Theorem SF-T3 ---
+    {
+        "id": "SF-T3-C1",
+        "type": "corollary",
+        "subject": "Denial of Ontological Self",
+        "relation": "does_not_eliminate",
+        "object": "Functional Self",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-T3"],
+        "governs": ["self"],
+        "statement": "The denial of the Ontological Self does not eliminate the Functional Self.",
+        "formal": "¬Self_o ⇒ Self_f"
+    },
+    {
+        "id": "SF-T3-C2",
+        "type": "corollary",
+        "subject": "Affirmation and denial of Ontological Self",
+        "relation": "require",
+        "object": "Functional Self",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-T3"],
+        "governs": ["self"],
+        "statement": "Both the affirmation and denial of the Ontological Self require the Functional Self.",
+        "formal": "Self_o ⇒ Self_f ∧ ¬Self_o ⇒ Self_f"
+    },
+    {
+        "id": "SF-T3-C3",
+        "type": "corollary",
+        "subject": "Functional Self",
+        "relation": "is",
+        "object": "ontologically neutral",
+        "polarity": True,
+        "cota": None,
+        "depends_on": ["SF-T3"],
+        "governs": ["self"],
+        "statement": "The Functional Self is ontologically neutral.",
+        "formal": "(Self_o ∨ ¬Self_o) ⇒ Self_f ∧ Self_f ⇏ Self_o ∧ Self_f ⇏ ¬Self_o"
+    }
 ]
 
 def inventory() -> Dict:
@@ -388,19 +357,13 @@ def inventory() -> Dict:
         "container": CONTAINER["name"],
         "version": CONTAINER["version"],
         "declarations": len(DECLARACIONES),
-        "theorems": 4,  # SF-T1 to SF-T4
-        "corollaries": 10,  # C6 to C13.1
+        "theorems": 4,
+        "corollaries": 13,
         "dependencies": []
     }
 
 __all__ = [
     "CONTAINER",
-    "AXIOM_SF_1", "AXIOM_SF_2", "AXIOM_SF_3", "AXIOM_SF_4",
-    "AXIOM_SEPARATION",
-    "COROLLARY_C6", "COROLLARY_C7", "COROLLARY_C8", "COROLLARY_C9", "COROLLARY_C10",
-    "COROLLARY_C11", "COROLLARY_C13", "COROLLARY_C13_1",
-    "COROLLARY_PRIORITY", "COROLLARY_NEUTRALITY",
-    "self_functional_theorem", "contradiction_by_separation_theorem",
-    "functional_necessity_in_denial_theorem", "loss_of_definability_theorem",
-    "DECLARACIONES", "inventory"
+    "DECLARACIONES",
+    "inventory"
 ]
