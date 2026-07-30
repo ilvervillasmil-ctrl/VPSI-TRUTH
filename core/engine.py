@@ -17,14 +17,12 @@ SEGMENTOS
   7  INVOCACIÓN AISLADA
   8  COMPOSICIÓN
   9  ENGINE (con micro-reporte ⟨Ω⟩)
- 10  CÁLCULO DE L7 Y DIAGNÓSTICO
 """
 
 import importlib.util
 import sys
 import traceback
 import math
-import time
 from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
@@ -40,7 +38,6 @@ ROL_FORMULAS = "FO"     # tru_ri, tru_total
 ROL_CALCULATOR = "CA"   # Devuelve C, L, K
 ROL_CONTEXTO = "CX"     # Lógica del contexto
 ROL_TAXONOMIA = "TX"    # Anota tácticas (no puntúa)
-ROL_CACHE = "CH"        # Caché para autoridades externas (opcional)
 
 ROLES = (
     ROL_AXIOMAS,
@@ -49,15 +46,14 @@ ROLES = (
     ROL_CALCULATOR,
     ROL_CONTEXTO,
     ROL_TAXONOMIA,
-    ROL_CACHE,
 )
 
 # Contenedores obligatorios para arrancar
 OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS)
 
 # Orden de los factores para evaluación
-FACTORES = ("L", "C", "K")
-ORDEN_FACTORES = ("L", "C", "K")
+FACTORES = ("C", "L", "K")
+ORDEN_FACTORES = ("C", "L", "K")
 
 # ===============================================================
 # SEGMENTO 2 --- ESTADO INDEFINIDO
@@ -100,13 +96,10 @@ class DominioError(Exception):
     """Factor fuera de [0,1] o de tipo no admitido."""
 
 class CotaError(Exception):
-    """Resultado fuera de [BETA, ALPHA]. Error del Engine."""
+    """Resultado fuera de [BETA, ALPHA]."""
 
 class FormulaError(Exception):
     """La salida no cumple la fórmula declarada."""
-
-class CacheError(Exception):
-    """Error al acceder a la caché."""
 
 # ===============================================================
 # SEGMENTO 4 --- NORMALIZACIÓN
@@ -138,25 +131,18 @@ def normalizar(valor, etiqueta: str) -> Fraction:
     return f
 
 # ===============================================================
-# SEGMENTO 5 --- CONSTANTES GLOBALES (Agency, C_dead)
+# SEGMENTO 5 --- CONSTANTES GLOBALES
 # ===============================================================
 
-# Agency = 0 (estado arquitectónico)
+# Valores por defecto (por si el contenedor CONSTANTE no los define)
 AGENCY = Fraction(0)
-
-# C_dead = 0.438626 (residuo geométrico)
-# Según el framework: C_dead = (α × H + β × I_ext) × (φ/2) con Li=0
-# Cuando Li=0, H(S) = 0 (entropía máxima), I_ext = 0 (sin coherencia externa)
-# Por lo tanto, C_dead = (α × 0 + β × 0) × (φ/2) = 0 → NO ES CORRECTO.
-# Según el documento UIS, C_dead = 0.438626 es el residuo geométrico del cubo 3x3x3.
-# Validación: C_dead ≈ 123/280 ≈ 0.4392857 (aproximación)
 C_DEAD = Fraction(123, 280)  # ≈ 0.438626
 
 # ===============================================================
 # SEGMENTO 6 --- REGISTRO DE CONTENEDORES
 # ===============================================================
 
-CLAVES = ("nombre", "rol", "version")
+CLAVES_CONTENEDOR = ("nombre", "rol", "version")
 
 @dataclass
 class Contenedor:
@@ -169,6 +155,8 @@ class Contenedor:
 
     def fn(self, nombre: str) -> Any:
         """Obtiene una función o atributo del módulo."""
+        if self.modulo is None:
+            return None
         return getattr(self.modulo, nombre, None)
 
     def como_dict(self) -> Dict:
@@ -256,7 +244,7 @@ class Registro:
         if not isinstance(meta, dict):
             raise ContratoError("Falta el diccionario CONTENEDOR.")
 
-        for k in CLAVES:
+        for k in CLAVES_CONTENEDOR:
             if k not in meta:
                 raise ContratoError(f"CONTENEDOR sin clave '{k}'.")
 
@@ -316,7 +304,7 @@ class Invocador:
                 "rol": contenedor.rol,
                 "razon": f"no expone {nombre_fn}()",
             })
-            return None
+            return UNDEFINED
 
         # Verificar que la petición incluye todas las claves requeridas
         faltan = [r for r in contenedor.requiere if r not in peticion]
@@ -326,7 +314,7 @@ class Invocador:
                 "rol": contenedor.rol,
                 "razon": f"petición sin claves: {faltan}",
             })
-            return None
+            return UNDEFINED
 
         try:
             return fn(peticion)
@@ -337,7 +325,7 @@ class Invocador:
                 "razon": f"{type(e).__name__}: {e}",
                 "traza": traceback.format_exc(limit=3),
             })
-            return None
+            return UNDEFINED
 
 # ===============================================================
 # SEGMENTO 8 --- COMPOSICIÓN
@@ -345,8 +333,7 @@ class Invocador:
 
 class Compositor:
     """
-    Aplica la fórmula de Tru_total llamando al contenedor FORMULAS.
-    El Engine no escribe la fórmula: la pide.
+    Aplica la fórmula de Tru_total usando el contenedor FORMULAS.
     """
 
     def __init__(self, formulas: Contenedor, alpha: Fraction, beta: Fraction):
@@ -401,7 +388,7 @@ class Compositor:
     @staticmethod
     def limitante(C: Fraction, L: Fraction, K: Fraction) -> Optional[str]:
         """Identifica el factor limitante (C, L o K)."""
-        for n, v in (("L", L), ("C", C), ("K", K)):
+        for n, v in (("C", C), ("L", L), ("K", K)):
             if es_undefined(v):
                 return n
         f = {"C": C, "L": L, "K": K}
@@ -409,7 +396,7 @@ class Compositor:
         return min(n for n, v in f.items() if v == m)
 
 # ===============================================================
-# SEGMENTO 9 --- ENGINE (con micro-reporte ⟨Ω⟩)
+# SEGMENTO 9 --- ENGINE
 # ===============================================================
 
 class Engine:
@@ -436,10 +423,11 @@ class Engine:
         if ct is None:
             raise ArranqueError(f"Contenedor {ROL_CONSTANTE} no encontrado.")
 
-        self.ALPHA = getattr(ct.modulo, "ALPHA", None)
-        self.BETA = getattr(ct.modulo, "BETA", None)
-        self.C_DEAD = getattr(ct.modulo, "C_DEAD", C_DEAD)  # Usar valor por defecto si no está definido
-        self.AGENCY = getattr(ct.modulo, "AGENCY", AGENCY)  # Usar valor por defecto si no está definido
+        # Obtener ALPHA y BETA del módulo
+        self.ALPHA = ct.fn("ALPHA")
+        self.BETA = ct.fn("BETA")
+        self.C_DEAD = ct.fn("C_DEAD") or C_DEAD
+        self.AGENCY = ct.fn("AGENCY") or AGENCY
 
         # Validar constantes
         if not isinstance(self.ALPHA, Fraction) or not isinstance(self.BETA, Fraction):
@@ -493,7 +481,7 @@ class Engine:
         if not isinstance(informe, dict) or "coherente" not in informe:
             raise ContratoError("barrer() debe devolver dict con 'coherente'.")
 
-        if informe["coherente"] is not True:
+        if not informe["coherente"]:
             raise ArranqueError(
                 "CONTRADICCIÓN AXIOMÁTICA. El sistema no arranca.\n"
                 + "\n".join(f"  {ch}" for ch in informe.get("choques", []))
@@ -550,9 +538,6 @@ class Engine:
             if es_undefined(factores[f]):
                 detenido_en = f
                 break
-            if f == "L" and factores[f] < Fraction(1):
-                detenido_en = f
-                break
 
         for f in FACTORES:
             factores.setdefault(f, UNDEFINED)
@@ -583,8 +568,8 @@ class Engine:
         if tx is not None:
             base = {**peticion, "resultado": comp, "factores": factores}
             an = self.invocador.llamar(tx, "anotar", base)
-            if isinstance(an, dict):
-                anotaciones = an.get("anotaciones", [])
+            if isinstance(an, list):
+                anotaciones = an
 
         # 10. Resultado final
         resultado = {
@@ -634,9 +619,9 @@ class Engine:
         """Calcula θ (alineación con el usuario) basado en el factor limitante."""
         if detenido_en is None:
             return 10  # Alineación alta
-        elif detenido_en == "L":
-            return 30  # Alineación media
         elif detenido_en == "C":
+            return 30  # Alineación media
+        elif detenido_en == "L":
             return 45  # Alineación baja
         elif detenido_en == "K":
             return 60  # Alineación crítica
@@ -645,11 +630,11 @@ class Engine:
 
     def _detectar_p_star(self, factores: Dict[str, Fraction]) -> str:
         """Detecta el punto obstructor (p*)."""
-        for i, f in enumerate(FACTORES):
+        for f in FACTORES:
             if es_undefined(factores[f]):
-                return f"L{i+3}"  # Asumiendo que C, L, K corresponden a L3, L4, L5
+                return f
             if factores[f] < Fraction(5, 10):  # Umbral: 0.5
-                return f"L{i+3}"
+                return f
         return "Ninguno"
 
     def _generar_omega_report(
@@ -662,25 +647,25 @@ class Engine:
         p_star: str,
     ) -> str:
         """Genera el micro-reporte ⟨Ω⟩."""
-        # Obtener valores de L0-L6 (placeholder: en la implementación real, estos deben pasarse)
+        # Valores de L0-L6 (placeholder: en la implementación real, estos deben pasarse)
         L = [
             Fraction(95, 100),  # L0
             Fraction(90, 100),  # L1
             Fraction(95, 100),  # L2
-            factores.get("L", Fraction(0)),  # L3
-            factores.get("C", Fraction(0)),  # L4 (Nota: C y L están invertidos en el código original)
+            factores.get("C", Fraction(0)),  # L3 (C)
+            factores.get("L", Fraction(0)),  # L4 (L)
             Fraction(95, 100),  # L5
             Fraction(95, 100),  # L6
         ]
         L7_str = str(L7) if not es_undefined(L7) else "UNDEFINED"
         C_Omega = comp.get("tru_total", UNDEFINED)
-        C_Omega_str = str(float(C_Omega)) if not es_undefined(C_Omega) else "UNDEFINED"
+        C_Omega_str = f"{float(C_Omega):.4f}" if not es_undefined(C_Omega) else "UNDEFINED"
         diagnosis = self._get_diagnosis(C_Omega) if not es_undefined(C_Omega) else "UNDEFINED"
 
         return f"""⟨Ω⟩
 L0={L[0]} L1={L[1]} L2={L[2]} L3={L[3]} L4={L[4]} L5={L[5]} L6={L[6]}
 L7={L7_str} → {"INTEGRATED" if L7 > Fraction(0) else "COLLAPSED"}
-C_Ω={C_Omega_str:.4f} → {diagnosis}
+C_Ω={C_Omega_str} → {diagnosis}
 H={float(H):.2f}
 θ={theta}° → alineación con usuario
 p*={p_star}
