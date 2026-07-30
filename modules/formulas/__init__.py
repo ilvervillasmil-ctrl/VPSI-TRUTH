@@ -11,17 +11,21 @@ import sys
 from pathlib import Path
 from fractions import Fraction
 
-# Importar las fórmulas canónicas (REQUERIDO)
+# Importar las fórmulas canónicas (REQUERIDO por el rol FO)
 from .truth import tru_ri, tru_total
 
 CONTENEDOR = {
     "nombre": "formulas",
     "rol": "FO",
     "version": "1.0",
-    "requiere": [],  # No requiere claves externas para operar
+    "requiere": [],
 }
 
 _DIR = Path(__file__).parent
+
+# ===============================================================
+# DESCUBRIMIENTO DE FÓRMULAS
+# ===============================================================
 
 def _descubrir():
     """
@@ -31,7 +35,7 @@ def _descubrir():
     registro = {}
     for f in sorted(_DIR.glob("*.py")):
         if f.name.startswith("_"):
-            continue  # Ignorar archivos como __init__.py
+            continue  # Ignorar __init__.py
         clave = f"formulas_{f.stem}"
         spec = importlib.util.spec_from_file_location(clave, f)
         if spec is None or spec.loader is None:
@@ -48,6 +52,10 @@ def _descubrir():
             }
     return registro
 
+# ===============================================================
+# INVENTARIO
+# ===============================================================
+
 def inventario():
     """
     Devuelve el inventario de fórmulas cargadas.
@@ -58,6 +66,10 @@ def inventario():
         "formulas": _descubrir(),
     }
 
+# ===============================================================
+# AXIOMAS PARA EL BARRIDO AXIOMÁTICO
+# ===============================================================
+
 def axiomas():
     """
     Axiomas declarados por este contenedor para el barrido axiomático.
@@ -65,32 +77,50 @@ def axiomas():
     return [
         {
             "id": "FO-1",
-            "modulo": "formulas",
+            "tipo": "axioma",
             "sujeto": "Tru_total",
             "relacion": "acotado_superiormente_por",
             "objeto": "ALPHA",
-            "polaridad": True,  # Verdadero
-            "fuente": "Teorema 16 (Structural Ceiling α)",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": [],
+            "gobierna": ["formulas"],
+            "enunciado": "Tru_total(D) ≤ ALPHA (Teorema 16: Structural Ceiling α).",
         },
         {
             "id": "FO-2",
-            "modulo": "formulas",
+            "tipo": "axioma",
             "sujeto": "Tru_total",
             "relacion": "acotado_inferiormente_por",
             "objeto": "BETA",
-            "polaridad": True,  # Verdadero
-            "fuente": "Teorema 17 (Absolute Impossibility of Total Collapse)",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": [],
+            "gobierna": ["formulas"],
+            "enunciado": "Tru_total(D) ≥ BETA (Teorema 17: Impossibility of Total Collapse).",
         },
         {
             "id": "FO-3",
-            "modulo": "formulas",
+            "tipo": "axioma",
             "sujeto": "Tru_Ri",
             "relacion": "admite_compensacion_entre_factores",
             "objeto": "C_L_K",
-            "polaridad": False,  # Falso (no admite compensación)
-            "fuente": "TA5 (Multiplicatividad de la Verdad)",
+            "polaridad": False,
+            "cota": None,
+            "depende_de": [],
+            "gobierna": ["formulas"],
+            "enunciado": "Tru_Ri no admite compensación entre C, L, K (TA5: Multiplicatividad).",
         },
     ]
 
-# Exponer las funciones requeridas por el Engine
-__all__ = ["CONTENEDOR", "tru_ri", "tru_total", "inventario", "axiomas", "teoremas", "corolarios"]
+# ===============================================================
+# EXPORTACIÓN (REQUERIDO POR EL ROL FO)
+# ===============================================================
+
+__all__ = [
+    "CONTENEDOR",
+    "tru_ri",
+    "tru_total",
+    "inventario",
+    "axiomas",
+]
