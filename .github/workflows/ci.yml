@@ -1,0 +1,332 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      # --- 1. Check out code ---
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Necesario para git history en Coherence Guard
+
+      # --- 2. Set up Python ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # --- 3. Install dependencies ---
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ==========================================================
+      # COMPUERTA 1 --- INVARIANTE DE CONSTANTES
+      # Nada corre si alpha + beta != 1 por igualdad exacta.
+      # ==========================================================
+      - name: Invariante alpha + beta = 1
+        run: |
+          python - <<'EOF'
+          import sys
+          from fractions import Fraction
+          sys.path.insert(0, ".")
+
+          from modules.constante import ALPHA, BETA
+
+          if not isinstance(ALPHA, Fraction) or not isinstance(BETA, Fraction):
+              print("FALLO: ALPHA y BETA deben ser Fraction, no float.")
+              print(f"  ALPHA: {type(ALPHA).__name__}")
+              print(f"  BETA:  {type(BETA).__name__}")
+              sys.exit(1)
+
+          suma = ALPHA + BETA
+          if suma != Fraction(1):
+              print(f"FALLO: ALPHA + BETA = {suma}, se exige 1 exacto.")
+              sys.exit(1)
+
+          print(f"OK  ALPHA = {ALPHA}  BETA = {BETA}  suma = {suma}")
+          EOF
+
+      # ==========================================================
+      # COMPUERTA 2 --- BARRIDO AXIOMÁTICO
+      # Si la axiomatización se contradice, el sistema no arranca.
+      # Error absoluto. No es advertencia.
+      # ==========================================================
+      - name: Barrido axiomático
+        run: |
+          python - <<'EOF'
+          import sys, json
+          from pathlib import Path
+          sys.path.insert(0, ".")
+
+          from core.engine import Engine, ArranqueError
+
+          try:
+              eng = Engine(Path("modules"), invocador_id="core")
+          except ArranqueError as e:
+              print("=" * 60)
+              print("CONTRADICCIÓN AXIOMÁTICA --- EL SISTEMA NO ARRANCA")
+              print("=" * 60)
+              print(e)
+              sys.exit(1)
+
+          informe = eng.informe_axiomas or {}
+          Path("diagnostics").mkdir(exist_ok=True)
+          Path("diagnostics/axioms_report.json").write_text(
+              json.dumps(informe, indent=2, ensure_ascii=False)
+          )
+
+          print(f"OK  axiomatización coherente")
+          print(f"    declaraciones: {informe.get('declaraciones', '?')}")
+          print(f"    choques: {len(informe.get('choques', []))}")
+          EOF
+
+      # ==========================================================
+      # COMPUERTA 3 --- SIN COMPONENTES ESTOCÁSTICOS
+      # TA2: misma entrada, misma salida. Un modelo que muestrea
+      # no lo cumple.
+      # ==========================================================
+      - name: Prohibición de componentes estocásticos
+        run: |
+          python - <<'EOF'
+          import ast, sys
+          from pathlib import Path
+
+          PROHIBIDOS = {
+              "random", "numpy.random", "torch", "tensorflow", "sklearn",
+              "transformers", "openai", "anthropic", "secrets",
+          }
+
+          violaciones = []
+          for f in list(Path("core").rglob("*.py")) + list(Path("modules").rglob("*.py")):
+              try:
+                  arbol = ast.parse(f.read_text(encoding="utf-8"))
+              except SyntaxError as e:
+                  violaciones.append(f"{f}: SyntaxError {e}")
+                  continue
+              for n in ast.walk(arbol):
+                  if isinstance(n, ast.Import):
+                      for a in n.names:
+                          if a.name.split(".")[0] in PROHIBIDOS:
+                              violaciones.append(f"{f}:{n.lineno} import {a.name}")
+                  elif isinstance(n, ast.ImportFrom):
+                      if n.module and n.module.split(".")[0] in PROHIBIDOS:
+                          violaciones.append(f"{f}:{n.lineno} from {n.module}")
+
+          if violaciones:
+              print("FALLO: import estocástico en la ruta de decisión")
+              for v in violaciones:
+                  print("  " + v)
+              sys.exit(1)
+
+          print("OK  sin componentes estocásticos")
+          EOF
+
+      # ==========================================================
+      # COMPUERTA 4 --- FLOAT PROHIBIDO EN FACTORES
+      # ==========================================================
+      - name: Float prohibido en factores
+        run: |
+          python - <<'EOF'
+          import sys
+          from fractions import Fraction
+          sys.path.insert(0, ".")
+
+          from core.engine import normalizar, DominioError
+
+          fallos = []
+
+          # float debe levantar DominioError
+          try:
+              normalizar(0.5, "prueba")
+              fallos.append("normalizar(0.5) no levantó DominioError")
+          except DominioError:
+              pass
+
+          # Fraction fuera de dominio debe levantar
+          try:
+              normalizar(Fraction(3, 2), "prueba")
+              fallos.append("normalizar(3/2) no levantó DominioError")
+          except DominioError:
+              pass
+
+          # Fraction en dominio debe pasar
+          try:
+              v = normalizar(Fraction(1, 2), "prueba")
+              if v != Fraction(1, 2):
+                  fallos.append(f"normalizar(1/2) devolvió {v}")
+          except Exception as e:
+              fallos.append(f"normalizar(1/2) levantó {e}")
+
+          if fallos:
+              print("FALLO: guarda de tipo")
+              for f in fallos:
+                  print("  " + f)
+              sys.exit(1)
+
+          print("OK  float rechazado, Fraction aceptado")
+          EOF
+
+      # ==========================================================
+      # PRUEBAS
+      # ==========================================================
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short --junit-xml=diagnostics/test_results.xml
+        env:
+          BEAL_Z3_HEAVY: "1"
+          COLLATZ_HEAVY: "1"
+
+      # ==========================================================
+      # OMEGA REPORT (solo si existe el script)
+      # ==========================================================
+      - name: Run Omega Report
+        run: |
+          if [ -f diagnostics/omega_report.py ]; then
+            python diagnostics/omega_report.py
+          else
+            echo "diagnostics/omega_report.py no encontrado; se omite."
+          fi
+
+      # ==========================================================
+      # COHERENCE GUARD
+      # El conteo de tests que pasan no baja entre commits.
+      # ==========================================================
+      - name: Coherence Guard
+        run: |
+          python - <<'EOF'
+          import xml.etree.ElementTree as ET
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          xml_path = Path("diagnostics/test_results.xml")
+          if not xml_path.exists():
+              print("No test_results.xml; se omite la guarda.")
+              raise SystemExit(0)
+
+          raiz = ET.parse(xml_path).getroot()
+          suites = [raiz] if raiz.tag == "testsuite" else list(raiz.iter("testsuite"))
+
+          total = failures = errors = skipped = 0
+          for s in suites:
+              total += int(s.get("tests", 0))
+              failures += int(s.get("failures", 0))
+              errors += int(s.get("errors", 0))
+              skipped += int(s.get("skipped", 0))
+
+          failed = failures + errors
+          passed = total - failed - skipped
+          rate = (passed / total * 100) if total else 0.0
+
+          hist_path = Path("diagnostics/coherence_history.json")
+          hist = []
+          if hist_path.exists():
+              try:
+                  hist = json.loads(hist_path.read_text())
+              except json.JSONDecodeError:
+                  hist = []
+
+          entrada = {
+              "utc": datetime.now(timezone.utc).isoformat(),
+              "sha": os.environ.get("GITHUB_SHA", "")[:12],
+              "ref": os.environ.get("GITHUB_REF", ""),
+              "total": total,
+              "passed": passed,
+              "failed": failed,
+              "skipped": skipped,
+              "rate": round(rate, 2),
+          }
+
+          estado = "BASELINE"
+          if hist:
+              ultimo = hist[-1]
+              if passed < ultimo["passed"]:
+                  estado = "REGRESSION"
+              elif passed > ultimo["passed"]:
+                  estado = "IMPROVEMENT"
+              else:
+                  estado = "STABLE"
+              entrada["previo"] = ultimo["passed"]
+
+          entrada["estado"] = estado
+          hist.append(entrada)
+          hist = hist[-100:]  # Mantener solo los últimos 100 registros
+
+          hist_path.parent.mkdir(exist_ok=True)
+          hist_path.write_text(json.dumps(hist, indent=2))
+
+          print(f"total={total} passed={passed} failed={failed} skipped={skipped} rate={rate:.2f}%")
+          print(f"estado={estado}")
+
+          if estado == "REGRESSION":
+              print(f"REGRESIÓN: {entrada['previo']} -> {passed}")
+              raise SystemExit(1)
+          EOF
+
+      # ==========================================================
+      # OMEGA DIARY (solo en push a main y si existe el script)
+      # ==========================================================
+      - name: Omega Diary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -f diagnostics/omega_diary_publisher.py ]; then
+            python diagnostics/omega_diary_publisher.py
+          else
+            echo "diagnostics/omega_diary_publisher.py no encontrado; se omite."
+          fi
+
+      # ==========================================================
+      # SUBIR ARTEFACTOS
+      # ==========================================================
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics
+          if-no-files-found: warn
+          path: |
+            diagnostics/test_results.xml
+            diagnostics/coherence_history.json
+            diagnostics/axioms_report.json
+            diagnostics/OMEGA_REPORT.md
+
+      # ==========================================================
+      # COMMIT DE HISTORIA (solo en push a main y si hay cambios)
+      # ==========================================================
+      - name: Commit coherence history
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for f in diagnostics/coherence_history.json \
+                   diagnostics/axioms_report.json \
+                   diagnostics/OMEGA_REPORT.md; do
+            [ -f "$f" ] && git add "$f"
+          done
+
+          if git diff --cached --quiet; then
+            echo "Sin cambios que registrar."
+            exit 0
+          fi
+
+          git commit -m "ci: historia de coherencia [skip ci]"
+          git pull --rebase -X ours origin main || true
+          git push origin HEAD:main
