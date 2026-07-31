@@ -1,26 +1,27 @@
 """
-VPSI-TRUTH --- tests/test_vpsi.py
+VPSI-TRUTH — tests/test_vpsi.py
 
-Suite única de verificación axiomática y estructural.
-Basada en los principios del framework VPSI-TRUTH (v9.4):
+Suite única de verificación axiomática y estructural del framework VPSI-TRUTH (v9.4).
 
-1. **Ancla**: ALPHA y BETA (derivados del cubo 3x3x3 en ℝ³).
-2. **Fórmulas**: La ecuación canónica Tru_total = (C * L * K * α) + β.
-3. **Axiomas**: Barrido axiomático y coherencia (TA4, TA5, etc.).
-4. **Engine**: Arranque, descubrimiento de módulos y ejecución de contratos.
-5. **Contexto**: Filtro inicial (coherencia del repositorio).
-6. **Construcción**: Verificación de que lo que falta sea visible.
+Alcance de la suite:
 
-Principios clave aplicados:
+1. Ancla: verifica ALPHA y BETA (derivados del cubo 3×3×3 en ℝ³).
+2. Fórmulas: verifica la ecuación canónica Tru_total = (C * L * K * α) + β.
+3. Axiomas: verifica el barrido axiomático y la coherencia del sistema.
+4. Engine: verifica el arranque, el descubrimiento de módulos y la ejecución de contratos.
+5. Contexto: verifica el filtro inicial y la coherencia del repositorio.
+6. Construcción: verifica que toda ausencia o incumplimiento sea visible y reportable.
+
+Principios verificados:
+
 - TA4: R ⊥ Observer (el Engine no modifica R).
 - TA5: Multiplicatividad de la verdad (Tru_Ri = C * L * K).
-- TA7: Sin acceso directo a R (solo a través de X).
-- Teorema 16: Techo estructural α (Tru_total ≤ 26/27).
-- Teorema 17: Imposibilidad de colapso total (Tru_total ≥ β = 1/27).
-- Teorema TR1: Generatividad estructural (el framework genera más verdades que postula).
+- TA7: Sin acceso directo a R (solo mediante X).
+- Teorema 16: Techo estructural α.
+- Teorema 17: Piso estructural β.
+- Teorema TR1: Generatividad estructural del framework.
 - Corolario Def-5.3.1: K es indefinido sin O_context explícito.
 """
-
 from fractions import Fraction
 import pytest
 
