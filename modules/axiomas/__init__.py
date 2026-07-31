@@ -10,17 +10,6 @@ import importlib.util
 import sys
 
 # ===============================================================
-# METADATOS DEL CONTENEDOR
-# ===============================================================
-
-CONTENEDOR = {
-    "nombre": "axiomas",
-    "rol": "AX",
-    "version": "1.0",
-    "requiere": [],
-}
-
-# ===============================================================
 # CARGA DE DECLARACIONES DESDE ARCHIVOS PLANOS Y EL AXIOMA CERO (VPSI.py)
 # ===============================================================
 
@@ -40,7 +29,7 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
 
     # 1. Intentar buscar atributo DECLARACIONES (correlacion.py, self.py)
     declaraciones = getattr(mod, "DECLARACIONES", None)
-    
+
     # 2. Si no existe, intentar buscar la función declaraciones() (VPSI.py)
     if declaraciones is None and callable(getattr(mod, "declaraciones", None)):
         try:
@@ -49,6 +38,7 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
             declaraciones = []
 
     return declaraciones if isinstance(declaraciones, list) else []
+
 
 # ===============================================================
 # NORMALIZACIÓN DE DECLARACIONES (CON TRADUCTOR)
@@ -67,8 +57,9 @@ TRADUCCION_CLAVES = {
     "statement": "enunciado",
     "depends_on": "depende_de",
     "governs": "gobierna",
-    "cota": "cota"
+    "cota": "cota",
 }
+
 
 def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
     """Valida los campos obligatorios soportando inglés y español."""
@@ -88,11 +79,16 @@ def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
 
     # 3. Validar el tipo y la polaridad
     tipo = str(decl["tipo"]).lower()
-    if tipo == "axiom": tipo = "axioma"
-    if tipo == "theorem": tipo = "teorema"
-    if tipo == "corollary": tipo = "corolario"
-    if tipo == "lemma": tipo = "lema"
-    if tipo == "definition": tipo = "definicion"
+    if tipo == "axiom":
+        tipo = "axioma"
+    if tipo == "theorem":
+        tipo = "teorema"
+    if tipo == "corollary":
+        tipo = "corolario"
+    if tipo == "lemma":
+        tipo = "lema"
+    if tipo == "definition":
+        tipo = "definicion"
 
     if tipo not in TIPOS:
         raise ValueError(f"{cuerpo}:{decl['id']} tipo '{tipo}' no válido. Admitidos: {TIPOS}")
@@ -115,6 +111,7 @@ def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
         "enunciado": str(decl.get("enunciado", "")),
     }
 
+
 # ===============================================================
 # DETECCIÓN DE CONTRADICCIONES
 # ===============================================================
@@ -126,8 +123,10 @@ def clave(d: Dict) -> Tuple[str, str, str]:
         d["objeto"].lower().strip(),
     )
 
+
 def ref(d: Dict) -> str:
     return f"{d['cuerpo']}:{d['id']}"
+
 
 def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
     grupos = {}
@@ -143,52 +142,67 @@ def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
                 choques.append({
                     "tipo": "contradiccion_directa",
                     "tripleta": " - ".join(k),
-                    "declaracion_1": {"id": a["id"], "ubicacion": ref(a), "enunciado": a["enunciado"]},
-                    "declaracion_2": {"id": n["id"], "ubicacion": ref(n), "enunciado": n["enunciado"]},
-                    "mensaje": f"Contradicción en '{' - '.join(k)}': {ref(a)} AFIRMA vs {ref(n)} NIEGA"
+                    "declaracion_1": {
+                        "id": a["id"],
+                        "ubicacion": ref(a),
+                        "enunciado": a["enunciado"],
+                    },
+                    "declaracion_2": {
+                        "id": n["id"],
+                        "ubicacion": ref(n),
+                        "enunciado": n["enunciado"],
+                    },
+                    "mensaje": (
+                        f"Contradicción en '{' - '.join(k)}': "
+                        f"{ref(a)} AFIRMA vs {ref(n)} NIEGA"
+                    ),
                 })
     return choques
+
 
 def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
     grupos = {}
     for d in decls:
-        if d["cota"] is None: continue
-        grupos.setdefault((d["sujeto"].lower().strip(), d["relacion"].lower().strip()), []).append(d)
+        if d["cota"] is None:
+            continue
+        grupos.setdefault(
+            (d["sujeto"].lower().strip(), d["relacion"].lower().strip()), []
+        ).append(d)
 
     choques = []
     for (suj, rel), grupo in grupos.items():
         porcota = {}
-        for d in grupo: porcota.setdefault(d["cota"], []).append(ref(d))
+        for d in grupo:
+            porcota.setdefault(d["cota"], []).append(ref(d))
         if len(porcota) > 1:
             cota_keys = list(porcota.keys())
             choques.append({
                 "tipo": "contradiccion_de_cota",
                 "sujeto": suj,
                 "relacion": rel,
-                "mensaje": f"Contradicción de cota en '{suj} {rel}'. Cotas: {cota_keys}"
+                "mensaje": f"Contradicción de cota en '{suj} {rel}'. Cotas: {cota_keys}",
             })
     return choques
 
+
 # ===============================================================
-# BARRIDO AXIOMÁTICO
+# BARRIDO AXIOMÁTICO (capacidad "verificar")
 # ===============================================================
 
 def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
+    """
+    Capacidad principal de verificación axiomática.
+    El Engine llama a esta función a través del contrato.
+    """
     decls = []
     errores = []
     directorio = Path(__file__).parent
 
-    # Buscar tanto en la carpeta actual como en la raíz (para encontrar VPSI.py si está fuera)
+    # Buscar tanto en la carpeta actual como en la raíz (para encontrar VPSI.py)
     archivos_a_procesar = list(directorio.glob("*.py"))
     vpsi_raiz = directorio.parent.parent / "VPSI.py"
     if not vpsi_raiz.exists():
         vpsi_raiz = directorio.parent / "VPSI.py"
-    
-    # Si VPSI.py existe en la raíz, lo agregamos a la lista de escaneo
-    if vpsi_raiz.exists():
-        from types import SimpleNamespace
-        # Procesaremos VPSI.py de forma personalizada abajo o incluyéndolo
-        pass
 
     for archivo in sorted(archivos_a_procesar):
         if archivo.name == "__init__.py":
@@ -200,21 +214,30 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
                 decl_normalizada = normalizar(decl, archivo.stem)
                 decls.append(decl_normalizada)
         except Exception as e:
-            errores.append({"archivo": archivo.name, "error": f"{type(e).__name__}: {e}"})
+            errores.append({
+                "archivo": archivo.name,
+                "error": f"{type(e).__name__}: {e}",
+            })
 
-    # Cargar explícitamente VPSI desde la raíz si se encuentra ahí
+    # Cargar explícitamente VPSI desde la raíz si se encuentra
     if vpsi_raiz.exists():
         try:
             declaraciones_vpsi = _cargar_declaraciones_desde_archivo(vpsi_raiz)
             for decl in declaraciones_vpsi:
                 decls.append(normalizar(decl, "VPSI"))
         except Exception as e:
-            errores.append({"archivo": "VPSI.py", "error": f"{type(e).__name__}: {e}"})
+            errores.append({
+                "archivo": "VPSI.py",
+                "error": f"{type(e).__name__}: {e}",
+            })
 
     if declaraciones_externas:
         for nombre, lista in declaraciones_externas.items():
             if not isinstance(lista, list):
-                errores.append({"modulo": nombre, "error": "declaraciones externas no es lista"})
+                errores.append({
+                    "modulo": nombre,
+                    "error": "declaraciones externas no es lista",
+                })
                 continue
             for d in lista:
                 try:
@@ -231,19 +254,26 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
         "declaraciones": len(decls),
     }
 
+
 # ===============================================================
-# FUNCIÓN axiomas() PARA EL ENGINE
+# FUNCIÓN axiomas() (capacidad "axiomas")
 # ===============================================================
 
 def axiomas() -> List[Dict]:
-    """Devuelve vacío para evitar duplicidad. El Engine lee los .py."""
+    """
+    Capacidad que el Engine puede solicitar para obtener las declaraciones
+    de este módulo. Devuelve lista vacía porque las declaraciones se leen
+    directamente de los archivos .py del directorio.
+    """
     return []
 
+
 # ===============================================================
-# INVENTARIO
+# INVENTARIO (capacidad "inventario")
 # ===============================================================
 
-def inventario() -> Dict:
+def inventario(peticion=None) -> Dict:
+    """Capacidad de inventario del módulo."""
     decls, errores = [], []
     directorio = Path(__file__).parent
 
@@ -259,14 +289,34 @@ def inventario() -> Dict:
             errores.append({"archivo": archivo.name, "error": str(e)})
 
     return {
-        "contenedor": CONTENEDOR["nombre"],
-        "version": CONTENEDOR["version"],
+        "contenedor": "axiomas",
+        "version": "1.0",
         "tipos": list(TIPOS),
         "declaraciones": len(decls),
         "por_tipo": {t: sum(1 for d in decls if d["tipo"] == t) for t in TIPOS},
         "errores": errores,
         "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
     }
+
+
+# ===============================================================
+# CONTENEDOR (contrato único y definitivo)
+# ===============================================================
+
+CONTENEDOR = {
+    "nombre": "axiomas",
+    "rol": "AX",
+    "version": "1.0",
+    "requiere": [],
+    "descripcion": "Contenedor de axiomas. Rol AX. Detecta contradicciones directas y de cota.",
+    "capacidades": {
+        "verificar": "barrer",      # capacidad que usa el Engine para arranque
+        "axiomas": "axiomas",       # capacidad que el Engine puede consultar
+        "evaluar": "barrer",        # capacidad canónica de evaluación
+        "inventario": "inventario", # capacidad de introspección
+    },
+}
+
 
 # ===============================================================
 # EXPORTACIÓN
@@ -281,18 +331,3 @@ __all__ = [
     "contradiccion_directa",
     "contradiccion_de_cota",
 ]
-
-CONTENEDOR = {
-    "nombre": "axiomas",
-    "rol": "AX",
-    "version": "1.0",
-    "requiere": [],
-    "descripcion": "Contenedor de axiomas. Rol AX.",
-    "capacidades": {
-        "verificar": "barrer",
-        "axiomas": "axiomas",
-        "evaluar": "barrer",  # Operación principal de evaluación
-        "inventario": "inventario",
-    }
-}
-
