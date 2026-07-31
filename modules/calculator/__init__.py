@@ -4,14 +4,14 @@ VPSI-TRUTH --- modules/calculator/__init__.py
 Contenedor de cálculo. Rol CA.
 
 Este módulo es responsable de calcular las variables C, L, K de manera independiente y auditable.
-- Expone la función calcular() para que el Engine pueda delegar el cálculo de C, L, K.
+- Expone la función calcular(peticion) para que el Engine pueda delegar el cálculo de C, L, K.
 - No calcula Tru_Ri ni Tru_total (eso es responsabilidad de formulas).
 - Usa Fraction para precisión matemática.
 - Devuelve UNDEFINED si falta información (ej: O_context para K).
 
 Dependencias:
-- CT (constantes ALPHA, BETA).
-- MC (correlacion_mecanica para validar orden causal).
+- CT (constantes ALPHA, BETA): Usadas internamente para cálculos de Tru_total.
+- MC (correlacion_mecanica): Usada para validar el orden causal antes de calcular.
 """
 
 from __future__ import annotations
@@ -25,11 +25,11 @@ CONTENEDOR = {
     "nombre": "calculator",
     "rol": "CA",  # Rol: Cálculo de variables de verdad (C, L, K)
     "version": "1.0",
-    "requiere": ["CT", "MC"],  # Depende de constantes y correlación mecánica
+    "requiere": [],  # No requiere claves en la petición, solo depende de módulos CT y MC internamente
     "descripcion": (
         "Calcula las variables fundamentales de verdad (C, L, K) usando métodos "
         "teóricos (IlverVillasmil.pdf) u operacionales (PROTOCOLO.pdf). "
-        "Expone la función calcular() para el Engine."
+        "Expone la función calcular(peticion) para el Engine."
     ),
 }
 
@@ -74,11 +74,9 @@ class MetodoError(Exception):
     pass
 
 # ===============================================================
-# FUNCIÓN PRINCIPAL: calcular()
+# FUNCIÓN PRINCIPAL: calcular(peticion)
 # ===============================================================
-def calcular(
-    peticion: Dict[str, Any]
-) -> Dict[str, Union[Fraction, type(UNDEFINED), str, None]]:
+def calcular(peticion: Dict[str, Any]) -> Dict[str, Union[Fraction, type(UNDEFINED), str, None]]:
     """
     Función principal para calcular C, L, K.
     Esta función es llamada por el Engine para delegar el cálculo de las variables.
@@ -100,11 +98,6 @@ def calcular(
             - "C": Valor de C (Fraction o UNDEFINED).
             - "L": Valor de L (Fraction o UNDEFINED).
             - "K": Valor de K (Fraction o UNDEFINED).
-            - "tru_ri": Valor de Tru_Ri (Fraction o UNDEFINED).
-            - "tru_total": Valor de Tru_total (Fraction o UNDEFINED).
-            - "estado": Estado del cálculo ("sin_evidencia", "evaluada", etc.).
-            - "limitante": Factor limitante ("C", "L", "K" o None).
-            - "detenido_en": Factor donde se detuvo el cálculo ("C", "L", "K" o None).
     """
     # Extraer datos de la petición
     mensaje = peticion.get("mensaje")
@@ -119,87 +112,41 @@ def calcular(
 
     # Inicializar variables
     C = L = K = UNDEFINED
-    tru_ri = tru_total = UNDEFINED
-    estado = "sin_evidencia"
-    limitante = None
-    detenido_en = None
 
-    # Calcular C
+    # --- Calcular C ---
     if metodo == "teorico":
-        if mensaje is not None:
-            C = _calcular_c_teorico(mensaje)
-        else:
-            C = UNDEFINED
-            detenido_en = "C"
+        C = _calcular_c_teorico(mensaje) if mensaje is not None else UNDEFINED
     else:  # operacional
         if compromisos is not None and contradicciones is not None:
             C = _calcular_c_operacional(compromisos, contradicciones)
         else:
             C = UNDEFINED
-            detenido_en = "C"
 
-    # Calcular L
+    # --- Calcular L ---
     if metodo == "teorico":
-        if mensaje is not None:
-            L = _calcular_l_teorico(mensaje)
-        else:
-            L = UNDEFINED
-            detenido_en = "L"
+        L = _calcular_l_teorico(mensaje) if mensaje is not None else UNDEFINED
     else:  # operacional
         if posturas is not None and reversiones is not None:
             L = _calcular_l_operacional(posturas, reversiones)
         else:
             L = UNDEFINED
-            detenido_en = "L"
 
-    # Calcular K
+    # --- Calcular K ---
     if contexto is None:
-        K = UNDEFINED
-        detenido_en = "K"
+        K = UNDEFINED  # K es UNDEFINED sin O_context (Corolario Def-5.3.1)
     else:
         if metodo == "teorico":
-            if mensaje is not None:
-                K = _calcular_k_teorico(mensaje, contexto)
-            else:
-                K = UNDEFINED
-                detenido_en = "K"
+            K = _calcular_k_teorico(mensaje, contexto) if mensaje is not None else UNDEFINED
         else:  # operacional
             if afirmaciones is not None and afirmaciones_falsas is not None:
                 K = _calcular_k_operacional(afirmaciones, afirmaciones_falsas, contexto)
             else:
                 K = UNDEFINED
-                detenido_en = "K"
-
-    # Determinar el factor limitante
-    if not es_undefined(C) and not es_undefined(L) and not es_undefined(K):
-        limitante = min(C, L, K, key=lambda x: x if not es_undefined(x) else Fraction(1, 1))
-        if es_undefined(limitante):
-            limitante = None
-        else:
-            limitante = "C" if limitante == C else "L" if limitante == L else "K"
-    else:
-        limitante = None
-
-    # Calcular Tru_Ri y Tru_total si C, L, K están definidos
-    if not es_undefined(C) and not es_undefined(L) and not es_undefined(K):
-        tru_ri = C * L * K
-        from modules.constante import ALPHA, BETA
-        tru_total = (tru_ri * ALPHA) + BETA
-        estado = "evaluada"
-    else:
-        tru_ri = UNDEFINED
-        tru_total = UNDEFINED
-        estado = "sin_evidencia"
 
     return {
         "C": C,
         "L": L,
         "K": K,
-        "tru_ri": tru_ri,
-        "tru_total": tru_total,
-        "estado": estado,
-        "limitante": limitante,
-        "detenido_en": detenido_en,
     }
 
 # ===============================================================
@@ -210,7 +157,10 @@ def _calcular_c_teorico(descripcion: str) -> Union[Fraction, type(UNDEFINED)]:
     from .coherencia import _calcular_c_teorico as _c_teorico
     return _c_teorico(descripcion)
 
-def _calcular_c_operacional(compromisos: Optional[List[str]], contradicciones: Optional[int]) -> Union[Fraction, type(UNDEFINED)]:
+def _calcular_c_operacional(
+    compromisos: Optional[List[str]],
+    contradicciones: Optional[int]
+) -> Union[Fraction, type(UNDEFINED)]:
     """Delegación a coherencia.py para método operacional."""
     from .coherencia import _calcular_c_operacional as _c_operacional
     return _c_operacional(compromisos, contradicciones)
@@ -220,17 +170,27 @@ def _calcular_l_teorico(descripcion: str) -> Union[Fraction, type(UNDEFINED)]:
     from .logica import _calcular_l_teorico as _l_teorico
     return _l_teorico(descripcion)
 
-def _calcular_l_operacional(posturas: Optional[List[str]], reversiones: Optional[int]) -> Union[Fraction, type(UNDEFINED)]:
+def _calcular_l_operacional(
+    posturas: Optional[List[str]],
+    reversiones: Optional[int]
+) -> Union[Fraction, type(UNDEFINED)]:
     """Delegación a logica.py para método operacional."""
     from .logica import _calcular_l_operacional as _l_operacional
     return _l_operacional(posturas, reversiones)
 
-def _calcular_k_teorico(descripcion: str, o_context: str) -> Union[Fraction, type(UNDEFINED)]:
+def _calcular_k_teorico(
+    descripcion: str,
+    o_context: str
+) -> Union[Fraction, type(UNDEFINED)]:
     """Delegación a correlacion_k.py para método teórico."""
     from .correlacion_k import _calcular_k_teorico as _k_teorico
     return _k_teorico(descripcion, o_context)
 
-def _calcular_k_operacional(afirmaciones: Optional[List[str]], afirmaciones_falsas: Optional[int], o_context: str) -> Union[Fraction, type(UNDEFINED)]:
+def _calcular_k_operacional(
+    afirmaciones: Optional[List[str]],
+    afirmaciones_falsas: Optional[int],
+    o_context: str
+) -> Union[Fraction, type(UNDEFINED)]:
     """Delegación a correlacion_k.py para método operacional."""
     from .correlacion_k import _calcular_k_operacional as _k_operacional
     return _k_operacional(afirmaciones, afirmaciones_falsas, o_context)
