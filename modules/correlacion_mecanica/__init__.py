@@ -249,3 +249,17 @@ __all__ = [
     "APROBADO",
     "RECHAZADO",
 ]
+
+CONTENEDOR = {
+    "nombre": "correlacion_mecanica",
+    "rol": "MC",
+    "version": "1.0",
+    "requiere": [],
+    "descripcion": "Contenedor de mecánica. Rol MC. Filtro de coherencia mecánica.",
+    "capacidades": {
+        "verificar": "barrer",
+        "axiomas": "axiomas",
+        "evaluar": "barrer",
+        "inventario": "inventario",
+    }
+}
