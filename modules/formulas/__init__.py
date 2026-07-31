@@ -226,3 +226,16 @@ def _tru_ri_wrapper(C, L, K):
 def _tru_total_wrapper(C, L, K):
     """Wrapper para tru_total (compatibilidad con el decorador)."""
     return tru_total(C, L, K)
+
+CONTENEDOR = {
+    "nombre": "formulas",
+    "rol": "FO",
+    "version": "1.0",
+    "requiere": ["CT"],  # Depende de constante (ALPHA, BETA)
+    "descripcion": "Contenedor de fórmulas. Rol FO. Expone tru_ri y tru_total al Engine.",
+    "capacidades": {
+        "evaluar": "barrer",  # Operación principal de evaluación
+        "axiomas": "axiomas",  # Función que devuelve declaraciones axiomáticas
+        "inventario": "inventario",  # Función que devuelve metadatos
+    }
+}
