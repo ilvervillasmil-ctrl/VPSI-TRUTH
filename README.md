@@ -94,59 +94,58 @@ El sistema **está diseñado para fallar**:
 
 ---
 
-## 3. Estructura del Repositorio
-
 ```
 VPSI-TRUTH/
 ├── core/
-│   ├── engine.py            # Autoridad de despacho          [MONTADO]
-│   ├── diagnostico.py       # Tabla de códigos               [HUÉRFANO]
-│   └── centinela.py         # Filtro de orquestación         [PENDIENTE]
+│   ├── engine.py                  # Autoridad de despacho          [MONTADO]
+│   ├── diagnostico.py             # Tabla de códigos               [HUÉRFANO]
+│   └── centinela.py               # Filtro de orquestación         [PENDIENTE]
 │
 ├── modules/
-│   ├── axiomas/             # AX: Juez de contraste          [MONTADO]
-│   │   ├── __init__.py      # Cargador + barrido
-│   │   ├── VPSI.py          # 89 declaraciones
-│   │   ├── correlacion.py   # 36 declaraciones (causalidad)
-│   │   └── self.py          # 22 declaraciones (Yo Funcional)
+│   ├── axiomas/                   # AX: Juez de contraste          [MONTADO]
+│   │   ├── __init__.py            #   Cargador + barrido
+│   │   ├── VPSI.py                #   89 declaraciones
+│   │   ├── correlacion.py         #   36 declaraciones (causalidad)
+│   │   └── self.py                #   22 declaraciones (Yo Funcional)
 │   │
-│   ├── constante/           # CT: α y β                      [MONTADO]
+│   ├── constante/                 # CT: α y β                      [MONTADO]
 │   │   └── __init__.py
 │   │
-│   ├── formulas/            # FO: tru_ri, tru_total          [MONTADO]
+│   ├── formulas/                  # FO: tru_ri, tru_total          [MONTADO]
 │   │   └── truth.py
 │   │
-│   ├── verificacion/        # VX: Auto-auditoría             [ROL NO ADMITIDO]
+│   ├── verificacion/              # VX: Auto-auditoría   [ROL NO ADMITIDO]
 │   │   └── __init__.py
 │   │
-│   ├── realidad/            # RE: Canal de evidencia         [ROL NO ADMITIDO]
+│   ├── realidad/                  # RE: Canal de evidencia [ROL NO ADMITIDO]
 │   │   ├── __init__.py
 │   │   └── acceso.py
 │   │
-│   ├── correlacion_mecanica/# MC: Secuencia y acoplamiento   [ROL NO ADMITIDO]
+│   ├── correlacion_mecanica/      # MC: Secuencia         [ROL NO ADMITIDO]
 │   │   └── __init__.py
 │   │
-│   ├── calculador/          # CA: Produce C, L, K            [PENDIENTE]
+│   ├── calculador/                # CA: Produce C, L, K            [PENDIENTE]
 │   │   └── __init__.py
 │   │
-│   ├── contexto/            # CX: Lógica del contexto        [PENDIENTE]
+│   ├── contexto/                  # CX: Lógica del contexto        [PENDIENTE]
 │   │   └── __init__.py
 │   │
-│   ├── taxonomia/           # TX: Tácticas T1–T15           [PENDIENTE]
+│   ├── taxonomia/                 # TX: Tácticas T1–T15            [PENDIENTE]
 │   │   └── __init__.py
 │   │
-│   └── cache/               # Registro forense             [PENDIENTE]
+│   └── cache/                     # Registro forense               [PENDIENTE]
 │       └── __init__.py
 │
 ├── diagnostics/
-│   └── omega_report.py      # Informe de compuertas          [MONTADO]
+│   └── omega_report.py            # Informe de compuertas          [MONTADO]
 │
 ├── tests/
-│   └── test_vpsi.py         # Suite única                    [MONTADO]
+│   └── test_vpsi.py               # Suite única                    [MONTADO]
 │
 └── .github/workflows/
-    └── ci.yml               # Pipeline de CI/CD              [MONTADO]
+    └── ci.yml                     # Pipeline de CI/CD              [MONTADO]
 ```
+
 
 ---
 
