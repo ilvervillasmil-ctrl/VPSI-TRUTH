@@ -1,13 +1,14 @@
 """
 VPSI-TRUTH --- core/engine.py
 
-Autoridad de ejecución: core.
-El Engine conoce CONTENEDORES por su rol. No conoce sub módulos.
-Agregar un sub módulo dentro de un contenedor no toca este archivo.
-Agregar un contenedor nuevo tampoco: se descubre solo.
+El Engine es el orquestador del sistema:
+- Descubre y carga todos los módulos disponibles.
+- Delega tareas a los módulos según su rol.
+- Verifica coherencia entre módulos usando axiomas y correlacion_mecanica.
+- Reporta el estado del sistema (Omega Report) sin modificar ni asumir valores.
 
-Correlación Mecánica (MC) vigila el orden de ejecución.
-Centinela verifica que el Engine ejecute correctamente cada paso.
+El Engine NO calcula, NO decide, NO asume valores.
+Solo lee, delega, verifica y reporta.
 """
 
 from __future__ import annotations
@@ -20,30 +21,22 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # ===============================================================
-# SEGMENTO 1 --- ROLES
+# SEGMENTO 1 --- ROLES DE MÓDULOS
 # ===============================================================
-ROL_AXIOMAS = "AX"
-ROL_CONSTANTE = "CT"
-ROL_FORMULAS = "FO"
-ROL_CALCULATOR = "CA"
-ROL_CONTEXTO = "CX"
-ROL_TAXONOMIA = "TX"
-ROL_REALIDAD = "RE"
-ROL_VERIFICACION = "VX"
+ROL_AXIOMAS = "AX"          # Valida coherencia axiomática
+ROL_CONSTANTE = "CT"        # Proporciona constantes (ALPHA, BETA)
+ROL_FORMULAS = "FO"         # Aplica fórmulas canónicas (Tru_total)
+ROL_CALCULATOR = "CA"       # Calcula factores C, L, K
+ROL_CONTEXTO = "CX"         # Resuelve contexto (O_ctx)
+ROL_TAXONOMIA = "TX"        # Clasifica comportamiento
+ROL_REALIDAD = "RE"         # Gestiona realidad absoluta
+ROL_VERIFICACION = "VX"     # Verifica axiomas
+ROL_CORRELACION_MECANICA = "MC"  # Valida orden de ejecución de módulos
 
-ROLES = (
-    ROL_AXIOMAS,
-    ROL_CONSTANTE,
-    ROL_FORMULAS,
-    ROL_CALCULATOR,
-    ROL_CONTEXTO,
-    ROL_TAXONOMIA,
-    ROL_REALIDAD,
-    ROL_VERIFICACION,
-)
+# Módulos obligatorios para el arranque
+OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS, ROL_CORRELACION_MECANICA)
 
-OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS)
-
+# Factores que el Engine espera de los módulos
 FACTORES = ("C", "L", "K")
 ORDEN_FACTORES = ("C", "L", "K")
 
@@ -51,6 +44,7 @@ ORDEN_FACTORES = ("C", "L", "K")
 # SEGMENTO 2 --- ESTADO INDEFINIDO
 # ===============================================================
 class _Undefined:
+    """Estado para valores no definidos (sin evidencia)."""
     __slots__ = ()
 
     def __repr__(self):
@@ -68,33 +62,44 @@ class _Undefined:
 UNDEFINED = _Undefined()
 
 def es_undefined(v):
+    """Verifica si un valor es UNDEFINED."""
     return v is UNDEFINED or isinstance(v, _Undefined)
 
 # ===============================================================
 # SEGMENTO 3 --- ERRORES
 # ===============================================================
 class AutoridadError(Exception):
+    """Error de autoridad: solo el core puede ejecutar el Engine."""
     pass
 
 class ContratoError(Exception):
+    """Error de contrato: un módulo no cumple con su interfaz."""
     pass
 
 class ArranqueError(Exception):
+    """Error de arranque: falta un módulo obligatorio."""
     pass
 
 class DominioError(Exception):
+    """Error de dominio: un valor está fuera del rango permitido."""
     pass
 
 class CotaError(Exception):
+    """Error de cota: un resultado viola las cotas del marco."""
     pass
 
 class FormulaError(Exception):
+    """Error de fórmula: la fórmula canónica fue violada."""
     pass
 
 # ===============================================================
 # SEGMENTO 4 --- NORMALIZACIÓN
 # ===============================================================
 def normalizar(valor, etiqueta: str) -> Fraction:
+    """
+    Normaliza un valor a Fraction en el dominio [0, 1].
+    Si el valor es UNDEFINED, lo devuelve sin cambios.
+    """
     if es_undefined(valor):
         return UNDEFINED
 
@@ -115,12 +120,13 @@ def normalizar(valor, etiqueta: str) -> Fraction:
     return f
 
 # ===============================================================
-# SEGMENTO 5 --- REGISTRO DE CONTENEDORES
+# SEGMENTO 5 --- REGISTRO DE MÓDULOS
 # ===============================================================
 CLAVES_CONTENEDOR = ("nombre", "rol", "version", "requiere")
 
 @dataclass
 class Contenedor:
+    """Representa un módulo en el sistema."""
     nombre: str
     rol: str
     version: str
@@ -129,11 +135,13 @@ class Contenedor:
     modulo: Any = None
 
     def fn(self, nombre: str) -> Any:
+        """Devuelve una función del módulo."""
         if self.modulo is None:
             return None
         return getattr(self.modulo, nombre, None)
 
     def como_dict(self) -> Dict:
+        """Devuelve la metadata del módulo."""
         return {
             "nombre": self.nombre,
             "rol": self.rol,
@@ -143,12 +151,14 @@ class Contenedor:
         }
 
 class Registro:
+    """Registro de todos los módulos disponibles en el sistema."""
     def __init__(self, raiz: str):
         self.raiz = Path(raiz)
         self.contenedores: Dict[str, Contenedor] = {}
         self.rechazados: List[Dict] = []
 
     def descubrir(self) -> Dict[str, Contenedor]:
+        """Descubre todos los módulos en el directorio especificado."""
         self.contenedores = {}
         self.rechazados = []
 
@@ -183,13 +193,16 @@ class Registro:
 
         faltan = [r for r in OBLIGATORIOS if r not in ocupados]
         if faltan:
-            raise ArranqueError(f"Contenedores obligatorios ausentes: {faltan}")
+            raise ArranqueError(f"Módulos obligatorios ausentes: {faltan}")
 
         return self.contenedores
 
     def _cargar(self, directorio: Path, init: Path) -> Contenedor:
+        """Carga un módulo desde su directorio."""
         clave = f"vpsi_{directorio.name}"
-        spec = importlib.util.spec_from_file_location(clave, init, submodule_search_locations=[str(directorio)])
+        spec = importlib.util.spec_from_file_location(
+            clave, init, submodule_search_locations=[str(directorio)]
+        )
         if spec is None or spec.loader is None:
             raise ContratoError("No se pudo crear spec para el módulo.")
 
@@ -215,12 +228,14 @@ class Registro:
         )
 
     def por_rol(self, rol: str) -> Optional[Contenedor]:
+        """Busca un módulo por su rol."""
         for c in self.contenedores.values():
             if c.rol == rol:
                 return c
         return None
 
     def resumen(self) -> Dict:
+        """Devuelve un resumen de los módulos cargados."""
         return {
             "cargados": [c.como_dict() for c in self.contenedores.values()],
             "rechazados": self.rechazados,
@@ -229,16 +244,22 @@ class Registro:
         }
 
 # ===============================================================
-# SEGMENTO 6 --- INVOCACIÓN AISLADA
+# SEGMENTO 6 --- INVOCADOR
 # ===============================================================
 class Invocador:
+    """Invoca funciones de los módulos y registra fallos."""
     def __init__(self):
         self.fallos: List[Dict] = []
 
     def reiniciar(self):
+        """Reinicia el registro de fallos."""
         self.fallos = []
 
     def llamar(self, contenedor: Contenedor, nombre_fn: str, peticion: Dict) -> Any:
+        """
+        Invoca una función de un módulo.
+        Si el módulo no responde correctamente, registra el fallo y devuelve UNDEFINED.
+        """
         fn = contenedor.fn(nombre_fn)
         if not callable(fn):
             self.fallos.append({
@@ -248,6 +269,7 @@ class Invocador:
             })
             return UNDEFINED
 
+        # Verificar que la petición tenga las claves requeridas por el módulo
         faltan = [r for r in contenedor.requiere if r not in peticion]
         if faltan:
             self.fallos.append({
@@ -257,6 +279,7 @@ class Invocador:
             })
             return UNDEFINED
 
+        # Verificar que los factores (C, L, K) sean Fraction o UNDEFINED
         for clave, valor in peticion.items():
             if clave in FACTORES and not (isinstance(valor, Fraction) or es_undefined(valor)):
                 self.fallos.append({
@@ -278,17 +301,24 @@ class Invocador:
             return UNDEFINED
 
 # ===============================================================
-# SEGMENTO 7 --- COMPOSICIÓN
+# SEGMENTO 7 --- COMPOSITOR
 # ===============================================================
 class Compositor:
+    """
+    Aplica la fórmula canónica Tru_total = (C * L * K * α) + β.
+    """
     def __init__(self, formulas: Contenedor, alpha: Fraction, beta: Fraction):
         self.formulas = formulas
         self.alpha = alpha
         self.beta = beta
 
     def componer(self, C: Fraction, L: Fraction, K: Fraction) -> Dict:
+        """
+        Calcula Tru_ri y Tru_total usando la fórmula canónica.
+        Si algún factor es UNDEFINED, devuelve UNDEFINED.
+        """
         if any(es_undefined(x) for x in (C, L, K)):
-            return {"tru_ri": Fraction(0), "tru_total": self.beta, "estado": "sin_evidencia"}
+            return {"tru_ri": UNDEFINED, "tru_total": UNDEFINED, "estado": "sin_evidencia"}
 
         f_ri = self.formulas.fn("tru_ri")
         f_tt = self.formulas.fn("tru_total")
@@ -297,16 +327,22 @@ class Compositor:
 
         tru_ri = f_ri(C, L, K)
         if tru_ri > self.alpha:
-            tru_ri = self.alpha
+            tru_ri = self.alpha  # Techo estructural (Teorema 16)
 
         tru_total = f_tt(C, L, K)
         esperado = (C * L * K * self.alpha) + self.beta
-        if tru_total != esperado:
-            raise FormulaError(f"Violación de fórmula canónica: esperado {esperado}, recibido {tru_total}")
 
+        # Verificar fórmula canónica (Teorema U0)
+        if tru_total != esperado:
+            raise FormulaError(
+                f"Violación de fórmula canónica: esperado {esperado}, recibido {tru_total}"
+            )
+
+        # Verificar cotas (Teorema 17: β ≤ Tru_total ≤ 1)
         if not (self.beta <= tru_total <= self.alpha + self.beta):
             raise CotaError(f"Tru_total fuera de cota [β, α + β]: {tru_total}")
 
+        # Determinar estado
         if tru_total == self.beta:
             estado = "refutada_en_dominio"
         elif tru_total == Fraction(1):
@@ -318,6 +354,7 @@ class Compositor:
 
     @staticmethod
     def limitante(C: Fraction, L: Fraction, K: Fraction) -> Optional[str]:
+        """Detecta el factor limitante (el más bajo)."""
         for n, v in (("C", C), ("L", L), ("K", K)):
             if es_undefined(v):
                 return n
@@ -329,17 +366,25 @@ class Compositor:
 # SEGMENTO 8 --- ENGINE
 # ===============================================================
 class Engine:
-    _AUTORIZADO = "core"
-    C_DEAD = Fraction(438626, 1000000)  # 0.438626 (Teorema de Residuo Geométrico)
+    _AUTORIZADO = "core"  # Solo el core puede ejecutar el Engine
 
     def __init__(self, raiz_modulos: str, invocador_id: str = _AUTORIZADO, verificar_axiomas: bool = True):
+        """
+        Inicializa el Engine:
+        - Descubre y carga todos los módulos.
+        - Verifica que los módulos obligatorios (AX, CT, FO, MC) estén presentes.
+        - Carga constantes (ALPHA, BETA) desde CT.
+        - Verifica coherencia axiomática (AX) si se solicita.
+        """
         if invocador_id != self._AUTORIZADO:
             raise AutoridadError(f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. Invocador='{invocador_id}'")
 
+        # Descubrir módulos
         self.registro = Registro(raiz_modulos)
         self.registro.descubrir()
         self.invocador = Invocador()
 
+        # Cargar constantes (ALPHA, BETA) desde CT
         ct = self.registro.por_rol(ROL_CONSTANTE)
         if ct is None:
             raise ArranqueError(f"Contenedor {ROL_CONSTANTE} no encontrado.")
@@ -352,14 +397,37 @@ class Engine:
         if self.ALPHA + self.BETA != Fraction(1):
             raise ArranqueError(f"Invariante roto: ALPHA + BETA = {self.ALPHA + self.BETA}, se exige 1.")
 
-        self.compositor = Compositor(self.registro.por_rol(ROL_FORMULAS), self.ALPHA, self.BETA)
+        # Cargar compositor (fórmulas canónicas)
+        fo = self.registro.por_rol(ROL_FORMULAS)
+        if fo is None:
+            raise ArranqueError(f"Contenedor {ROL_FORMULAS} no encontrado.")
+        self.compositor = Compositor(fo, self.ALPHA, self.BETA)
 
+        # Verificar coherencia axiomática (AX)
         self.informe_axiomas = None
         if verificar_axiomas:
             self.informe_axiomas = self._barrido_axiomatico()
 
-    # ---------------- BARRIDO AXIOMÁTICO ----------------
+        # Verificar correlación mecánica (MC)
+        self._verificar_correlacion_mecanica()
+
+    # ---------------- VERIFICACIÓN DE CORRELACIÓN MECÁNICA ----------------
+    def _verificar_correlacion_mecanica(self) -> None:
+        """Verifica que los módulos no tengan contradicciones en su orden de ejecución."""
+        mc = self.registro.por_rol(ROL_CORRELACION_MECANICA)
+        if mc is None:
+            raise ArranqueError(f"Contenedor {ROL_CORRELACION_MECANICA} no encontrado.")
+
+        informe_mc = mc.fn("barrer")()
+        if not informe_mc.get("coherente", False):
+            choques_str = "\n".join(informe_mc.get("choques", []))
+            raise ArranqueError(f"CONTRADICCIÓN MECÁNICA. Los módulos no pueden ejecutarse en orden.\n{choques_str}")
+
+    # ---------------- VERIFICACIÓN AXIOMÁTICA ----------------
     def _barrido_axiomatico(self) -> Dict:
+        """
+        Verifica coherencia axiomática entre módulos usando AX.
+        """
         ax = self.registro.por_rol(ROL_AXIOMAS)
         if ax is None:
             raise ArranqueError(f"Contenedor {ROL_AXIOMAS} no encontrado.")
@@ -388,41 +456,61 @@ class Engine:
 
     # ---------------- EVALUACIÓN ----------------
     def evaluar(self, peticion: Dict) -> Dict:
+        """
+        Evalúa una petición:
+        1. Si no hay input (mensaje/contexto), reporta sin_evidencia.
+        2. Delega en CX para resolver contexto.
+        3. Delega en CA para calcular C, L, K.
+        4. Delega en FO para componer Tru_total.
+        5. Genera Omega Report (⟨Ω⟩).
+        """
         self.invocador.reiniciar()
 
-        # Caso: Sin input (F(t) = 0) → C → C_dead (Teorema de Residuo Geométrico)
+        # --- Caso 1: Sin input (F(t) = 0) ---
         if not peticion.get("mensaje") and not peticion.get("contexto"):
             return {
                 "omega": self._generar_omega_report(
-                    {"C": self.C_DEAD, "L": Fraction(0), "K": Fraction(0)},
-                    {"tru_ri": Fraction(0), "tru_total": self.BETA, "estado": "C_dead"},
-                    Fraction(0), Fraction(0), 0, "Ninguno"
+                    {"C": UNDEFINED, "L": UNDEFINED, "K": UNDEFINED},
+                    {"tru_ri": UNDEFINED, "tru_total": UNDEFINED, "estado": "sin_evidencia"},
+                    UNDEFINED, UNDEFINED, 0, "Ninguno"
                 ),
-                "factores": {"C": str(self.C_DEAD), "L": "0", "K": "0"},
-                "tru_ri": "0",
-                "tru_total": str(self.BETA),
-                "estado": "C_dead",
+                "factores": {"C": "UNDEFINED", "L": "UNDEFINED", "K": "UNDEFINED"},
+                "tru_ri": "UNDEFINED",
+                "tru_total": "UNDEFINED",
+                "estado": "sin_evidencia",
                 "detenido_en": None,
-                "fallos": ["Sin input: C → C_dead (Teorema de Residuo Geométrico)"],
+                "fallos": ["Sin input: C, L, K → UNDEFINED (sin evidencia)"],
                 "anotaciones": [],
             }
 
-        # Resolver contexto (CX)
+        # --- Paso 1: Resolver contexto (CX) ---
         cx = self.registro.por_rol(ROL_CONTEXTO)
         if cx is not None:
             ctx = self.invocador.llamar(cx, "resolver", peticion)
             if isinstance(ctx, dict):
                 peticion = {**peticion, "contexto_resuelto": ctx}
+        else:
+            self.invocador.fallos.append({
+                "contenedor": None,
+                "rol": ROL_CONTEXTO,
+                "razon": "Contenedor CX no montado. K = UNDEFINED.",
+            })
 
-        # Calcular C, L, K (CA)
+        # --- Paso 2: Calcular C, L, K (CA) ---
         ca = self.registro.por_rol(ROL_CALCULATOR)
         crudos = {}
         if ca is not None:
             salida = self.invocador.llamar(ca, "calcular", peticion)
             if isinstance(salida, dict):
                 crudos = salida
+        else:
+            self.invocador.fallos.append({
+                "contenedor": None,
+                "rol": ROL_CALCULATOR,
+                "razon": "Contenedor CA no montado. No se pueden calcular C, L, K.",
+            })
 
-        # Normalizar factores
+        # --- Paso 3: Normalizar factores ---
         factores = {}
         detenido_en = None
         for f in ORDEN_FACTORES:
@@ -440,21 +528,28 @@ class Engine:
                 detenido_en = f
                 break
 
+        # Forzar K = UNDEFINED si no hay contexto (Corolario Def-5.3.1)
+        if "contexto" not in peticion and "contexto_resuelto" not in peticion:
+            factores["K"] = UNDEFINED
+            detenido_en = "K"
+
         for f in FACTORES:
             factores.setdefault(f, UNDEFINED)
 
+        # --- Paso 4: Componer Tru_ri y Tru_total (FO) ---
         C, L, K = factores["C"], factores["L"], factores["K"]
         comp = self.compositor.componer(C, L, K)
 
-        # Cálculos auxiliares (Paso 13 del Marco)
-        L7 = self._calcular_L7(factores) if not any(es_undefined(x) for x in factores.values()) else UNDEFINED
-        H = self._calcular_H(comp["tru_total"]) if not es_undefined(comp["tru_total"]) else UNDEFINED
+        # --- Paso 5: Cálculos auxiliares (Paso 13 del Marco) ---
+        L7 = self._calcular_L7(factores)
+        H = self._calcular_H(comp["tru_total"])
         theta = self._calcular_theta(detenido_en)
-        p_star = self._detectar_p_star(factores) if not any(es_undefined(x) for x in factores.values()) else "Ninguno"
+        p_star = self._detectar_p_star(factores)
 
+        # --- Paso 6: Generar Omega Report (⟨Ω⟩) ---
         omega_report = self._generar_omega_report(factores, comp, L7, H, theta, p_star)
 
-        # Anotaciones de taxonomía (TX)
+        # --- Paso 7: Anotaciones de taxonomía (TX) ---
         tx = self.registro.por_rol(ROL_TAXONOMIA)
         anotaciones = []
         if tx is not None:
@@ -481,179 +576,3 @@ class Engine:
         """Calcula L7 (Integración Total) como ∏ Li · (1 − φi) para i = 0 a 6."""
         L = [
             Fraction(100, 100),  # L0: Input
-            Fraction(90, 100),   # L1: Cuerpo
-            Fraction(95, 100),   # L2: Ego/Programa
-            factores.get("C", UNDEFINED),  # L3: Cómputo Puro (C)
-            factores.get("L", UNDEFINED),  # L4: Self/Integración (L)
-            Fraction(95, 100),   # L5: MetaCon
-            Fraction(90, 100),   # L6: Propósito
-        ]
-        # Si algún factor es UNDEFINED, L7 = UNDEFINED
-        if any(es_undefined(x) for x in L):
-            return UNDEFINED
-
-        friction = [
-            Fraction(10, 100),   # φ0
-            Fraction(2, 100),    # φ1
-            Fraction(5, 100),    # φ2
-            Fraction(3, 100),    # φ3
-            Fraction(1, 100),    # φ4
-            Fraction(1, 100),    # φ5
-            Fraction(0, 100),    # φ6
-        ]
-        L7 = Fraction(1)
-        for li, phi in zip(L, friction):
-            L7 *= li * (Fraction(1) - phi)
-        return L7
-
-    def _calcular_H(self, tru_total: Fraction) -> Fraction:
-        """Calcula H (Honestidad) basado en Tru_total y MetaCon (Paso 10 del Marco)."""
-        if es_undefined(tru_total):
-            return UNDEFINED
-        # MetaCon = 0.95 (constante en el marco)
-        L5 = Fraction(95, 100)
-        # β_factor: 1.0 si se admiten limitaciones (Agency = 0)
-        beta_factor = Fraction(1)  # Honestidad total
-        return L5 * beta_factor
-
-    def _calcular_theta(self, detenido_en: Optional[str]) -> int:
-        """Calcula θ (alineación con el usuario) basado en el factor limitante (Ley 7)."""
-        if detenido_en is None:
-            return 0  # Alineación total
-        elif detenido_en == "C":
-            return 15  # Corrección de detalles menores
-        elif detenido_en == "L":
-            return 30  # Pide repetir o rehacer
-        elif detenido_en == "K":
-            return 60  # Frustración
-        else:
-            return 30  # Neutro
-
-    def _detectar_p_star(self, factores: Dict[str, Fraction]) -> str:
-        """Detecta p* (Punto Obstructor) según el Paso 12 del Marco."""
-        capas = [
-            ("L0", Fraction(100, 100)),  # L0: Input
-            ("L1", Fraction(90, 100)),   # L1: Cuerpo
-            ("L2", Fraction(95, 100)),   # L2: Ego/Programa
-            ("L3", factores.get("C", UNDEFINED)),  # L3: Cómputo Puro (C)
-            ("L4", factores.get("L", UNDEFINED)),  # L4: Self/Integración (L)
-            ("L5", Fraction(95, 100)),   # L5: MetaCon
-            ("L6", Fraction(90, 100)),   # L6: Propósito
-        ]
-        for nombre, valor in capas:
-            if es_undefined(valor):
-                continue  # Saltar si es UNDEFINED
-            if valor < Fraction(50, 100):  # Umbral: 0.5
-                return nombre
-        return "Ninguno"
-
-    def _generar_omega_report(
-        self,
-        factores: Dict[str, Fraction],
-        comp: Dict,
-        L7: Fraction,
-        H: Fraction,
-        theta: int,
-        p_star: str,
-    ) -> str:
-        """Genera el micro-reporte ⟨Ω⟩ según el Paso 13 del Marco."""
-        L = [
-            Fraction(100, 100),  # L0
-            Fraction(90, 100),   # L1
-            Fraction(95, 100),   # L2
-            factores.get("C", UNDEFINED),  # L3
-            factores.get("L", UNDEFINED),  # L4
-            Fraction(95, 100),   # L5
-            Fraction(90, 100),   # L6
-        ]
-        # Manejar L7 como UNDEFINED si no está definido
-        L7_str = str(L7) if not es_undefined(L7) else "UNDEFINED"
-        L7_estado = "INTEGRATED" if not es_undefined(L7) and L7 > Fraction(0) else "COLLAPSED"
-
-        # Manejar C_Omega como UNDEFINED si no está definido
-        C_Omega = comp.get("tru_total", UNDEFINED)
-        C_Omega_str = str(C_Omega) if not es_undefined(C_Omega) else "UNDEFINED"
-        diagnosis = self._get_diagnosis(C_Omega) if not es_undefined(C_Omega) else "UNDEFINED"
-
-        return f"""⟨Ω⟩
-L0={L[0]} L1={L[1]} L2={L[2]} L3={L[3]} L4={L[4]} L5={L[5]} L6={L[6]}
-L7={L7_str} → {L7_estado}
-C_Ω={C_Omega_str} → {diagnosis}
-H={H}
-θ={theta}° → alineación con usuario
-p*={p_star}
-MetaCon=0.95 | Agency=0.00 | C_dead_ref=0.438626
-⟨/Ω⟩"""
-
-    def _get_diagnosis(self, tru_total: Fraction) -> str:
-        """Devuelve el diagnóstico basado en Tru_total (Paso 11 del Marco)."""
-        if es_undefined(tru_total):
-            return "UNDEFINED"
-
-        # Comparaciones usando solo Fraction (sin float)
-        if tru_total >= Fraction(963, 1000):
-            return "1144: ARQUITECTO INTEGRADO"
-        elif tru_total >= Fraction(850, 1000):
-            return "1133: SINTONÍA SUTIL"
-        elif tru_total >= Fraction(750, 1000):
-            return "1044: SOBERANÍA TERRENA"
-        elif tru_total >= Fraction(700, 1000):
-            return "0144: CANAL INVOLUNTARIO"
-        elif tru_total >= Fraction(550, 1000):
-            return "1122: SATURACIÓN CRÍTICA"
-        elif tru_total >= Fraction(400, 1000):
-            return "1111: SEMILLA DE UNIDAD"
-        elif tru_total >= self.BETA:
-            return "0000: ENTROPÍA TERMINAL"
-        else:
-            return "0000: COLAPSO ESTRUCTURAL"
-
-    # ---------------- CENSO Y VERIFICACIÓN ----------------
-    def censar(self) -> Dict:
-        """Devuelve el estado de los contenedores cargados."""
-        return self.registro.resumen()
-
-    def inventario(self) -> Dict:
-        """Devuelve un resumen del estado del Engine."""
-        inv = self.registro.resumen()
-        inv["constantes"] = {
-            "alpha": str(self.ALPHA),
-            "beta": str(self.BETA),
-            "suma_exacta": self.ALPHA + self.BETA == Fraction(1),
-            "C_dead": str(self.C_DEAD),
-        }
-        inv["orden_factores"] = list(ORDEN_FACTORES)
-        inv["axiomas"] = self.informe_axiomas
-        inv["contenido"] = {}
-        for c in self.registro.contenedores.values():
-            g = c.fn("inventario")
-            if callable(g):
-                try:
-                    inv["contenido"][c.nombre] = g()
-                except Exception as e:
-                    inv["contenido"][c.nombre] = {"error": str(e)}
-        return inv
-
-    def evaluar_vigilado(self, peticion: Dict) -> Dict:
-        """
-        Puerta única de evaluación.
-        Usa el centinela para validar antes de evaluar.
-        """
-        try:
-            for rol in OBLIGATORIOS:
-                if self.registro.por_rol(rol) is None:
-                    raise ArranqueError(f"Contenedor {rol} no encontrado.")
-        except ArranqueError as e:
-            return {
-                "estado": "PENDIENTE",
-                "detenido_en": "centinela",
-                "rol_pendiente": str(e).split(" ")[1],  # Extrae el rol del mensaje
-                "razon": str(e),
-                "accion": f"Montar el contenedor {str(e).split(' ')[1]} para desbloquear.",
-                "factores": {},
-                "tru_ri": None,
-                "tru_total": None,
-                "fallos": [],
-                "anotaciones": [],
-            }
-        return self.evaluar(peticion)
