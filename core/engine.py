@@ -1,4 +1,4 @@
-""""""
+"""
 VPSI-TRUTH --- tests/test_vpsi.py
 
 Suite única de verificación axiomática y estructural.
