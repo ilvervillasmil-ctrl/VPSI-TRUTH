@@ -1,13 +1,15 @@
 """
 VPSI-TRUTH --- core/engine.py
 
-El Engine es el ejecutor de contratos del framework VPSI-TRUTH.
-- Conoce absolutamente todo sobre el sistema: módulos, contratos, dependencias, estados y capacidades.
-- Su capacidad de actuar está estrictamente limitada por los contratos de los módulos.
-- Descubre y carga módulos sin intervenir en su lógica interna.
-- Ejecuta las operaciones definidas en los contratos de los módulos.
-- Recopila los reportes generados por los módulos y los unifica para el Omega Report.
-- No conoce funciones concretas, lógica de negocio, ni interpreta resultados.
+El Engine es el ejecutor universal de contratos del framework VPSI-TRUTH.
+
+- Posee conocimiento completo de la arquitectura (módulos, contratos, dependencias, estados y capacidades).
+- Su capacidad de actuación está estrictamente limitada por lo que cada contrato declara explícitamente.
+- Nunca inventa operaciones.
+- Nunca modifica resultados.
+- Nunca sustituye la lógica de un módulo.
+- Nunca interpreta la información producida por un módulo.
+- Todo comportamiento proviene exclusivamente de los contratos.
 """
 
 from __future__ import annotations
@@ -15,9 +17,8 @@ import importlib.util
 import sys
 import traceback
 from dataclasses import dataclass, field
-from fractions import Fraction
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Callable
+from typing import Any, Dict, List, Optional
 
 # ===============================================================
 # CONSTANTES GLOBALES: ROLES DE MÓDULOS
@@ -33,7 +34,6 @@ ROL_REALIDAD = "RE"
 ROL_VERIFICACION = "VX"
 ROL_CORRELACION_MECANICA = "MC"
 
-# Tupla de roles válidos (parte de la arquitectura)
 ROLES = (
     ROL_AXIOMAS,
     ROL_CONSTANTE,
@@ -82,7 +82,7 @@ class AutoridadError(Exception):
     pass
 
 class ContratoError(Exception):
-    """Un módulo no cumple con su interfaz."""
+    """Un módulo no cumple con su interfaz / contrato."""
     pass
 
 class ArranqueError(Exception):
@@ -92,11 +92,23 @@ class ArranqueError(Exception):
 # ===============================================================
 # REGISTRO DE MÓDULOS (DESCUBRIMIENTO Y CARGA)
 # ===============================================================
-CLAVES_CONTENEDOR = ("nombre", "rol", "version", "requiere", "descripcion", "operacion_principal")
+# Claves mínimas obligatorias del contrato CONTENEDOR
+CLAVES_CONTENEDOR = (
+    "nombre",
+    "rol",
+    "version",
+    "requiere",
+    "descripcion",
+    "capacidades",
+)
 
 @dataclass
 class Contenedor:
-    """Representa un módulo en el sistema. No interviene en su lógica interna."""
+    """
+    Representa un módulo en el sistema.
+    El Engine nunca interviene en su lógica interna.
+    Toda capacidad se obtiene exclusivamente del contrato.
+    """
     nombre: str
     rol: str
     version: str
@@ -104,13 +116,24 @@ class Contenedor:
     ruta: Optional[str] = None
     modulo: Any = None
     descripcion: Optional[str] = None
-    operacion_principal: Optional[str] = None  # Nombre de la función principal del contrato
+    capacidades: Dict[str, str] = field(default_factory=dict)  # capacidad -> nombre_función
 
-    def fn(self, nombre: str) -> Any:
-        """Devuelve una función del módulo (sin modificar su comportamiento)."""
+    def obtener_funcion(self, capacidad: str) -> Any:
+        """
+        Devuelve la función asociada a una capacidad declarada en el contrato.
+        Nunca asume nombres. Solo consulta el contrato.
+        """
         if self.modulo is None:
             return None
-        return getattr(self.modulo, nombre, None)
+        nombre_fn = self.capacidades.get(capacidad)
+        if not nombre_fn:
+            return None
+        return getattr(self.modulo, nombre_fn, None)
+
+    def tiene_capacidad(self, capacidad: str) -> bool:
+        """Indica si el contrato declara la capacidad y la función existe."""
+        fn = self.obtener_funcion(capacidad)
+        return callable(fn)
 
     def como_dict(self) -> Dict:
         """Metadata del módulo (solo lectura)."""
@@ -121,7 +144,7 @@ class Contenedor:
             "requiere": list(self.requiere),
             "ruta": self.ruta,
             "descripcion": self.descripcion,
-            "operacion_principal": self.operacion_principal,
+            "capacidades": dict(self.capacidades),
         }
 
 class Registro:
@@ -160,7 +183,9 @@ class Registro:
                 continue
 
             if c.rol in ocupados:
-                raise ArranqueError(f"Rol '{c.rol}' duplicado: '{ocupados[c.rol]}' y '{c.nombre}'.")
+                raise ArranqueError(
+                    f"Rol '{c.rol}' duplicado: '{ocupados[c.rol]}' y '{c.nombre}'."
+                )
 
             ocupados[c.rol] = c.nombre
             self.contenedores[c.nombre] = c
@@ -192,6 +217,10 @@ class Registro:
             if k not in meta:
                 raise ContratoError(f"CONTENEDOR sin clave '{k}'.")
 
+        capacidades = meta.get("capacidades")
+        if not isinstance(capacidades, dict):
+            raise ContratoError("CONTENEDOR['capacidades'] debe ser un diccionario.")
+
         return Contenedor(
             nombre=str(meta["nombre"]),
             rol=str(meta["rol"]),
@@ -200,7 +229,7 @@ class Registro:
             ruta=directorio.name,
             modulo=mod,
             descripcion=str(meta.get("descripcion", "")),
-            operacion_principal=str(meta.get("operacion_principal", None)),
+            capacidades={str(k): str(v) for k, v in capacidades.items()},
         )
 
     def por_rol(self, rol: str) -> Optional[Contenedor]:
@@ -216,14 +245,20 @@ class Registro:
             "cargados": [c.como_dict() for c in self.contenedores.values()],
             "rechazados": self.rechazados,
             "roles": {c.rol: c.nombre for c in self.contenedores.values()},
-            "roles_vacios": [r for r in ROLES if r not in {c.rol for c in self.contenedores.values()}],
+            "roles_vacios": [
+                r for r in ROLES
+                if r not in {c.rol for c in self.contenedores.values()}
+            ],
         }
 
 # ===============================================================
-# INVOCADOR (DELEGACIÓN ESTRICTA)
+# INVOCADOR (DELEGACIÓN ESTRICTA POR CAPACIDAD)
 # ===============================================================
 class Invocador:
-    """Invoca funciones de módulos sin alterar su lógica. Registra fallos sin intervencionismo."""
+    """
+    Invoca capacidades declaradas en los contratos.
+    Nunca conoce nombres de funciones. Solo usa el contrato.
+    """
     def __init__(self):
         self.fallos: List[Dict] = []
 
@@ -231,144 +266,201 @@ class Invocador:
         """Reinicia el registro de fallos (para cada evaluación independiente)."""
         self.fallos = []
 
-    def llamar(self, contenedor: Contenedor, nombre_fn: str, peticion: Dict) -> Any:
+    def ejecutar_capacidad(
+        self,
+        contenedor: Contenedor,
+        capacidad: str,
+        *args,
+        **kwargs,
+    ) -> Any:
         """
-        Invoca una función de módulo.
-        Si falla, registra el error y devuelve UNDEFINED (Organic Fail-Fast).
+        Ejecuta una capacidad declarada en el contrato del módulo.
+        Si la capacidad no existe o falla, registra el error y devuelve UNDEFINED.
         """
-        fn = contenedor.fn(nombre_fn)
+        fn = contenedor.obtener_funcion(capacidad)
         if not callable(fn):
             self.fallos.append({
                 "contenedor": contenedor.nombre,
                 "rol": contenedor.rol,
-                "razon": f"no expone {nombre_fn}()",
+                "capacidad": capacidad,
+                "razon": f"capacidad '{capacidad}' no declarada o función no callable",
             })
             return UNDEFINED
 
-        # Verificar que la petición tenga las claves requeridas por el módulo
-        faltan = [r for r in contenedor.requiere if r not in peticion]
-        if faltan:
-            self.fallos.append({
-                "contenedor": contenedor.nombre,
-                "rol": contenedor.rol,
-                "razon": f"petición sin claves: {faltan}",
-            })
-            return UNDEFINED
+        # Verificar claves requeridas solo cuando se pasa una petición (dict)
+        if args and isinstance(args[0], dict):
+            peticion = args[0]
+            faltan = [r for r in contenedor.requiere if r not in peticion]
+            if faltan:
+                self.fallos.append({
+                    "contenedor": contenedor.nombre,
+                    "rol": contenedor.rol,
+                    "capacidad": capacidad,
+                    "razon": f"petición sin claves: {faltan}",
+                })
+                return UNDEFINED
 
         try:
-            return fn(peticion)
+            return fn(*args, **kwargs)
         except Exception as e:
             self.fallos.append({
                 "contenedor": contenedor.nombre,
                 "rol": contenedor.rol,
+                "capacidad": capacidad,
                 "razon": f"{type(e).__name__}: {e}",
                 "traza": traceback.format_exc(limit=3),
             })
             return UNDEFINED
 
 # ===============================================================
-# ENGINE (EJECUTOR DE CONTRATOS)
+# ENGINE (EJECUTOR UNIVERSAL DE CONTRATOS)
 # ===============================================================
 class Engine:
     _AUTORIZADO = "core"  # Solo el core puede ejecutar el Engine
 
-    def __init__(self, raiz_modulos: str, invocador_id: str = _AUTORIZADO, verificar_axiomas: bool = True):
+    def __init__(
+        self,
+        raiz_modulos: str,
+        invocador_id: str = _AUTORIZADO,
+        verificar_contratos: bool = True,
+    ):
         """
         Inicializa el Engine:
         - Descubre y carga módulos.
-        - Verifica que los obligatorios (AX, CT, FO, MC) estén presentes.
-        - Verifica coherencia axiomática (AX) y mecánica (MC) si se solicita.
-        - Conoce absolutamente todo sobre el sistema, pero su acción está limitada por los contratos.
+        - Valida que los contratos de los módulos obligatorios declaren las capacidades mínimas.
+        - Verifica coherencia axiomática y mecánica exclusivamente a través de capacidades declaradas.
+        - Conoce la arquitectura, pero solo actúa según lo que cada contrato declara.
         """
         if invocador_id != self._AUTORIZADO:
-            raise AutoridadError(f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. Invocador='{invocador_id}'")
+            raise AutoridadError(
+                f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. "
+                f"Invocador='{invocador_id}'"
+            )
 
-        # Descubrir módulos (conocimiento absoluto)
         self.registro = Registro(raiz_modulos)
         self.registro.descubrir()
         self.invocador = Invocador()
 
-        # Verificar módulos obligatorios (parte de la arquitectura)
+        # Verificar presencia de módulos obligatorios
         for rol in OBLIGATORIOS:
             if self.registro.por_rol(rol) is None:
                 raise ArranqueError(f"Contenedor {rol} no encontrado.")
 
-        # Verificar coherencia axiomática (AX) y mecánica (MC) (acción limitada por contrato)
-        if verificar_axiomas:
+        if verificar_contratos:
             self._verificar_contratos_obligatorios()
 
     # ---------------- VERIFICACIÓN DE CONTRATOS OBLIGATORIOS ----------------
     def _verificar_contratos_obligatorios(self) -> None:
-        """Verifica que los módulos obligatorios cumplan con sus contratos."""
-        # Verificar AX (debe exponer "barrer" y "operacion_principal" debe estar definida)
+        """
+        Verifica que los módulos obligatorios declaren las capacidades mínimas
+        necesarias para el arranque. Todo se obtiene del contrato.
+        """
+        # AX debe declarar capacidad de verificación (ej. "verificar")
         ax = self.registro.por_rol(ROL_AXIOMAS)
         if ax is None:
             raise ArranqueError(f"Contenedor {ROL_AXIOMAS} no encontrado.")
-        if not callable(ax.fn("barrer")):
-            raise ContratoError(f"Contenedor {ROL_AXIOMAS} debe exponer barrer().")
-        if ax.operacion_principal is None:
-            raise ContratoError(f"Contenedor {ROL_AXIOMAS} debe definir operacion_principal en CONTENEDOR.")
+        if not ax.tiene_capacidad("verificar"):
+            raise ContratoError(
+                f"Contenedor {ROL_AXIOMAS} debe declarar capacidad 'verificar'."
+            )
 
-        # Verificar CT (debe exponer "ALPHA" y "BETA")
+        # CT debe declarar capacidades de constantes (ej. "alpha" y "beta")
         ct = self.registro.por_rol(ROL_CONSTANTE)
         if ct is None:
             raise ArranqueError(f"Contenedor {ROL_CONSTANTE} no encontrado.")
-        if ct.fn("ALPHA") is None or ct.fn("BETA") is None:
-            raise ContratoError(f"Contenedor {ROL_CONSTANTE} debe exponer ALPHA y BETA.")
+        if not ct.tiene_capacidad("alpha") or not ct.tiene_capacidad("beta"):
+            raise ContratoError(
+                f"Contenedor {ROL_CONSTANTE} debe declarar capacidades 'alpha' y 'beta'."
+            )
 
-        # Verificar FO (debe exponer su operación principal)
+        # FO debe declarar al menos una capacidad de evaluación
         fo = self.registro.por_rol(ROL_FORMULAS)
         if fo is None:
             raise ArranqueError(f"Contenedor {ROL_FORMULAS} no encontrado.")
-        if fo.operacion_principal is None:
-            raise ContratoError(f"Contenedor {ROL_FORMULAS} debe definir operacion_principal en CONTENEDOR.")
+        if not fo.capacidades:
+            raise ContratoError(
+                f"Contenedor {ROL_FORMULAS} debe declarar al menos una capacidad."
+            )
 
-        # Verificar MC (debe exponer "barrer")
+        # MC debe declarar capacidad de verificación
         mc = self.registro.por_rol(ROL_CORRELACION_MECANICA)
         if mc is None:
             raise ArranqueError(f"Contenedor {ROL_CORRELACION_MECANICA} no encontrado.")
-        if not callable(mc.fn("barrer")):
-            raise ContratoError(f"Contenedor {ROL_CORRELACION_MECANICA} debe exponer barrer().")
+        if not mc.tiene_capacidad("verificar"):
+            raise ContratoError(
+                f"Contenedor {ROL_CORRELACION_MECANICA} debe declarar capacidad 'verificar'."
+            )
 
-        # Verificar correlación mecánica (MC)
-        informe_mc = mc.fn("barrer")()
-        if not informe_mc.get("coherente", False):
-            choques_str = "\n".join(informe_mc.get("choques", []))
-            raise ArranqueError(f"CONTRADICCIÓN MECÁNICA. Los módulos no pueden ejecutarse en orden.\n{choques_str}")
+        # --- Verificación mecánica (a través de la capacidad declarada) ---
+        informe_mc = self.invocador.ejecutar_capacidad(mc, "verificar")
+        if es_undefined(informe_mc):
+            raise ArranqueError("Fallo al ejecutar capacidad 'verificar' de MC.")
+        if not isinstance(informe_mc, dict) or not informe_mc.get("coherente", False):
+            choques = informe_mc.get("choques", []) if isinstance(informe_mc, dict) else []
+            choques_str = "\n".join(str(c) for c in choques)
+            raise ArranqueError(
+                f"CONTRADICCIÓN MECÁNICA. Los módulos no pueden ejecutarse en orden.\n{choques_str}"
+            )
 
-        # Verificar coherencia axiomática (AX)
+        # --- Verificación axiomática (a través de la capacidad declarada) ---
         declaraciones = {}
         for c in self.registro.contenedores.values():
-            g = c.fn("axiomas")
-            if callable(g):
-                declaraciones[c.nombre] = g()
+            if c.tiene_capacidad("axiomas"):
+                result = self.invocador.ejecutar_capacidad(c, "axiomas")
+                if not es_undefined(result):
+                    declaraciones[c.nombre] = result
 
-        informe_ax = ax.fn("barrer")(declaraciones)
+        informe_ax = self.invocador.ejecutar_capacidad(ax, "verificar", declaraciones)
+        if es_undefined(informe_ax):
+            raise ArranqueError("Fallo al ejecutar capacidad 'verificar' de AX.")
         if not isinstance(informe_ax, dict) or "coherente" not in informe_ax:
-            raise ContratoError("barrer() debe devolver dict con 'coherente'.")
+            raise ContratoError(
+                "Capacidad 'verificar' de AX debe devolver dict con clave 'coherente'."
+            )
         if not informe_ax["coherente"]:
+            choques = informe_ax.get("choques", [])
             choques_str = "\n".join(
                 f"  - {ch.get('tipo', 'Desconocido')}: {ch.get('mensaje', 'Sin mensaje')}"
-                for ch in informe_ax.get("choques", [])
+                if isinstance(ch, dict) else f"  - {ch}"
+                for ch in choques
             )
-            raise ArranqueError(f"CONTRADICCIÓN AXIOMÁTICA. {choques_str}")
+            raise ArranqueError(f"CONTRADICCIÓN AXIOMÁTICA.\n{choques_str}")
 
-    # ---------------- EJECUCIÓN DE CONTRATOS ----------------
+    # ---------------- EJECUCIÓN DE CAPACIDADES ----------------
+    def ejecutar_capacidad(
+        self,
+        rol: str,
+        capacidad: str,
+        *args,
+        **kwargs,
+    ) -> Any:
+        """
+        Ejecuta una capacidad de un módulo identificado por rol.
+        El Engine solo consulta el contrato. Nunca conoce el nombre real de la función.
+        """
+        contenedor = self.registro.por_rol(rol)
+        if contenedor is None:
+            return UNDEFINED
+        return self.invocador.ejecutar_capacidad(contenedor, capacidad, *args, **kwargs)
+
     def ejecutar_contratos(self, peticion: Dict) -> Dict:
         """
-        Ejecuta la operación principal de cada módulo según su contrato.
-        El Engine NO conoce funciones concretas, solo ejecuta lo definido en los contratos.
+        Ejecuta la capacidad principal de evaluación de cada módulo
+        según lo declarado en su contrato.
+        El Engine no conoce nombres de funciones; solo capacidades.
         """
         self.invocador.reiniciar()
         reportes = {}
 
-        # Recorrer todos los módulos registrados y ejecutar su operación principal
         for contenedor in self.registro.contenedores.values():
-            if contenedor.operacion_principal is None:
-                continue  # Saltar módulos sin operación principal definida
+            # La capacidad canónica de evaluación se llama "evaluar"
+            # (cada módulo la mapea a su función real en el contrato)
+            if not contenedor.tiene_capacidad("evaluar"):
+                continue
 
-            # Ejecutar la operación principal del módulo
-            reporte = self.invocador.llamar(contenedor, contenedor.operacion_principal, peticion)
+            reporte = self.invocador.ejecutar_capacidad(
+                contenedor, "evaluar", peticion
+            )
             if isinstance(reporte, dict):
                 reportes[contenedor.rol] = reporte
 
@@ -377,15 +469,14 @@ class Engine:
             "fallos": list(self.invocador.fallos),
         }
 
-    # ---------------- EVALUACIÓN (EJECUCIÓN DE CONTRATOS) ----------------
+    # ---------------- EVALUACIÓN ----------------
     def evaluar(self, peticion: Dict) -> Dict:
         """
-        Evalúa una petición ejecutando los contratos de los módulos.
-        El Engine NO interpreta resultados, solo recopila reportes.
+        Evalúa una petición ejecutando las capacidades declaradas.
+        El Engine no interpreta resultados; solo recopila reportes.
         """
         return self.ejecutar_contratos(peticion)
 
-    # ---------------- EVALUACIÓN VIGILADA (CONTRATOS) ----------------
     def evaluar_vigilado(self, peticion: Dict) -> Dict:
         """
         Puerta única de evaluación.
@@ -396,31 +487,36 @@ class Engine:
                 if self.registro.por_rol(rol) is None:
                     raise ArranqueError(f"Contenedor {rol} no encontrado.")
         except ArranqueError as e:
+            rol_pendiente = str(e).split(" ")[1] if " " in str(e) else "desconocido"
             return {
                 "estado": "PENDIENTE",
                 "detenido_en": "centinela",
-                "rol_pendiente": str(e).split(" ")[1],  # Extrae el rol del mensaje
+                "rol_pendiente": rol_pendiente,
                 "razon": str(e),
-                "accion": f"Montar el contenedor {str(e).split(' ')[1]} para desbloquear.",
+                "accion": f"Montar el contenedor {rol_pendiente} para desbloquear.",
                 "reportes": {},
                 "fallos": [],
             }
         return self.evaluar(peticion)
 
-    # ---------------- CENSO Y VERIFICACIÓN (CONOCIMIENTO ABSOLUTO) ----------------
+    # ---------------- CENSO E INVENTARIO (SOLO A TRAVÉS DE CONTRATOS) ----------------
     def censar(self) -> Dict:
         """Devuelve el estado de los módulos cargados (transparencia total)."""
         return self.registro.resumen()
 
     def inventario(self) -> Dict:
-        """Devuelve un resumen del estado del Engine y sus módulos (conocimiento absoluto)."""
+        """
+        Devuelve un resumen del estado del Engine y de los módulos
+        que declaran la capacidad 'inventario'.
+        """
         inv = self.registro.resumen()
         inv["contenido"] = {}
+
         for c in self.registro.contenedores.values():
-            g = c.fn("inventario")
-            if callable(g):
-                try:
-                    inv["contenido"][c.nombre] = g()
-                except Exception as e:
-                    inv["contenido"][c.nombre] = {"error": str(e)}
+            if c.tiene_capacidad("inventario"):
+                result = self.invocador.ejecutar_capacidad(c, "inventario")
+                if not es_undefined(result):
+                    inv["contenido"][c.nombre] = result
+                else:
+                    inv["contenido"][c.nombre] = {"error": "capacidad 'inventario' falló"}
         return inv
