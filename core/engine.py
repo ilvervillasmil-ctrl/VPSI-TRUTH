@@ -3,13 +3,16 @@ VPSI-TRUTH --- core/engine.py
 
 El Engine es el ejecutor universal de contratos del framework VPSI-TRUTH.
 
-- Posee conocimiento completo de la arquitectura (módulos, contratos, dependencias, estados y capacidades).
-- Su capacidad de actuación está estrictamente limitada por lo que cada contrato declara explícitamente.
+Principio fundamental:
+- Posee conocimiento completo de la arquitectura (módulos, contratos, dependencias,
+  estados, capacidades, variables, archivos internos y estructura de cada módulo).
+- Su capacidad de actuación está estrictamente limitada por lo que cada contrato
+  declara explícitamente en CONTENEDOR["capacidades"].
 - Nunca inventa operaciones.
 - Nunca modifica resultados.
 - Nunca sustituye la lógica de un módulo.
 - Nunca interpreta la información producida por un módulo.
-- Todo comportamiento proviene exclusivamente de los contratos.
+- Todo comportamiento de acción proviene exclusivamente de los contratos.
 """
 
 from __future__ import annotations
@@ -106,8 +109,8 @@ CLAVES_CONTENEDOR = (
 class Contenedor:
     """
     Representa un módulo en el sistema.
-    El Engine nunca interviene en su lógica interna.
-    Toda capacidad se obtiene exclusivamente del contrato.
+    El Engine tiene conocimiento total de él, pero nunca interviene en su lógica interna.
+    Toda acción se obtiene exclusivamente del contrato.
     """
     nombre: str
     rol: str
@@ -131,7 +134,7 @@ class Contenedor:
         return getattr(self.modulo, nombre_fn, None)
 
     def tiene_capacidad(self, capacidad: str) -> bool:
-        """Indica si el contrato declara la capacidad y la función existe."""
+        """Indica si el contrato declara la capacidad y la función existe y es callable."""
         fn = self.obtener_funcion(capacidad)
         return callable(fn)
 
@@ -146,6 +149,40 @@ class Contenedor:
             "descripcion": self.descripcion,
             "capacidades": dict(self.capacidades),
         }
+
+    def conocimiento_completo(self) -> Dict:
+        """
+        Devuelve todo lo que el Engine conoce de este módulo
+        (introspección total, sin actuar).
+        """
+        info = self.como_dict()
+        if self.modulo is None:
+            info["atributos"] = {}
+            info["callables"] = []
+            return info
+
+        atributos = {}
+        callables = []
+        for nombre in dir(self.modulo):
+            if nombre.startswith("_"):
+                continue
+            try:
+                valor = getattr(self.modulo, nombre)
+                if callable(valor):
+                    callables.append(nombre)
+                else:
+                    # Solo valores simples para no saturar
+                    if isinstance(valor, (str, int, float, bool, type(None))):
+                        atributos[nombre] = valor
+                    else:
+                        atributos[nombre] = repr(valor)[:120]
+            except Exception:
+                atributos[nombre] = "<error al leer>"
+
+        info["atributos"] = atributos
+        info["callables"] = callables
+        return info
+
 
 class Registro:
     """Registro de módulos. Descubre y carga sin alterar su esencia."""
@@ -251,6 +288,28 @@ class Registro:
             ],
         }
 
+    def conocimiento_total(self) -> Dict:
+        """
+        Devuelve el conocimiento completo que el Engine tiene del sistema.
+        Esto es introspección pura: no ejecuta ninguna capacidad.
+        """
+        return {
+            "raiz": str(self.raiz),
+            "modulos": {
+                nombre: c.conocimiento_completo()
+                for nombre, c in self.contenedores.items()
+            },
+            "rechazados": self.rechazados,
+            "roles_ocupados": {
+                c.rol: c.nombre for c in self.contenedores.values()
+            },
+            "roles_vacios": [
+                r for r in ROLES
+                if r not in {c.rol for c in self.contenedores.values()}
+            ],
+        }
+
+
 # ===============================================================
 # INVOCADOR (DELEGACIÓN ESTRICTA POR CAPACIDAD)
 # ===============================================================
@@ -312,6 +371,7 @@ class Invocador:
             })
             return UNDEFINED
 
+
 # ===============================================================
 # ENGINE (EJECUTOR UNIVERSAL DE CONTRATOS)
 # ===============================================================
@@ -326,10 +386,13 @@ class Engine:
     ):
         """
         Inicializa el Engine:
-        - Descubre y carga módulos.
-        - Valida que los contratos de los módulos obligatorios declaren las capacidades mínimas.
-        - Verifica coherencia axiomática y mecánica exclusivamente a través de capacidades declaradas.
-        - Conoce la arquitectura, pero solo actúa según lo que cada contrato declara.
+
+        1. Descubre y carga todos los módulos (conocimiento total).
+        2. Valida que los contratos de los módulos obligatorios declaren
+           las capacidades mínimas requeridas.
+        3. Ejecuta las verificaciones de coherencia (AX y MC) exclusivamente
+           a través de las capacidades declaradas en los contratos.
+        4. Queda listo para actuar solo según lo que cada contrato autorice.
         """
         if invocador_id != self._AUTORIZADO:
             raise AutoridadError(
@@ -354,8 +417,9 @@ class Engine:
         """
         Verifica que los módulos obligatorios declaren las capacidades mínimas
         necesarias para el arranque. Todo se obtiene del contrato.
+        El Engine conoce los módulos, pero solo actúa por lo declarado.
         """
-        # AX debe declarar capacidad de verificación (ej. "verificar")
+        # AX debe declarar capacidad de verificación
         ax = self.registro.por_rol(ROL_AXIOMAS)
         if ax is None:
             raise ArranqueError(f"Contenedor {ROL_AXIOMAS} no encontrado.")
@@ -364,7 +428,7 @@ class Engine:
                 f"Contenedor {ROL_AXIOMAS} debe declarar capacidad 'verificar'."
             )
 
-        # CT debe declarar capacidades de constantes (ej. "alpha" y "beta")
+        # CT debe declarar capacidades de constantes
         ct = self.registro.por_rol(ROL_CONSTANTE)
         if ct is None:
             raise ArranqueError(f"Contenedor {ROL_CONSTANTE} no encontrado.")
@@ -373,7 +437,7 @@ class Engine:
                 f"Contenedor {ROL_CONSTANTE} debe declarar capacidades 'alpha' y 'beta'."
             )
 
-        # FO debe declarar al menos una capacidad de evaluación
+        # FO debe declarar al menos una capacidad
         fo = self.registro.por_rol(ROL_FORMULAS)
         if fo is None:
             raise ArranqueError(f"Contenedor {ROL_FORMULAS} no encontrado.")
@@ -391,7 +455,7 @@ class Engine:
                 f"Contenedor {ROL_CORRELACION_MECANICA} debe declarar capacidad 'verificar'."
             )
 
-        # --- Verificación mecánica (a través de la capacidad declarada) ---
+        # --- Verificación mecánica (solo a través de la capacidad declarada) ---
         informe_mc = self.invocador.ejecutar_capacidad(mc, "verificar")
         if es_undefined(informe_mc):
             raise ArranqueError("Fallo al ejecutar capacidad 'verificar' de MC.")
@@ -402,7 +466,7 @@ class Engine:
                 f"CONTRADICCIÓN MECÁNICA. Los módulos no pueden ejecutarse en orden.\n{choques_str}"
             )
 
-        # --- Verificación axiomática (a través de la capacidad declarada) ---
+        # --- Verificación axiomática (solo a través de la capacidad declarada) ---
         declaraciones = {}
         for c in self.registro.contenedores.values():
             if c.tiene_capacidad("axiomas"):
@@ -426,7 +490,7 @@ class Engine:
             )
             raise ArranqueError(f"CONTRADICCIÓN AXIOMÁTICA.\n{choques_str}")
 
-    # ---------------- EJECUCIÓN DE CAPACIDADES ----------------
+    # ---------------- EJECUCIÓN DE CAPACIDADES (ÚNICA VÍA DE ACCIÓN) ----------------
     def ejecutar_capacidad(
         self,
         rol: str,
@@ -445,7 +509,7 @@ class Engine:
 
     def ejecutar_contratos(self, peticion: Dict) -> Dict:
         """
-        Ejecuta la capacidad principal de evaluación de cada módulo
+        Ejecuta la capacidad canónica "evaluar" de cada módulo
         según lo declarado en su contrato.
         El Engine no conoce nombres de funciones; solo capacidades.
         """
@@ -453,8 +517,6 @@ class Engine:
         reportes = {}
 
         for contenedor in self.registro.contenedores.values():
-            # La capacidad canónica de evaluación se llama "evaluar"
-            # (cada módulo la mapea a su función real en el contrato)
             if not contenedor.tiene_capacidad("evaluar"):
                 continue
 
@@ -499,15 +561,23 @@ class Engine:
             }
         return self.evaluar(peticion)
 
-    # ---------------- CENSO E INVENTARIO (SOLO A TRAVÉS DE CONTRATOS) ----------------
+    # ---------------- CONOCIMIENTO TOTAL (SIN ACTUAR) ----------------
     def censar(self) -> Dict:
         """Devuelve el estado de los módulos cargados (transparencia total)."""
         return self.registro.resumen()
+
+    def conocimiento(self) -> Dict:
+        """
+        Devuelve el conocimiento completo que el Engine tiene del sistema.
+        Esta operación es puramente introspectiva: no ejecuta ninguna capacidad.
+        """
+        return self.registro.conocimiento_total()
 
     def inventario(self) -> Dict:
         """
         Devuelve un resumen del estado del Engine y de los módulos
         que declaran la capacidad 'inventario'.
+        Solo actúa sobre módulos que explícitamente autorizan esta capacidad.
         """
         inv = self.registro.resumen()
         inv["contenido"] = {}
