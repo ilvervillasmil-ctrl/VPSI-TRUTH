@@ -5,7 +5,7 @@ Contenedor de constantes. Rol CT.
 
 Este módulo expone las constantes geométricas fundamentales del marco VPSI:
 - ALPHA = 26/27 (techo estructural).
-- BETA = 1/27 (piso estructural).
+- BETA  = 1/27  (piso estructural).
 
 Estas constantes son derivadas del cubo 3x3x3 en ℝ³ y son invariantes en todo el sistema.
 """
@@ -16,41 +16,55 @@ from fractions import Fraction
 # CONSTANTES GEOMÉTRICAS (Derivadas del cubo 3x3x3 en ℝ³)
 # ===============================================================
 ALPHA = Fraction(26, 27)  # Techo estructural: fracción observable del cubo.
-BETA = Fraction(1, 27)    # Piso estructural: fracción interior irreducible del cubo.
+BETA  = Fraction(1, 27)   # Piso estructural: fracción interior irreducible del cubo.
 
 # ===============================================================
-# CONTENEDOR: Metadatos del módulo
+# CAPACIDADES (funciones que el contrato declara)
 # ===============================================================
-CONTENEDOR = {
-    "nombre": "constante",
-    "rol": "CT",  # Rol: Constantes
-    "version": "1.0",
-    "requiere": [],  # No tiene dependencias
-    "descripcion": (
-        "Expone las constantes geométricas ALPHA y BETA, derivadas del cubo 3x3x3 en ℝ³. "
-        "Estas constantes son invariantes y se usan en todos los cálculos de verdad."
-    ),
-}
+def get_alpha(peticion=None):
+    """Capacidad 'alpha': devuelve la constante ALPHA."""
+    return ALPHA
+
+def get_beta(peticion=None):
+    """Capacidad 'beta': devuelve la constante BETA."""
+    return BETA
+
+def inventario(peticion=None):
+    """Capacidad opcional de inventario."""
+    return {
+        "ALPHA": str(ALPHA),
+        "BETA": str(BETA),
+        "tipo": "Fraction",
+        "origen": "cubo 3x3x3 en ℝ³",
+    }
 
 # ===============================================================
-# EXPORTACIÓN: Lo que el módulo expone al exterior
+# CONTENEDOR: Contrato del módulo
 # ===============================================================
-__all__ = [
-    "ALPHA",
-    "BETA",
-    "CONTENEDOR",
-]
-
 CONTENEDOR = {
     "nombre": "constante",
     "rol": "CT",
     "version": "1.0",
     "requiere": [],
-    "descripcion": "Contenedor de constantes. Rol CT. Expone ALPHA y BETA, derivadas del cubo 3x3x3 en ℝ³.",
+    "descripcion": (
+        "Expone las constantes geométricas ALPHA y BETA, derivadas del cubo 3x3x3 en ℝ³. "
+        "Estas constantes son invariantes y se usan en todos los cálculos de verdad."
+    ),
     "capacidades": {
-        "alpha": "ALPHA",  # ← Obligatorio para CT
-        "beta": "BETA",     # ← Obligatorio para CT
-        "evaluar": None,   # Opcional
-        "inventario": None, # Opcional
-    }
+        "alpha": "get_alpha",      # obligatorio para CT
+        "beta": "get_beta",        # obligatorio para CT
+        "inventario": "inventario", # opcional
+    },
 }
+
+# ===============================================================
+# EXPORTACIÓN
+# ===============================================================
+__all__ = [
+    "ALPHA",
+    "BETA",
+    "get_alpha",
+    "get_beta",
+    "inventario",
+    "CONTENEDOR",
+]
