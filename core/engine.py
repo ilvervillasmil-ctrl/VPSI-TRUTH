@@ -590,3 +590,17 @@ class Engine:
                 else:
                     inv["contenido"][c.nombre] = {"error": "capacidad 'inventario' falló"}
         return inv
+      
+# ===============================================================
+# REPORTES DE MÓDULOS (COMPATIBILIDAD)
+# ===============================================================
+# El Engine no genera informes especializados. Cada módulo produce
+# su propio reporte según su contrato y el Engine únicamente los
+# conserva para que puedan ser consultados por Omega Report u otras
+# herramientas del framework.
+#
+# 'informe_axiomas' se mantiene únicamente por compatibilidad con
+# código existente. Su contenido debe provenir del reporte generado
+# por el módulo AX, nunca de lógica interna del Engine.
+self.reportes = {}
+self.informe_axiomas = self.reportes.setdefault("AX", {})
