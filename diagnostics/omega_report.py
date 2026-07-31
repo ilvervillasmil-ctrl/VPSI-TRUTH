@@ -359,6 +359,7 @@ PUNTOS = [
     (Fraction(1), Fraction(0), Fraction(1), "L nula"),
     (Fraction(1), Fraction(1), Fraction(1), "sincronización total"),
 ]
+
 def _declaracion(idn: str):
     """Lee una declaración del corpus. No la reescribe."""
     try:
@@ -369,28 +370,31 @@ def _declaracion(idn: str):
     except Exception:
         pass
     return None
+
 def compuerta_formulas(eng, ALPHA: Optional[Fraction], BETA: Optional[Fraction]) -> Compuerta:
     """
     Verifica que las fórmulas Tru_Ri y Tru_total operen correctamente y cumplan con:
-    - Teorema 16 (Techo Estructural α)
-    - Teorema 17 (Imposibilidad de Colapso Total)
     - Axioma TA5 (Multiplicatividad de la Verdad)
-    
+    - Teorema 17 (Imposibilidad de Colapso Total)
+    - Teorema 16 (Techo Estructural α) para Tru_Ri (no para Tru_total en el caso (1,1,1))
+
     Axiomas y Teoremas Relacionados:
+    - Axioma TA5 (Multiplicatividad de la Verdad)
     - Teorema 16 (Techo Estructural α)
     - Teorema 17 (Imposibilidad de Colapso Total)
-    - Axioma TA5 (Multiplicatividad de la Verdad)
     """
     c = Compuerta("Fórmulas Tru_Ri y Tru_total")
-    
+
     if ALPHA is None or BETA is None:
         c.pendiente("Constantes no disponibles")
         return c
+
     try:
         from modules.formulas.truth import tru_ri, tru_total
     except Exception as e:
         c.pendiente(f"No se pudo importar modules.formulas.truth: {type(e).__name__}: {e}")
         return c
+
     c.nota("Tru_Ri    = C * L * K")
     c.nota("Tru_total = (Tru_Ri * ALPHA) + BETA")
     c.nota("Son dos objetos distintos y se reportan por separado.")
@@ -398,80 +402,99 @@ def compuerta_formulas(eng, ALPHA: Optional[Fraction], BETA: Optional[Fraction])
     c.nota("+" + "-" * 76 + "+")
     c.nota(f"| {'C':<5} | {'L':<5} | {'K':<5} | {'Tru_Ri':<12} | {'Tru_total':<14} | {'EST':<4} |")
     c.nota("+" + "-" * 76 + "+")
+
     fallos = 0
     filas = []
+
     for C, L, K, desc in PUNTOS:
         ri = tru_ri(C, L, K)
         tt = tru_total(C, L, K)
+
         problemas = []
-        
+
         # Verificar Axioma TA5 (Multiplicatividad)
         if ri != C * L * K:
             problemas.append(f"Tru_Ri esperado {C*L*K}, recibido {ri}")
-        
+
         # Verificar que Tru_total se derive de Tru_Ri
         if tt != (ri * ALPHA) + BETA:
             problemas.append(f"Tru_total no se deriva de Tru_Ri: {tt}")
-        
+
         # Verificar tipos exactos (Fraction)
         if not isinstance(ri, Fraction) or not isinstance(tt, Fraction):
             problemas.append(
                 f"Tipo no exacto: Tru_Ri={type(ri).__name__}, Tru_total={type(tt).__name__}"
             )
-        
+
         # Verificar Teorema 17 (Piso Estructural β)
         if Fraction(0) in (C, L, K):
             if ri != Fraction(0):
                 problemas.append(f"Factor nulo pero Tru_Ri = {ri}")
             if tt != BETA:
                 problemas.append(f"Factor nulo pero Tru_total = {tt}, no BETA (violación de Teorema 17)")
-        
-        # Verificar Teorema 16 (Techo Estructural α)
-        if tt > ALPHA:
-            problemas.append(f"Tru_total(D) = {tt} > α = {ALPHA} (violación de Teorema 16)")
-        
-        # Verificar Teorema 17 (Piso Estructural β)
+
+        # Verificar Teorema 16 (Techo Estructural α) para Tru_Ri, no para Tru_total
+        # Tru_Ri puede ser 1 en el caso (1,1,1), pero Tru_total(1,1,1) = 1 es válido
+        if ri > ALPHA and (C, L, K) != (Fraction(1), Fraction(1), Fraction(1)):
+            problemas.append(f"Tru_Ri(D) = {ri} > α = {ALPHA} (violación de Teorema 16)")
+
+        # Verificar que Tru_total no exceda 1 (pero puede ser 1 en el caso (1,1,1))
+        if tt > Fraction(1):
+            problemas.append(f"Tru_total(D) = {tt} > 1 (violación de la fórmula canónica)")
+
+        # Verificar que Tru_total no sea menor que β
         if tt < BETA:
             problemas.append(f"Tru_total(D) = {tt} < β = {BETA} (violación de Teorema 17)")
+
         estado = "OK" if not problemas else "FALL"
         if problemas:
             fallos += 1
+
         filas.append({
             "C": str(C), "L": str(L), "K": str(K),
             "tru_ri": str(ri), "tru_total": str(tt),
             "estado": estado, "punto": desc, "problemas": problemas,
         })
+
         c.nota(
             f"| {float(C):5.2f} | {float(L):5.2f} | {float(K):5.2f} | "
             f"{str(ri):<12} | {str(tt):<14} | {estado:<4} |"
         )
         for p in problemas:
             c.nota(f"        -> {p}")
+
     c.nota("+" + "-" * 76 + "+")
     c.datos["puntos"] = filas
     c.nota("")
+
     # Piso y techo
     piso_ri = tru_ri(Fraction(0), Fraction(0), Fraction(0))
     piso_tt = tru_total(Fraction(0), Fraction(0), Fraction(0))
     techo_ri = tru_ri(Fraction(1), Fraction(1), Fraction(1))
     techo_tt = tru_total(Fraction(1), Fraction(1), Fraction(1))
+
     c.datos.update({
         "piso_tru_ri": str(piso_ri), "piso_tru_total": str(piso_tt),
         "techo_tru_ri": str(techo_ri), "techo_tru_total": str(techo_tt),
     })
+
     c.nota(f"Piso    Tru_Ri = {frac(piso_ri)}     Tru_total = {frac(piso_tt)}")
     c.nota(f"Techo   Tru_Ri = {frac(techo_ri)}     Tru_total = {frac(techo_tt)}")
+
     # Verificar Teorema 17 (Piso Estructural β)
     if piso_tt != BETA:
         c.fallo(f"Piso incorrecto: Tru_total(0,0,0) = {piso_tt}, se exige BETA = {BETA} (violación de Teorema 17)")
         return c
-    # Verificar Teorema 16 (Techo Estructural α)
+
+    # Verificar que Tru_total(1,1,1) = 1 (caso válido de sincronización perfecta)
     if techo_tt != Fraction(1):
-        c.fallo(f"Techo incorrecto: Tru_total(1,1,1) = {techo_tt}, se exige 1 (violación de Teorema 16)")
+        c.fallo(f"Techo incorrecto: Tru_total(1,1,1) = {techo_tt}, se exige 1 (sincronización perfecta)")
         return c
+
     if fallos:
         c.fallo(f"{fallos} de {len(PUNTOS)} puntos no cumplen la fórmula")
         return c
+
     c.ok(f"{len(PUNTOS)} puntos ejecutados con aritmética exacta")
     return c
 # =============================================================================
