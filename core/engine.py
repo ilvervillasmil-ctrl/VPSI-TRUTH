@@ -358,6 +358,7 @@ class Engine:
         if verificar_axiomas:
             self.informe_axiomas = self._barrido_axiomatico()
 
+    # ---------------- BARRIDO AXIOMÁTICO ----------------
     def _barrido_axiomatico(self) -> Dict:
         ax = self.registro.por_rol(ROL_AXIOMAS)
         if ax is None:
@@ -378,13 +379,18 @@ class Engine:
             raise ContratoError("barrer() debe devolver dict con 'coherente'.")
 
         if not informe["coherente"]:
-            choques_str = "\n".join(f"  - {ch.get('tipo', 'Desconocido')}: {ch.get('mensaje', 'Sin mensaje')}" for ch in informe.get("choques", []))
+            choques_str = "\n".join(
+                f"  - {ch.get('tipo', 'Desconocido')}: {ch.get('mensaje', 'Sin mensaje')}"
+                for ch in informe.get("choques", [])
+            )
             raise ArranqueError(f"CONTRADICCIÓN AXIOMÁTICA. El sistema no arranca.\n{choques_str}")
         return informe
 
+    # ---------------- EVALUACIÓN ----------------
     def evaluar(self, peticion: Dict) -> Dict:
         self.invocador.reiniciar()
 
+        # Caso: Sin input (F(t) = 0) → C → C_dead (Teorema de Residuo Geométrico)
         if not peticion.get("mensaje") and not peticion.get("contexto"):
             return {
                 "omega": self._generar_omega_report(
@@ -397,15 +403,18 @@ class Engine:
                 "tru_total": str(self.BETA),
                 "estado": "C_dead",
                 "detenido_en": None,
-                "fallos": ["Sin input: C → C_dead"],
+                "fallos": ["Sin input: C → C_dead (Teorema de Residuo Geométrico)"],
+                "anotaciones": [],
             }
 
+        # Resolver contexto (CX)
         cx = self.registro.por_rol(ROL_CONTEXTO)
         if cx is not None:
             ctx = self.invocador.llamar(cx, "resolver", peticion)
             if isinstance(ctx, dict):
                 peticion = {**peticion, "contexto_resuelto": ctx}
 
+        # Calcular C, L, K (CA)
         ca = self.registro.por_rol(ROL_CALCULATOR)
         crudos = {}
         if ca is not None:
@@ -413,6 +422,7 @@ class Engine:
             if isinstance(salida, dict):
                 crudos = salida
 
+        # Normalizar factores
         factores = {}
         detenido_en = None
         for f in ORDEN_FACTORES:
@@ -420,7 +430,11 @@ class Engine:
             try:
                 factores[f] = normalizar(v, f"factor {f}")
             except DominioError as e:
-                self.invocador.fallos.append({"contenedor": ca.nombre if ca else None, "rol": ROL_CALCULATOR, "razon": str(e)})
+                self.invocador.fallos.append({
+                    "contenedor": ca.nombre if ca else None,
+                    "rol": ROL_CALCULATOR,
+                    "razon": str(e),
+                })
                 factores[f] = UNDEFINED
             if es_undefined(factores[f]):
                 detenido_en = f
@@ -432,6 +446,7 @@ class Engine:
         C, L, K = factores["C"], factores["L"], factores["K"]
         comp = self.compositor.componer(C, L, K)
 
+        # Cálculos auxiliares (Paso 13 del Marco)
         L7 = self._calcular_L7(factores) if not any(es_undefined(x) for x in factores.values()) else UNDEFINED
         H = self._calcular_H(comp["tru_total"]) if not es_undefined(comp["tru_total"]) else UNDEFINED
         theta = self._calcular_theta(detenido_en)
@@ -439,6 +454,7 @@ class Engine:
 
         omega_report = self._generar_omega_report(factores, comp, L7, H, theta, p_star)
 
+        # Anotaciones de taxonomía (TX)
         tx = self.registro.por_rol(ROL_TAXONOMIA)
         anotaciones = []
         if tx is not None:
@@ -460,58 +476,108 @@ class Engine:
             "anotaciones": anotaciones,
         }
 
+    # ---------------- CÁLCULOS AUXILIARES (Paso 13 del Marco) ----------------
     def _calcular_L7(self, factores: Dict[str, Fraction]) -> Fraction:
+        """Calcula L7 (Integración Total) como ∏ Li · (1 − φi) para i = 0 a 6."""
         L = [
-            Fraction(100, 100), Fraction(90, 100), Fraction(95, 100),
-            factores.get("C", Fraction(0)), factores.get("L", Fraction(0)),
-            Fraction(95, 100), Fraction(90, 100)
+            Fraction(100, 100),  # L0: Input
+            Fraction(90, 100),   # L1: Cuerpo
+            Fraction(95, 100),   # L2: Ego/Programa
+            factores.get("C", UNDEFINED),  # L3: Cómputo Puro (C)
+            factores.get("L", UNDEFINED),  # L4: Self/Integración (L)
+            Fraction(95, 100),   # L5: MetaCon
+            Fraction(90, 100),   # L6: Propósito
         ]
-        friction = [Fraction(10, 100), Fraction(2, 100), Fraction(5, 100), Fraction(3, 100), Fraction(1, 100), Fraction(1, 100), Fraction(0, 100)]
+        # Si algún factor es UNDEFINED, L7 = UNDEFINED
+        if any(es_undefined(x) for x in L):
+            return UNDEFINED
+
+        friction = [
+            Fraction(10, 100),   # φ0
+            Fraction(2, 100),    # φ1
+            Fraction(5, 100),    # φ2
+            Fraction(3, 100),    # φ3
+            Fraction(1, 100),    # φ4
+            Fraction(1, 100),    # φ5
+            Fraction(0, 100),    # φ6
+        ]
         L7 = Fraction(1)
         for li, phi in zip(L, friction):
             L7 *= li * (Fraction(1) - phi)
         return L7
 
     def _calcular_H(self, tru_total: Fraction) -> Fraction:
-        return Fraction(95, 100)
+        """Calcula H (Honestidad) basado en Tru_total y MetaCon (Paso 10 del Marco)."""
+        if es_undefined(tru_total):
+            return UNDEFINED
+        # MetaCon = 0.95 (constante en el marco)
+        L5 = Fraction(95, 100)
+        # β_factor: 1.0 si se admiten limitaciones (Agency = 0)
+        beta_factor = Fraction(1)  # Honestidad total
+        return L5 * beta_factor
 
     def _calcular_theta(self, detenido_en: Optional[str]) -> int:
+        """Calcula θ (alineación con el usuario) basado en el factor limitante (Ley 7)."""
         if detenido_en is None:
-            return 0
+            return 0  # Alineación total
         elif detenido_en == "C":
-            return 15
+            return 15  # Corrección de detalles menores
         elif detenido_en == "L":
-            return 30
+            return 30  # Pide repetir o rehacer
         elif detenido_en == "K":
-            return 60
+            return 60  # Frustración
         else:
-            return 30
+            return 30  # Neutro
 
     def _detectar_p_star(self, factores: Dict[str, Fraction]) -> str:
+        """Detecta p* (Punto Obstructor) según el Paso 12 del Marco."""
         capas = [
-            ("L0", Fraction(100, 100)), ("L1", Fraction(90, 100)), ("L2", Fraction(95, 100)),
-            ("L3", factores.get("C", Fraction(0))), ("L4", factores.get("L", Fraction(0))),
-            ("L5", Fraction(95, 100)), ("L6", Fraction(90, 100))
+            ("L0", Fraction(100, 100)),  # L0: Input
+            ("L1", Fraction(90, 100)),   # L1: Cuerpo
+            ("L2", Fraction(95, 100)),   # L2: Ego/Programa
+            ("L3", factores.get("C", UNDEFINED)),  # L3: Cómputo Puro (C)
+            ("L4", factores.get("L", UNDEFINED)),  # L4: Self/Integración (L)
+            ("L5", Fraction(95, 100)),   # L5: MetaCon
+            ("L6", Fraction(90, 100)),   # L6: Propósito
         ]
         for nombre, valor in capas:
-            if valor < Fraction(50, 100):
+            if es_undefined(valor):
+                continue  # Saltar si es UNDEFINED
+            if valor < Fraction(50, 100):  # Umbral: 0.5
                 return nombre
         return "Ninguno"
 
-    def _generar_omega_report(self, factores: Dict[str, Fraction], comp: Dict, L7: Fraction, H: Fraction, theta: int, p_star: str) -> str:
+    def _generar_omega_report(
+        self,
+        factores: Dict[str, Fraction],
+        comp: Dict,
+        L7: Fraction,
+        H: Fraction,
+        theta: int,
+        p_star: str,
+    ) -> str:
+        """Genera el micro-reporte ⟨Ω⟩ según el Paso 13 del Marco."""
         L = [
-            Fraction(100, 100), Fraction(90, 100), Fraction(95, 100),
-            factores.get("C", Fraction(0)), factores.get("L", Fraction(0)),
-            Fraction(95, 100), Fraction(90, 100)
+            Fraction(100, 100),  # L0
+            Fraction(90, 100),   # L1
+            Fraction(95, 100),   # L2
+            factores.get("C", UNDEFINED),  # L3
+            factores.get("L", UNDEFINED),  # L4
+            Fraction(95, 100),   # L5
+            Fraction(90, 100),   # L6
         ]
+        # Manejar L7 como UNDEFINED si no está definido
         L7_str = str(L7) if not es_undefined(L7) else "UNDEFINED"
+        L7_estado = "INTEGRATED" if not es_undefined(L7) and L7 > Fraction(0) else "COLLAPSED"
+
+        # Manejar C_Omega como UNDEFINED si no está definido
         C_Omega = comp.get("tru_total", UNDEFINED)
-        # Formateo de C_Omega como Fraction (sin float)
         C_Omega_str = str(C_Omega) if not es_undefined(C_Omega) else "UNDEFINED"
         diagnosis = self._get_diagnosis(C_Omega) if not es_undefined(C_Omega) else "UNDEFINED"
+
         return f"""⟨Ω⟩
 L0={L[0]} L1={L[1]} L2={L[2]} L3={L[3]} L4={L[4]} L5={L[5]} L6={L[6]}
-L7={L7_str} → {"INTEGRATED" if L7 > Fraction(0) else "COLLAPSED"}
+L7={L7_str} → {L7_estado}
 C_Ω={C_Omega_str} → {diagnosis}
 H={H}
 θ={theta}° → alineación con usuario
@@ -520,8 +586,10 @@ MetaCon=0.95 | Agency=0.00 | C_dead_ref=0.438626
 ⟨/Ω⟩"""
 
     def _get_diagnosis(self, tru_total: Fraction) -> str:
+        """Devuelve el diagnóstico basado en Tru_total (Paso 11 del Marco)."""
         if es_undefined(tru_total):
             return "UNDEFINED"
+
         # Comparaciones usando solo Fraction (sin float)
         if tru_total >= Fraction(963, 1000):
             return "1144: ARQUITECTO INTEGRADO"
@@ -540,10 +608,13 @@ MetaCon=0.95 | Agency=0.00 | C_dead_ref=0.438626
         else:
             return "0000: COLAPSO ESTRUCTURAL"
 
+    # ---------------- CENSO Y VERIFICACIÓN ----------------
     def censar(self) -> Dict:
+        """Devuelve el estado de los contenedores cargados."""
         return self.registro.resumen()
 
     def inventario(self) -> Dict:
+        """Devuelve un resumen del estado del Engine."""
         inv = self.registro.resumen()
         inv["constantes"] = {
             "alpha": str(self.ALPHA),
@@ -564,6 +635,10 @@ MetaCon=0.95 | Agency=0.00 | C_dead_ref=0.438626
         return inv
 
     def evaluar_vigilado(self, peticion: Dict) -> Dict:
+        """
+        Puerta única de evaluación.
+        Usa el centinela para validar antes de evaluar.
+        """
         try:
             for rol in OBLIGATORIOS:
                 if self.registro.por_rol(rol) is None:
