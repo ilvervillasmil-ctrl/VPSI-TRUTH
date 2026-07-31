@@ -341,6 +341,18 @@ jobs:
           # Importamos directamente tu librería
           from modules.axiomas import barrer
           
+               # ==========================================================
+      # AUDITORÍA DE AXIOMAS (Paso independiente corregido)
+      # ==========================================================
+      - name: Auditar librería de axiomas
+        run: |
+          python - <<'EOF'
+          import sys, json
+          from pathlib import Path
+          sys.path.insert(0, ".")
+          
+          from modules.axiomas import barrer
+          
           print("============================================================")
           print("AUDITORÍA PROFUNDA DE LA LIBRERÍA DE AXIOMAS")
           print("============================================================")
@@ -348,4 +360,3 @@ jobs:
           informe = barrer()
           print(json.dumps(informe, indent=2, ensure_ascii=False))
           EOF
-
