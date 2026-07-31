@@ -1,173 +1,258 @@
 """
-VPSI-TRUTH  ---  modules/constante
-THE SEED
-======================================================================
+VPSI-TRUTH --- modules/constante/__init__.py
 
-Single source of truth. Every module reads from here. Nothing here
-reads from anywhere else.
+THE SEED: Punto de anclaje del sistema.
+Single source of truth. Every module reads from here. Nothing here reads from anywhere else.
 
-The Engine does all the work, but the Engine depends absolutely on
-this file. A formula that does not connect to ALPHA and BETA does not
-pass, and without that the rest does not hold.
+El Engine depende absolutamente de este módulo. Sin ALPHA y BETA, el sistema no funciona.
+Contenido: Plano 3D, partición, ALPHA, BETA, topología.
 
-Contents:  the 3D plane, the partition, ALPHA and BETA, the topology.
-            Nothing else.
-
-----------------------------------------------------------------------
-WHAT THIS MEANS  ---  for anyone reading, code or not
-----------------------------------------------------------------------
-
-Imagine a solid cube. To measure anything inside it you first have to
-divide it. Cut each of the three edges into three, and the cube breaks
-into 27 equal little cubes.
-
-Now count how many of those 27 touch the outside:
-
-     26 of them touch at least one outer face. You can see them.
-      1 of them touches nothing. It sits in the middle, wrapped by the
-        other 26. You cannot see it from outside, and from inside it
-        cannot see out.
-
-That is the whole idea. The 26 are what can be observed. The 1 is the
-observer. Two fractions, and only two:
-
-     ALPHA = 26/27      what can be observed
-     BETA  =  1/27      the observer
-
-     ALPHA + BETA = 1   nothing is left over
-
-Why cut into three and not two or four:
-
-     two cuts  ->  2^3 =  8 cubes, and all eight touch the outside.
-                   There is no middle. Nothing to be an observer.
-
-     three     ->  3^3 = 27 cubes, and exactly one touches nothing.
-                   The middle appears, and it appears once.
-
-     four      ->  4^3 = 64 cubes. A middle exists, but there are eight
-                   of them. The center stops being a single place.
-
-Three is the only cut that produces a middle and produces it alone.
-That is why the partition is minimal: below it there is no inside,
-above it the inside is not one.
-
-BETA being greater than zero is the statement that the observer
-exists. BETA being exactly 1/27 is how much room it takes.
-
-ALPHA + BETA = 1 is the statement that there is no third part. What
-can be observed and the one observing use up the whole cube.
-
-======================================================================
+Si este módulo no tiene su topología correcta, el Engine no accede a él.
 """
 
+from __future__ import annotations
 import math
 from fractions import Fraction
+from typing import Any, Dict, List
 
-# ======================================================================
-# CONTENEDOR
-# ======================================================================
-
+# ===============================================================
+# SEGMENTO 1 --- IDENTIDAD
+# ===============================================================
 CONTENEDOR = {
-    "nombre":   "constante",
-    "rol":      "CT",
-    "version":  "1.0",
+    "nombre": "constante",
+    "rol": "CT",
+    "version": "1.0",
     "requiere": [],
+    "descripcion": "Punto de anclaje: expone ALPHA=26/27 y BETA=1/27 (derivados del cubo 3×3×3).",
+    "obligatorio": True,  # Este módulo es obligatorio para el Engine
 }
 
-# ======================================================================
-# THE 3D PLANE
-# ======================================================================
+# ===============================================================
+# SEGMENTO 2 --- ERRORES
+# ===============================================================
+class InvarianteRotoError(Exception):
+    """Error si ALPHA + BETA != 1 o alguna aserción de cierre falla."""
+    pass
 
+# ===============================================================
+# SEGMENTO 3 --- CONSTANTES Y CONTRATOS
+# ===============================================================
+# Plano 3D: Tres ejes cartesianos ortogonales. Un cubo unitario.
 DIMENSION = 3
 AXES = ("x", "y", "z")
 
-# ======================================================================
-# THE PARTITION
-# ======================================================================
-
-DIVISIONS_PER_AXIS = 3
-CUBE_TOTAL = DIVISIONS_PER_AXIS ** DIMENSION
-CUBE_CENTER = 1
-CUBE_EXTERIOR = CUBE_TOTAL - CUBE_CENTER
+# Partición: División mínima regular de R3 que tiene un interior distinguible.
+DIVISIONES_PER_AXIS = 3
+CUBE_TOTAL = DIVISIONS_PER_AXIS ** DIMENSION  # 27
+CUBE_CENTER = 1  # 1 (el observador)
+CUBE_EXTERIOR = CUBE_TOTAL - CUBE_CENTER  # 26 (lo observable)
 N_CUBE = CUBE_TOTAL
 
-# ======================================================================
-# THE SEED
-# ======================================================================
+# La semilla: Las dos fracciones que produce la partición.
+ALPHA = Fraction(CUBE_EXTERIOR, CUBE_TOTAL)  # 26/27 (lo observable)
+BETA = Fraction(CUBE_CENTER, CUBE_TOTAL)    # 1/27 (el observador)
+C_MAX = ALPHA  # Techo estructural
 
-ALPHA = Fraction(CUBE_EXTERIOR, CUBE_TOTAL)  # 26/27
-BETA = Fraction(CUBE_CENTER, CUBE_TOTAL)     # 1/27
-C_MAX = ALPHA
+# Anatomía de la superficie: Capas del cubo.
+LAYER_FACES = 6      # 6 caras
+LAYER_EDGES = 12     # 12 aristas
+LAYER_VERTICES = 8   # 8 vértices
+SURFACE = LAYER_FACES + LAYER_EDGES + LAYER_VERTICES  # 26 = CUBE_EXTERIOR
 
-# ======================================================================
-# ANATOMY OF THE SURFACE
-# ======================================================================
-
-LAYER_FACES = 6
-LAYER_EDGES = 12
-LAYER_VERTICES = 8
-SURFACE = LAYER_FACES + LAYER_EDGES + LAYER_VERTICES
-
-# ======================================================================
-# TRANSITIONS
-# ======================================================================
-
+# Transiciones: Adyacencia de la partición.
 TRANS_CENTER = 6
 TRANS_PER_FACE = 9
 TRANS_PER_EDGE = 6
 TRANS_PER_VERTEX = 3
-
 TRANSITIONS = (
     TRANS_CENTER
     + LAYER_FACES * TRANS_PER_FACE
     + LAYER_EDGES * TRANS_PER_EDGE
     + LAYER_VERTICES * TRANS_PER_VERTEX
-)
+)  # 156 = 6 * 26
+PERCEPTUAL_MODE = 5  # Modo perceptual
 
-PERCEPTUAL_MODE = 5
-
-# ======================================================================
-# TOPOLOGY
-# ======================================================================
-
+# Topología: Derivada de la partición.
 SIN2_THETA = BETA
 COS2_THETA = ALPHA
 TAN2_THETA = BETA / ALPHA
-R_FIN = Fraction(1) + BETA
+R_FIN = Fraction(1) + BETA  # 28/27
 
-def theta():
+# ===============================================================
+# SEGMENTO 4 --- ESTADO (Colecciones auto-llenables)
+# ===============================================================
+_DECLARACIONES: List[Dict[str, Any]] = []
+
+# ===============================================================
+# SEGMENTO 5 --- GANCHOS DE ANEXO (Decoradores)
+# ===============================================================
+def declarar(d: Dict[str, Any]) -> Dict[str, Any]:
+    """Registra una declaración axiomática del contenedor."""
+    _DECLARACIONES.append(d)
+    return d
+
+# ===============================================================
+# SEGMENTO 6 --- LECTURA (Funciones privadas)
+# ===============================================================
+def _validar_invariante() -> None:
+    """Valida que todas las aserciones de cierre se cumplan."""
+    assert DIMENSION == 3, "DIMENSION debe ser 3."
+    assert DIVISIONS_PER_AXIS ** DIMENSION == CUBE_TOTAL, "CUBE_TOTAL debe ser 27."
+    assert CUBE_EXTERIOR + CUBE_CENTER == CUBE_TOTAL, "CUBE_EXTERIOR + CUBE_CENTER debe ser 27."
+    assert SURFACE == CUBE_EXTERIOR, "SURFACE debe ser igual a CUBE_EXTERIOR."
+    assert CUBE_CENTER + SURFACE == CUBE_TOTAL, "CUBE_CENTER + SURFACE debe ser 27."
+    assert TRANSITIONS == TRANS_CENTER * CUBE_EXTERIOR, "TRANSITIONS debe ser 6 * 26."
+    assert ALPHA + BETA == Fraction(1), "ALPHA + BETA debe ser 1."
+    assert SIN2_THETA + COS2_THETA == Fraction(1), "SIN2_THETA + COS2_THETA debe ser 1."
+    assert TAN2_THETA == SIN2_THETA / COS2_THETA, "TAN2_THETA debe ser SIN2_THETA / COS2_THETA."
+    assert C_MAX == ALPHA, "C_MAX debe ser igual a ALPHA."
+    assert R_FIN == Fraction(1) + BETA, "R_FIN debe ser 1 + BETA."
+
+# ===============================================================
+# SEGMENTO 7 --- API DEL CONTENEDOR (Contrato con el Engine)
+# ===============================================================
+def barrer() -> Dict[str, Any]:
+    """Filtro de paso al Engine. Valida las aserciones de cierre."""
+    try:
+        _validar_invariante()
+        return {
+            "contenedor": CONTENEDOR["nombre"],
+            "estado": "APROBADO",
+            "coherente": True,
+            "faltas": [],
+        }
+    except AssertionError as e:
+        return {
+            "contenedor": CONTENEDOR["nombre"],
+            "estado": "RECHAZADO",
+            "coherente": False,
+            "faltas": [str(e)],
+        }
+
+def inventario() -> Dict[str, Any]:
+    """Describe el contenedor sin tocar disco/red."""
+    return {
+        "contenedor": CONTENEDOR["nombre"],
+        "version": CONTENEDOR["version"],
+        "partition": partition(),
+        "anatomy": anatomy(),
+        "seed": {"ALPHA": str(ALPHA), "BETA": str(BETA)},
+        "c_max": str(C_MAX),
+        "topology": topology(),
+        "closure": {
+            "alpha_plus_beta": str(ALPHA + BETA),
+            "exact": ALPHA + BETA == Fraction(1),
+            "layers_close": SURFACE == CUBE_EXTERIOR,
+            "transitions": TRANSITIONS == TRANS_CENTER * CUBE_EXTERIOR,
+            "pythagorean": SIN2_THETA + COS2_THETA == Fraction(1),
+        },
+    }
+
+def axiomas() -> List[Dict[str, Any]]:
+    """Declaraciones axiomáticas del contenedor para el barrido general."""
+    return _DECLARACIONES
+
+# ===============================================================
+# SEGMENTO 8 --- REGLAS (Validaciones internas)
+# ===============================================================
+@regla
+def _validar_particion() -> List[str]:
+    """Valida que la partición del cubo sea correcta."""
+    faltas = []
+    if DIVISIONS_PER_AXIS ** DIMENSION != 27:
+        faltas.append("DIVISIONS_PER_AXIS ** DIMENSION debe ser 27.")
+    if CUBE_EXTERIOR + CUBE_CENTER != 27:
+        faltas.append("CUBE_EXTERIOR + CUBE_CENTER debe ser 27.")
+    return faltas
+
+@regla
+def _validar_constantes() -> List[str]:
+    """Valida que ALPHA y BETA sean correctos."""
+    faltas = []
+    if ALPHA + BETA != Fraction(1):
+        faltas.append("ALPHA + BETA debe ser 1.")
+    if ALPHA != Fraction(26, 27):
+        faltas.append("ALPHA debe ser 26/27.")
+    if BETA != Fraction(1, 27):
+        faltas.append("BETA debe ser 1/27.")
+    return faltas
+
+# ===============================================================
+# SEGMENTO 9 --- DECLARACIONES (Axiomas/Teoremas del módulo)
+# ===============================================================
+declarar({
+    "id": "CT-1",
+    "tipo": "axioma",
+    "sujeto": "ALPHA",
+    "relacion": "+",
+    "objeto": "BETA",
+    "polaridad": True,
+    "enunciado": "ALPHA + BETA = 1 (Ley de Conservación: lo observable y el observador agotan el cubo).",
+    "cota": None,
+    "depende_de": [],
+    "gobierna": ["FO-1", "FO-2"],
+})
+
+declarar({
+    "id": "CT-2",
+    "tipo": "definicion",
+    "sujeto": "ALPHA",
+    "relacion": "=",
+    "objeto": "26/27",
+    "polaridad": True,
+    "enunciado": "ALPHA = 26/27 (fracción accesible del cubo 3×3×3).",
+    "cota": "26/27",
+    "depende_de": [],
+    "gobierna": ["FO-1"],
+})
+
+declarar({
+    "id": "CT-3",
+    "tipo": "definicion",
+    "sujeto": "BETA",
+    "relacion": "=",
+    "objeto": "1/27",
+    "polaridad": True,
+    "enunciado": "BETA = 1/27 (fracción interior irreducible del cubo 3×3×3).",
+    "cota": "1/27",
+    "depende_de": [],
+    "gobierna": ["FO-2"],
+})
+
+declarar({
+    "id": "CT-4",
+    "tipo": "axioma",
+    "sujeto": "CUBE_TOTAL",
+    "relacion": "=",
+    "objeto": "27",
+    "polaridad": True,
+    "enunciado": "CUBE_TOTAL = 27 (partición mínima con interior distinguible).",
+    "cota": "27",
+    "depende_de": [],
+    "gobierna": [],
+})
+
+# ===============================================================
+# ZONA DE ANEXO
+# ===============================================================
+# Funciones de lectura (no requieren decoradores, son parte de la API pública)
+
+def theta() -> float:
+    """Ángulo en radianes. Derivado de SIN2_THETA = BETA."""
     return math.asin(math.sqrt(float(SIN2_THETA)))
 
-def theta_degrees():
+def theta_degrees() -> float:
+    """Ángulo en grados. 11.09..."""
     return math.degrees(theta())
 
-# ======================================================================
-# CLOSURE
-# ======================================================================
-
-assert DIMENSION == 3
-assert DIVISIONS_PER_AXIS ** DIMENSION == CUBE_TOTAL
-assert CUBE_EXTERIOR + CUBE_CENTER == CUBE_TOTAL
-assert SURFACE == CUBE_EXTERIOR
-assert CUBE_CENTER + SURFACE == CUBE_TOTAL
-assert TRANSITIONS == TRANS_CENTER * CUBE_EXTERIOR
-assert ALPHA + BETA == Fraction(1)
-assert SIN2_THETA + COS2_THETA == Fraction(1)
-assert TAN2_THETA == SIN2_THETA / COS2_THETA
-assert C_MAX == ALPHA
-assert R_FIN == Fraction(1) + BETA
-
-# ======================================================================
-# CONNECTION
-# ======================================================================
-
-_SCOPE = {
-    "ALPHA": ALPHA,
-    "BETA": BETA,
-    "Fraction": Fraction,
-}
-
-def derives(value, expression):
+def derives(value: Any, expression: str) -> Fraction:
+    """
+    Recomputa y compara. Devuelve el valor si la expresión es válida en el contexto de ALPHA y BETA.
+    Ejemplo:
+        derives(Fraction(28, 27), "1 + BETA") -> 28/27
+        derives(Fraction(1, 2), "1 + BETA") -> ValueError
+    """
+    _SCOPE = {"ALPHA": ALPHA, "BETA": BETA, "Fraction": Fraction}
     try:
         got = eval(expression, {"__builtins__": {}}, _SCOPE)
     except Exception as e:
@@ -194,14 +279,12 @@ def derives(value, expression):
 
     return want
 
-# ======================================================================
-# READING
-# ======================================================================
-
-def seed():
+def seed() -> Dict[str, Fraction]:
+    """Devuelve ALPHA y BETA."""
     return {"ALPHA": ALPHA, "BETA": BETA}
 
-def partition():
+def partition() -> Dict[str, Any]:
+    """Devuelve la partición del cubo."""
     return {
         "dimension": DIMENSION,
         "axes": list(AXES),
@@ -211,7 +294,8 @@ def partition():
         "center": CUBE_CENTER,
     }
 
-def anatomy():
+def anatomy() -> Dict[str, Any]:
+    """Devuelve la anatomía del cubo."""
     return {
         "center": CUBE_CENTER,
         "faces": LAYER_FACES,
@@ -230,7 +314,8 @@ def anatomy():
         "perceptual_mode": PERCEPTUAL_MODE,
     }
 
-def topology():
+def topology() -> Dict[str, Any]:
+    """Devuelve la topología derivada de la partición."""
     return {
         "sin2_theta": str(SIN2_THETA),
         "cos2_theta": str(COS2_THETA),
@@ -240,48 +325,8 @@ def topology():
         "theta_degrees": theta_degrees(),
     }
 
-def inventario():
-    return {
-        "contenedor": CONTENEDOR["nombre"],
-        "version": CONTENEDOR["version"],
-        "partition": partition(),
-        "anatomy": anatomy(),
-        "seed": {"ALPHA": str(ALPHA), "BETA": str(BETA)},
-        "c_max": str(C_MAX),
-        "topology": topology(),
-        "closure": {
-            "alpha_plus_beta": str(ALPHA + BETA),
-            "exact": ALPHA + BETA == Fraction(1),
-            "layers_close": SURFACE == CUBE_EXTERIOR,
-            "transitions": TRANSITIONS == TRANS_CENTER * CUBE_EXTERIOR,
-            "pythagorean": SIN2_THETA + COS2_THETA == Fraction(1),
-        },
-    }
-
-# ======================================================================
-# EXPORTACIÓN (REQUERIDO PARA QUE EL ENGINE Y OTROS MÓDULOS IMPORTEN)
-# ======================================================================
-
-__all__ = [
-    # Contenedor
-    "CONTENEDOR",
-
-    # Constantes fundamentales
-    "ALPHA", "BETA", "C_MAX",
-
-    # Geometría del cubo
-    "DIMENSION", "AXES", "DIVISIONS_PER_AXIS",
-    "CUBE_TOTAL", "CUBE_EXTERIOR", "CUBE_CENTER", "N_CUBE",
-
-    # Capas del cubo
-    "LAYER_FACES", "LAYER_EDGES", "LAYER_VERTICES", "SURFACE",
-
-    # Transiciones
-    "TRANSITIONS", "TRANS_CENTER", "TRANS_PER_FACE", "TRANS_PER_EDGE", "TRANS_PER_VERTEX", "PERCEPTUAL_MODE",
-
-    # Topología
-    "SIN2_THETA", "COS2_THETA", "TAN2_THETA", "R_FIN",
-
-    # Funciones
-    "theta", "theta_degrees", "derives", "seed", "partition", "anatomy", "topology", "inventario",
-]
+# ===============================================================
+# EXPORTACIÓN (Funciones y constantes públicas)
+# ===============================================================
+# No se usa __all__ para permitir anexo al final sin editar esta lista.
+# Python exporta todo lo que no empieza con "_".
