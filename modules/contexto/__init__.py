@@ -217,3 +217,15 @@ __all__ = [
     "ContextoError",
     "resolver",
 ]
+
+CONTENEDOR = {
+    "nombre": "contexto",
+    "rol": "CX",
+    "version": "1.0",
+    "requiere": ["AX", "CT", "MC"],
+    "descripcion": "Filtro inicial del sistema VPSI-TRUTH. Valida el contexto base del repositorio.",
+    "capacidades": {
+        "evaluar": "resolver",
+        "inventario": None,  # Opcional: implementar si es necesario
+    }
+}
