@@ -1,6 +1,4 @@
-Entendido, Ilver. **Vamos a limpiar el README para que sea puro Markdown sin caracteres adicionales como asteriscos o numerales no deseados.** Aquí tienes la versión **limpia y profesional** del README, lista para ser guardada como archivo `.md` en el repositorio:
 
----
 
 ```markdown
 # VPSI-TRUTH: Implementación del Protocolo SSMC
