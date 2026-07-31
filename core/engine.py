@@ -18,17 +18,30 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # ===============================================================
-# SEGMENTO 1 --- ROLES DE MÓDULOS
+# SEGMENTO 1 --- ROLES DE MÓDULOS (CONSTANTES GLOBALES)
 # ===============================================================
-ROL_AXIOMAS = "AX"                # Valida coherencia axiomática
-ROL_CONSTANTE = "CT"              # Proporciona constantes (ALPHA, BETA)
-ROL_FORMULAS = "FO"               # Aplica fórmulas canónicas (Tru_total)
-ROL_CALCULATOR = "CA"             # Calcula factores C, L, K
-ROL_CONTEXTO = "CX"               # Resuelve contexto (O_ctx)
-ROL_TAXONOMIA = "TX"              # Clasifica comportamiento
-ROL_REALIDAD = "RE"               # Gestiona realidad absoluta
-ROL_VERIFICACION = "VX"           # Verifica axiomas
-ROL_CORRELACION_MECANICA = "MC"   # Valida orden de ejecución de módulos
+ROL_AXIOMAS = "AX"
+ROL_CONSTANTE = "CT"
+ROL_FORMULAS = "FO"
+ROL_CALCULATOR = "CA"
+ROL_CONTEXTO = "CX"
+ROL_TAXONOMIA = "TX"
+ROL_REALIDAD = "RE"
+ROL_VERIFICACION = "VX"
+ROL_CORRELACION_MECANICA = "MC"
+
+# Tupla global de todos los roles (accesible en todo el módulo)
+ROLES = (
+    ROL_AXIOMAS,
+    ROL_CONSTANTE,
+    ROL_FORMULAS,
+    ROL_CALCULATOR,
+    ROL_CONTEXTO,
+    ROL_TAXONOMIA,
+    ROL_REALIDAD,
+    ROL_VERIFICACION,
+    ROL_CORRELACION_MECANICA,  # Añadido para que esté en ROLES
+)
 
 # Módulos obligatorios para el arranque
 OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS, ROL_CORRELACION_MECANICA)
