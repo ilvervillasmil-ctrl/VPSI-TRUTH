@@ -2,40 +2,57 @@
 VPSI-TRUTH --- modules/constante/__init__.py
 
 THE SEED: Punto de anclaje del sistema.
-Single source of truth. Every module reads from here.
+Single source of truth. Every module reads from here. Nothing here reads from anywhere else.
+
+El Engine depende absolutamente de este módulo. Sin ALPHA y BETA, el sistema no funciona.
 """
 
-from __future__ import annotations
-import math
 from fractions import Fraction
+import math
 
 # ===============================================================
-# SEGMENTO 1 --- IDENTIDAD
+# CONTENEDOR
 # ===============================================================
 CONTENEDOR = {
     "nombre": "constante",
     "rol": "CT",
     "version": "1.0",
     "requiere": [],
-    "obligatorio": True,
 }
 
 # ===============================================================
-# SEGMENTO 3 --- CONSTANTES Y CONTRATOS
+# THE 3D PLANE
 # ===============================================================
 DIMENSION = 3
 AXES = ("x", "y", "z")
 
+# ===============================================================
+# THE PARTITION
+# ===============================================================
 DIVISIONES_PER_AXIS = 3
 CUBE_TOTAL = DIVISIONES_PER_AXIS ** DIMENSION
 CUBE_CENTER = 1
 CUBE_EXTERIOR = CUBE_TOTAL - CUBE_CENTER
+N_CUBE = CUBE_TOTAL
 
+# ===============================================================
+# THE SEED
+# ===============================================================
+ALPHA = Fraction(CUBE_EXTERIOR, CUBE_TOTAL)  # 26/27
+BETA = Fraction(CUBE_CENTER, CUBE_TOTAL)     # 1/27
+C_MAX = ALPHA
+
+# ===============================================================
+# ANATOMY OF THE SURFACE
+# ===============================================================
 LAYER_FACES = 6
 LAYER_EDGES = 12
 LAYER_VERTICES = 8
 SURFACE = LAYER_FACES + LAYER_EDGES + LAYER_VERTICES
 
+# ===============================================================
+# TRANSITIONS
+# ===============================================================
 TRANS_CENTER = 6
 TRANS_PER_FACE = 9
 TRANS_PER_EDGE = 6
@@ -48,17 +65,22 @@ TRANSITIONS = (
 )
 PERCEPTUAL_MODE = 5
 
-ALPHA = Fraction(CUBE_EXTERIOR, CUBE_TOTAL)
-BETA = Fraction(CUBE_CENTER, CUBE_TOTAL)
-C_MAX = ALPHA
-
+# ===============================================================
+# TOPOLOGY
+# ===============================================================
 SIN2_THETA = BETA
 COS2_THETA = ALPHA
 TAN2_THETA = BETA / ALPHA
 R_FIN = Fraction(1) + BETA
 
+def theta():
+    return math.asin(math.sqrt(float(SIN2_THETA)))
+
+def theta_degrees():
+    return math.degrees(theta())
+
 # ===============================================================
-# SEGMENTO 4 --- VALIDACIÓN DE INVARIANTES
+# CLOSURE
 # ===============================================================
 assert DIMENSION == 3
 assert DIVISIONES_PER_AXIS ** DIMENSION == CUBE_TOTAL
@@ -73,58 +95,15 @@ assert C_MAX == ALPHA
 assert R_FIN == Fraction(1) + BETA
 
 # ===============================================================
-# SEGMENTO 7 --- API DEL CONTENEDOR
+# CONNECTION
 # ===============================================================
-def seed():
-    return {"ALPHA": ALPHA, "BETA": BETA}
-
-def partition():
-    return {
-        "dimension": DIMENSION,
-        "axes": list(AXES),
-        "divisions_per_axis": DIVISIONES_PER_AXIS,
-        "total": CUBE_TOTAL,
-        "exterior": CUBE_EXTERIOR,
-        "center": CUBE_CENTER,
-    }
-
-def anatomy():
-    return {
-        "center": CUBE_CENTER,
-        "faces": LAYER_FACES,
-        "edges": LAYER_EDGES,
-        "vertices": LAYER_VERTICES,
-        "surface": SURFACE,
-        "total": CUBE_TOTAL,
-        "transitions": {
-            "center": TRANS_CENTER,
-            "faces": LAYER_FACES * TRANS_PER_FACE,
-            "edges": LAYER_EDGES * TRANS_PER_EDGE,
-            "vertices": LAYER_VERTICES * TRANS_PER_VERTEX,
-            "total": TRANSITIONS,
-            "factorisation": f"{TRANS_CENTER} x {CUBE_EXTERIOR}",
-        },
-        "perceptual_mode": PERCEPTUAL_MODE,
-    }
-
-def topology():
-    return {
-        "sin2_theta": str(SIN2_THETA),
-        "cos2_theta": str(COS2_THETA),
-        "tan2_theta": str(TAN2_THETA),
-        "r_fin": str(R_FIN),
-        "theta_rad": math.asin(math.sqrt(float(SIN2_THETA))),
-        "theta_degrees": math.degrees(math.asin(math.sqrt(float(SIN2_THETA)))),
-    }
-
-def theta():
-    return math.asin(math.sqrt(float(SIN2_THETA)))
-
-def theta_degrees():
-    return math.degrees(theta())
+_SCOPE = {
+    "ALPHA": ALPHA,
+    "BETA": BETA,
+    "Fraction": Fraction,
+}
 
 def derives(value, expression):
-    _SCOPE = {"ALPHA": ALPHA, "BETA": BETA, "Fraction": Fraction}
     try:
         got = eval(expression, {"__builtins__": {}}, _SCOPE)
     except Exception as e:
