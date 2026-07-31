@@ -92,9 +92,7 @@ El sistema **está diseñado para fallar**:
 
 ---
 
----
-
-```
+~~~
 VPSI-TRUTH/
 ├── core/
 │   ├── engine.py                  # Autoridad de despacho          [MONTADO]
@@ -144,7 +142,8 @@ VPSI-TRUTH/
 │
 └── .github/workflows/
     └── ci.yml                     # Pipeline de CI/CD              [MONTADO]
-```
+~~~
+
 
 
 ---
