@@ -23,7 +23,6 @@ Principios clave aplicados:
 
 from fractions import Fraction
 import pytest
-from core.engine import Engine, AutoridadError, es_undefined, UNDEFINED
 
 # Constantes para pruebas
 F = Fraction
