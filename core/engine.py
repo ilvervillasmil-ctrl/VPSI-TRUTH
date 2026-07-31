@@ -591,16 +591,26 @@ class Engine:
                     inv["contenido"][c.nombre] = {"error": "capacidad 'inventario' falló"}
         return inv
       
-# ===============================================================
-# REPORTES DE MÓDULOS (COMPATIBILIDAD)
-# ===============================================================
-# El Engine no genera informes especializados. Cada módulo produce
-# su propio reporte según su contrato y el Engine únicamente los
-# conserva para que puedan ser consultados por Omega Report u otras
-# herramientas del framework.
-#
-# 'informe_axiomas' se mantiene únicamente por compatibilidad con
-# código existente. Su contenido debe provenir del reporte generado
-# por el módulo AX, nunca de lógica interna del Engine.
-self.reportes = {}
-self.informe_axiomas = self.reportes.setdefault("AX", {})
+        # ===============================================================
+        # REPORTES DE CONTRATOS
+        # ===============================================================
+        # El Engine conoce toda la arquitectura del framework y ejecuta
+        # los contratos de los módulos. No genera, modifica ni interpreta
+        # reportes especializados.
+        #
+        # Cada módulo es el único responsable de producir su propio
+        # reporte. El Engine únicamente conserva una referencia a dichos
+        # reportes para que Omega Report y cualquier otro componente del
+        # framework puedan consultarlos sin recalcularlos.
+        #
+        # 'informe_axiomas' se mantiene por compatibilidad con versiones
+        # anteriores. Su contenido siempre debe provenir del módulo AX.
+        self.reportes: Dict[str, Dict[str, Any]] = {}
+        self.informe_axiomas: Dict[str, Any] = {}
+
+        if verificar_axiomas:
+            self.informe_axiomas = self._barrido_axiomatico()
+            self.reportes["AX"] = self.informe_axiomas
+
+        # Finaliza la inicialización del Engine.
+        return
