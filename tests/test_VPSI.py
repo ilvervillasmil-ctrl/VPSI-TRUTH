@@ -1,5 +1,4 @@
 """
-======================================================================
 VPSI-TRUTH  ---  tests/test_vpsi.py
 SUITE UNICA DE VERIFICACION
 ======================================================================
@@ -11,6 +10,7 @@ sostiene:
     2. FORMULAS       la ecuacion, con vectores exactos
     3. AXIOMAS        el barrido y su piso de carga
     4. ENGINE         arranque, descubrimiento, frontera de tipos
+    4.5. CONTEXTO     filtro inicial: coherencia del repositorio
     5. REALIDAD       acceso e INTI (se salta si aun no existe)
     6. CONSTRUCCION   lo que falta debe ser visible, no silencioso
 
@@ -39,6 +39,13 @@ from core.engine import (
 )
 
 try:
+    import modules.contexto as CX
+    from modules.contexto import ContextoError
+    HAY_CONTEXTO = True
+except ImportError:
+    HAY_CONTEXTO = False
+
+try:
     import modules.realidad as RE
     from modules.realidad import (
         Canal, Inti, ENCONTRADO, NO_EXISTE, FUERA_DE_ALCANCE, ESTADOS,
@@ -50,6 +57,10 @@ except ImportError:
 
 sin_realidad = pytest.mark.skipif(
     not HAY_REALIDAD, reason="modules.realidad aun no montado"
+)
+
+sin_contexto = pytest.mark.skipif(
+    not HAY_CONTEXTO, reason="modules.contexto aun no montado"
 )
 
 def motor():
@@ -267,6 +278,124 @@ def test_engine_normalizar_rechaza_tipo_no_admitido():
 
 def test_engine_normalizar_propaga_undefined():
     assert es_undefined(normalizar(UNDEFINED, "factor C"))
+
+# ===============================================================
+# SEGMENTO 4.5 --- CONTEXTO
+# ===============================================================
+#
+# CONTEXTO es el filtro inicial del sistema. Valida el contexto base
+# del repositorio (axiomas, orden causal, constantes) y expone
+# la función resolver() para el Engine.
+# Si el contexto no es coherente, el Engine no delegará tareas.
+
+@sin_contexto
+def test_contexto_modulo_cargado():
+    """Verifica que el módulo contexto esté cargado y exponga resolver()."""
+    cx = motor().registro.por_rol("CX")
+    assert cx is not None, "Módulo CX (contexto) no cargado"
+    assert hasattr(cx.modulo, "resolver"), "Módulo contexto no expone resolver()"
+    assert callable(cx.modulo.resolver), "resolver() no es callable"
+
+@sin_contexto
+def test_contexto_resolver_devuelve_contexto_base():
+    """Verifica que resolver() devuelva el contexto base del repositorio."""
+    cx = motor().registro.por_rol("CX")
+    contexto_resuelto = cx.fn("resolver")({})
+
+    # Verificar estructura del contexto resuelto
+    assert "O_context" in contexto_resuelto
+    assert contexto_resuelto["O_context"] == "VPSI-TRUTH v9.4 (repositorio)"
+    assert "coherencia" in contexto_resuelto
+    assert isinstance(contexto_resuelto["coherencia"], bool)
+    assert "axiomas" in contexto_resuelto
+    assert "mecanica" in contexto_resuelto
+    assert "constantes" in contexto_resuelto
+    assert "archivos_contexto" in contexto_resuelto
+    assert "errores" in contexto_resuelto
+
+@sin_contexto
+def test_contexto_coherencia_global():
+    """Verifica que el contexto base del repositorio sea coherente."""
+    cx = motor().registro.por_rol("CX")
+    contexto_resuelto = cx.fn("resolver")({})
+
+    # Verificar coherencia global
+    assert contexto_resuelto["coherencia"] is True, (
+        f"Contexto no coherente: {contexto_resuelto['errores']}"
+    )
+
+    # Verificar axiomas
+    assert contexto_resuelto["axiomas"]["coherente"] is True, (
+        f"Choques axiomáticos: {contexto_resuelto['axiomas']['choques']}"
+    )
+
+    # Verificar orden causal
+    assert contexto_resuelto["mecanica"]["coherente"] is True, (
+        f"Choques mecánicos: {contexto_resuelto['mecanica']['choques']}"
+    )
+
+    # Verificar constantes
+    assert contexto_resuelto["constantes"]["valido"] is True, (
+        f"Constantes inválidas: {contexto_resuelto['constantes']}"
+    )
+
+@sin_contexto
+def test_contexto_archivos_cargados():
+    """Verifica que todos los archivos de contexto en la carpeta se carguen correctamente."""
+    cx = motor().registro.por_rol("CX")
+    contexto_resuelto = cx.fn("resolver")({})
+
+    archivos_contexto = contexto_resuelto["archivos_contexto"]
+    assert isinstance(archivos_contexto, dict), "archivos_contexto debe ser un diccionario"
+
+    # Verificar que no haya errores en los archivos de contexto
+    for nombre_archivo, contexto in archivos_contexto.items():
+        assert "error" not in contexto, (
+            f"Archivo de contexto {nombre_archivo} tiene error: {contexto.get('error')}"
+        )
+
+@sin_contexto
+def test_contexto_sin_errores():
+    """Verifica que el contexto resuelto no tenga errores."""
+    cx = motor().registro.por_rol("CX")
+    contexto_resuelto = cx.fn("resolver")({})
+
+    assert contexto_resuelto["errores"] == [], (
+        f"Errores en el contexto: {contexto_resuelto['errores']}"
+    )
+
+@sin_contexto
+def test_contexto_sondeo_basico():
+    """Sondeo básico: Verifica que el módulo contexto responda correctamente a una petición simple."""
+    cx = motor().registro.por_rol("CX")
+    peticion = {"mensaje": "prueba de sondeo", "contexto": "Octx declarado"}
+
+    contexto_resuelto = cx.fn("resolver")(peticion)
+
+    # Verificar que el contexto resuelto tenga la estructura esperada
+    assert "O_context" in contexto_resuelto
+    assert "coherencia" in contexto_resuelto
+    assert contexto_resuelto["coherencia"] is True
+    assert "errores" in contexto_resuelto
+    assert contexto_resuelto["errores"] == []
+
+@sin_contexto
+def test_contexto_coherencia_interna_repositorio():
+    """Verifica la coherencia interna del repositorio con el marco VPSI."""
+    cx = motor().registro.por_rol("CX")
+    contexto_resuelto = cx.fn("resolver")({})
+
+    # Verificar que el repositorio cumpla con los axiomas
+    assert contexto_resuelto["axiomas"]["coherente"] is True
+
+    # Verificar que el orden causal sea válido
+    assert contexto_resuelto["mecanica"]["coherente"] is True
+
+    # Verificar que las constantes sean válidas
+    assert contexto_resuelto["constantes"]["valido"] is True
+
+    # Verificar que no haya errores
+    assert contexto_resuelto["errores"] == []
 
 # ===============================================================
 # SEGMENTO 5 --- REALIDAD
