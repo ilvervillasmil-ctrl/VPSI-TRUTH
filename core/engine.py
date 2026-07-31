@@ -150,7 +150,7 @@ def normalizar(valor, etiqueta: str) -> Fraction:
 # ===============================================================
 # SEGMENTO 5 --- REGISTRO DE CONTENEDORES
 # ===============================================================
-CLAVES_CONTENEDOR = ("nombre", "rol", "version", "descripcion")
+CLAVES_CONTENEDOR = ("nombre", "rol", "version", "descripcion", "obligatorio")
 
 @dataclass
 class Contenedor:
@@ -175,6 +175,7 @@ class Contenedor:
             "requiere": list(self.requiere),
             "ruta": self.ruta,
             "descripcion": getattr(self.modulo, "CONTENEDOR", {}).get("descripcion", "Sin descripción"),
+            "obligatorio": getattr(self.modulo, "CONTENEDOR", {}).get("obligatorio", False),
         }
 
 class Registro:
@@ -230,29 +231,14 @@ class Registro:
             ocupados[c.rol] = c.nombre
             self.contenedores[c.nombre] = c
 
-        # Actualizar ROLES y OBLIGATORIOS dinámicamente
-        global ROLES, OBLIGATORIOS
-        ROLES = self._descubrir_roles()
-        OBLIGATORIOS = self._descubrir_obligatorios()
-
-        faltan = [r for r in OBLIGATORIOS if r not in ocupados]
+        # Verificar contenedores obligatorios
+        obligatorios = [c for c in self.contenedores.values() if getattr(c.modulo, "CONTENEDOR", {}).get("obligatorio", False)]
+        roles_obligatorios = [c.rol for c in obligatorios]
+        faltan = [r for r in roles_obligatorios if r not in ocupados]
         if faltan:
             raise ArranqueError(f"Contenedores obligatorios ausentes: {faltan}")
 
         return self.contenedores
-
-    def _descubrir_roles(self) -> Tuple[str, ...]:
-        """Descubre todos los roles desde los contenedores cargados."""
-        return tuple(sorted({c.rol for c in self.contenedores.values()}))
-
-    def _descubrir_obligatorios(self) -> Tuple[str, ...]:
-        """Descubre roles obligatorios desde los metadatos de CONTENEDOR."""
-        obligatorios: Set[str] = set()
-        for c in self.contenedores.values():
-            meta = getattr(c.modulo, "CONTENEDOR", {})
-            if meta.get("obligatorio", False):
-                obligatorios.add(c.rol)
-        return tuple(sorted(obligatorios))
 
     def _cargar(self, directorio: Path, init: Path) -> Contenedor:
         """Carga un contenedor desde su __init__.py."""
@@ -274,11 +260,6 @@ class Registro:
         for k in CLAVES_CONTENEDOR:
             if k not in meta:
                 raise ContratoError(f"CONTENEDOR sin clave '{k}'.")
-
-        if meta["rol"] not in ROLES:
-            raise ContratoError(
-                f"Rol '{meta['rol']}' no válido. Admitidos: {ROLES}"
-            )
 
         return Contenedor(
             nombre=str(meta["nombre"]),
