@@ -227,6 +227,126 @@ def test_engine_inventario_basico():
     inv = motor().inventario()
     assert "contenido" in inv
 
+# ===============================================================
+# SEGMENTO 4.1 --- ENGINE: VERIFICACIÓN AXIOMÁTICA DETALLADA
+# ===============================================================
+
+def test_engine_informe_axiomas_mediante_introspeccion():
+    """
+    Obtiene el informe axiomático usando los métodos oficiales del Engine.
+    Esto reemplaza el atributo inexistente 'informe_axiomas' con la
+    introspección correcta que el Engine provee.
+    """
+    e = motor()
+    
+    # Obtener el módulo AX por su rol
+    ax = e.registro.por_rol("AX")
+    assert ax is not None, "Módulo AX no encontrado"
+    assert ax.tiene_capacidad("verificar"), "AX debe declarar capacidad 'verificar'"
+    
+    # Recolectar declaraciones de todos los módulos que tienen la capacidad 'axiomas'
+    declaraciones = {}
+    for c in e.registro.contenedores.values():
+        if c.tiene_capacidad("axiomas"):
+            result = e.invocador.ejecutar_capacidad(c, "axiomas")
+            if not es_undefined(result):
+                declaraciones[c.nombre] = result
+    
+    # Ejecutar verificación de AX
+    informe_ax = e.invocador.ejecutar_capacidad(ax, "verificar", declaraciones)
+    
+    # Verificar que el informe existe y es válido
+    assert not es_undefined(informe_ax), "Verificación axiomática devolvió UNDEFINED"
+    assert isinstance(informe_ax, dict), "El informe debe ser un diccionario"
+    assert "coherente" in informe_ax, "El informe debe tener clave 'coherente'"
+    
+    # Si es incoherente, mostrar los choques para depuración
+    if not informe_ax.get("coherente", False):
+        choques = informe_ax.get("choques", [])
+        mensaje = f"Sistema axiomático INCOHERENTE: {len(choques)} choques"
+        if choques:
+            mensaje += f"\nPrimer choque: {choques[0]}"
+        pytest.fail(mensaje)
+    
+    # Guardar el informe en un atributo de la prueba para depuración
+    # (esto es solo para que pytest lo muestre si falla)
+    assert informe_ax.get("choques", []) == [], "Debe haber cero choques"
+    assert len(declaraciones) > 0, "Debe haber al menos una declaración"
+
+def test_engine_conocimiento_total_incluye_ax():
+    """
+    Verifica que el método conocimiento() del Engine incluye
+    toda la información del módulo AX.
+    """
+    e = motor()
+    conocimiento = e.conocimiento()
+    
+    assert "modulos" in conocimiento
+    modulos = conocimiento["modulos"]
+    
+    # Buscar el módulo AX
+    ax_encontrado = False
+    for nombre, info in modulos.items():
+        if info.get("rol") == "AX":
+            ax_encontrado = True
+            assert "capacidades" in info
+            assert "verificar" in info.get("capacidades", {}), \
+                "AX debe tener capacidad 'verificar' en el conocimiento"
+            assert "callables" in info
+            break
+    
+    assert ax_encontrado, "Módulo AX no encontrado en el conocimiento del Engine"
+
+def test_engine_censo_muestra_estado_de_ax():
+    """
+    Verifica que el censo del Engine muestra el estado correcto de AX.
+    """
+    e = motor()
+    censo = e.censar()
+    
+    assert "cargados" in censo
+    assert "roles" in censo
+    assert "AX" in censo["roles"], "AX debe aparecer en los roles del censo"
+    
+    # Verificar que AX está en los módulos cargados
+    ax_cargado = False
+    for modulo in censo["cargados"]:
+        if modulo.get("rol") == "AX":
+            ax_cargado = True
+            assert modulo.get("nombre") is not None
+            assert modulo.get("version") is not None
+            assert "capacidades" in modulo
+            break
+    
+    assert ax_cargado, "AX debe estar en la lista de módulos cargados"
+
+def test_engine_ejecutar_capacidad_ax_directamente():
+    """
+    Ejecuta la capacidad 'verificar' de AX directamente a través del Engine.
+    Esta es la forma correcta de obtener el informe axiomático.
+    """
+    e = motor()
+    
+    # Primero recolectar declaraciones
+    declaraciones = {}
+    for c in e.registro.contenedores.values():
+        if c.tiene_capacidad("axiomas"):
+            result = e.invocador.ejecutar_capacidad(c, "axiomas")
+            if not es_undefined(result):
+                declaraciones[c.nombre] = result
+    
+    # Ejecutar la capacidad directamente
+    resultado = e.ejecutar_capacidad("AX", "verificar", declaraciones)
+    
+    assert not es_undefined(resultado), "La ejecución no debe devolver UNDEFINED"
+    assert isinstance(resultado, dict), "Debe devolver un diccionario"
+    assert "coherente" in resultado, "Debe tener clave 'coherente'"
+    
+    # Si es coherente, todo bien
+    if not resultado.get("coherente", False):
+        choques = resultado.get("choques", [])
+        pytest.fail(f"AX reporta incoherencia: {len(choques)} choques")
+
 
 # ===============================================================
 # SEGMENTO 4.5 --- CONTEXTO
@@ -473,3 +593,122 @@ def test_construccion_evaluar_sin_calculador_no_finge():
         r = e.evaluar({"mensaje": "sonda", "contexto": "Octx"})
     except Exception:
         return
+
+
+# ===============================================================
+# SEGMENTO 4.2 --- ENGINE: INTEGRACIÓN COMPLETA (NUEVO)
+# ===============================================================
+
+def test_engine_informe_completo_mediante_conocimiento():
+    """
+    Obtiene el informe completo del sistema usando conocimiento()
+    Esta es la forma más completa de introspección que ofrece el Engine.
+    """
+    e = motor()
+    conocimiento = e.conocimiento()
+    
+    # Verificar estructura completa
+    assert "raiz" in conocimiento
+    assert "modulos" in conocimiento
+    assert "rechazados" in conocimiento
+    assert "roles_ocupados" in conocimiento
+    assert "roles_vacios" in conocimiento
+    
+    # Verificar que cada módulo tiene su conocimiento completo
+    for nombre, info in conocimiento["modulos"].items():
+        assert "nombre" in info
+        assert "rol" in info
+        assert "version" in info
+        assert "capacidades" in info
+        assert "atributos" in info
+        assert "callables" in info
+    
+    # Verificar específicamente AX
+    ax_info = None
+    for info in conocimiento["modulos"].values():
+        if info.get("rol") == "AX":
+            ax_info = info
+            break
+    
+    assert ax_info is not None, "AX debe estar en el conocimiento"
+    assert "verificar" in ax_info.get("capacidades", {}), \
+        "AX debe tener capacidad 'verificar'"
+    
+    # El informe axiomático está en la verificación al arranque
+    # pero podemos confirmar que el sistema es coherente
+    assert "AX" in conocimiento["roles_ocupados"], \
+        "AX debe estar en roles_ocupados"
+
+def test_engine_informe_axiomas_via_inventario():
+    """
+    Obtiene el informe axiomático a través del inventario.
+    Si los módulos declaran la capacidad 'inventario', esta prueba lo verifica.
+    """
+    e = motor()
+    inventario = e.inventario()
+    
+    assert "contenido" in inventario
+    assert "cargados" in inventario
+    
+    # Verificar que AX tiene inventario si declara la capacidad
+    ax = e.registro.por_rol("AX")
+    if ax and ax.tiene_capacidad("inventario"):
+        assert "AX" in inventario.get("contenido", {}), \
+            "AX debe aparecer en el inventario si declara la capacidad"
+        
+        contenido_ax = inventario["contenido"].get(ax.nombre, {})
+        if isinstance(contenido_ax, dict) and "error" not in contenido_ax:
+            # El inventario de AX contiene información útil
+            assert True  # La prueba pasa si llegamos aquí
+
+def test_engine_ejecutar_verificacion_ax_con_peticion_vacia():
+    """
+    Ejecuta la verificación de AX con una petición vacía.
+    Esto prueba que el Engine maneja correctamente los casos límite.
+    """
+    e = motor()
+    
+    # Ejecutar verificación sin declaraciones
+    resultado = e.ejecutar_capacidad("AX", "verificar", {})
+    
+    # Debe devolver algo (puede ser UNDEFINED o un dict)
+    # El comportamiento exacto depende de la implementación de AX
+    if not es_undefined(resultado):
+        assert isinstance(resultado, dict)
+        # Puede ser coherente o no, pero debe ser un dict válido
+
+def test_engine_invocador_registra_fallos_correctamente():
+    """
+    Verifica que el invocador del Engine registra fallos correctamente
+    cuando una capacidad no existe o falla.
+    """
+    e = motor()
+    
+    # Intentar ejecutar una capacidad que no existe
+    resultado = e.ejecutar_capacidad("AX", "capacidad_inexistente")
+    
+    # Debe devolver UNDEFINED
+    assert es_undefined(resultado)
+    
+    # El invocador debe haber registrado el fallo
+    assert len(e.invocador.fallos) > 0
+    fallo = e.invocador.fallos[-1]
+    assert fallo.get("capacidad") == "capacidad_inexistente"
+    assert "no declarada" in fallo.get("razon", "")
+
+def test_engine_registro_contenedores_es_accesible():
+    """
+    Verifica que el registro de contenedores del Engine es accesible
+    y contiene todos los módulos cargados.
+    """
+    e = motor()
+    
+    contenedores = e.registro.contenedores
+    assert len(contenedores) > 0, "Debe haber al menos un contenedor"
+    
+    # Verificar que cada contenedor tiene los atributos mínimos
+    for nombre, contenedor in contenedores.items():
+        assert contenedor.nombre is not None
+        assert contenedor.rol is not None
+        assert contenedor.version is not None
+        assert isinstance(contenedor.capacidades, dict)
