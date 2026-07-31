@@ -6,9 +6,6 @@ El Engine es el orquestador del sistema:
 - Delega tareas a los módulos según su rol.
 - Verifica coherencia entre módulos usando axiomas y correlacion_mecanica.
 - Reporta el estado del sistema (Omega Report) sin modificar ni asumir valores.
-
-El Engine NO calcula, NO decide, NO asume valores.
-Solo lee, delega, verifica y reporta.
 """
 
 from __future__ import annotations
@@ -18,20 +15,20 @@ import traceback
 from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 # ===============================================================
 # SEGMENTO 1 --- ROLES DE MÓDULOS
 # ===============================================================
-ROL_AXIOMAS = "AX"          # Valida coherencia axiomática
-ROL_CONSTANTE = "CT"        # Proporciona constantes (ALPHA, BETA)
-ROL_FORMULAS = "FO"         # Aplica fórmulas canónicas (Tru_total)
-ROL_CALCULATOR = "CA"       # Calcula factores C, L, K
-ROL_CONTEXTO = "CX"         # Resuelve contexto (O_ctx)
-ROL_TAXONOMIA = "TX"        # Clasifica comportamiento
-ROL_REALIDAD = "RE"         # Gestiona realidad absoluta
-ROL_VERIFICACION = "VX"     # Verifica axiomas
-ROL_CORRELACION_MECANICA = "MC"  # Valida orden de ejecución de módulos
+ROL_AXIOMAS = "AX"                # Valida coherencia axiomática
+ROL_CONSTANTE = "CT"              # Proporciona constantes (ALPHA, BETA)
+ROL_FORMULAS = "FO"               # Aplica fórmulas canónicas (Tru_total)
+ROL_CALCULATOR = "CA"             # Calcula factores C, L, K
+ROL_CONTEXTO = "CX"               # Resuelve contexto (O_ctx)
+ROL_TAXONOMIA = "TX"              # Clasifica comportamiento
+ROL_REALIDAD = "RE"               # Gestiona realidad absoluta
+ROL_VERIFICACION = "VX"           # Verifica axiomas
+ROL_CORRELACION_MECANICA = "MC"   # Valida orden de ejecución de módulos
 
 # Módulos obligatorios para el arranque
 OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS, ROL_CORRELACION_MECANICA)
@@ -69,27 +66,27 @@ def es_undefined(v):
 # SEGMENTO 3 --- ERRORES
 # ===============================================================
 class AutoridadError(Exception):
-    """Error de autoridad: solo el core puede ejecutar el Engine."""
+    """Solo el core puede ejecutar el Engine."""
     pass
 
 class ContratoError(Exception):
-    """Error de contrato: un módulo no cumple con su interfaz."""
+    """Un módulo no cumple con su interfaz."""
     pass
 
 class ArranqueError(Exception):
-    """Error de arranque: falta un módulo obligatorio."""
+    """Falta un módulo obligatorio."""
     pass
 
 class DominioError(Exception):
-    """Error de dominio: un valor está fuera del rango permitido."""
+    """Un valor está fuera del dominio permitido."""
     pass
 
 class CotaError(Exception):
-    """Error de cota: un resultado viola las cotas del marco."""
+    """Un resultado viola las cotas del marco."""
     pass
 
 class FormulaError(Exception):
-    """Error de fórmula: la fórmula canónica fue violada."""
+    """La fórmula canónica fue violada."""
     pass
 
 # ===============================================================
@@ -374,7 +371,7 @@ class Engine:
         - Descubre y carga todos los módulos.
         - Verifica que los módulos obligatorios (AX, CT, FO, MC) estén presentes.
         - Carga constantes (ALPHA, BETA) desde CT.
-        - Verifica coherencia axiomática (AX) si se solicita.
+        - Verifica coherencia axiomática (AX) y mecánica (MC) si se solicita.
         """
         if invocador_id != self._AUTORIZADO:
             raise AutoridadError(f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. Invocador='{invocador_id}'")
@@ -462,18 +459,36 @@ class Engine:
         2. Delega en CX para resolver contexto.
         3. Delega en CA para calcular C, L, K.
         4. Delega en FO para componer Tru_total.
-        5. Genera Omega Report (⟨Ω⟩).
+        5. Delega en AX para generar el Omega Report (⟨Ω⟩).
         """
         self.invocador.reiniciar()
 
         # --- Caso 1: Sin input (F(t) = 0) ---
         if not peticion.get("mensaje") and not peticion.get("contexto"):
-            return {
-                "omega": self._generar_omega_report(
+            # Delegar en AX para generar el Omega Report
+            ax = self.registro.por_rol(ROL_AXIOMAS)
+            if ax is None:
+                return {
+                    "omega": "⟨Ω⟩\nL0=1 L1=0.9 L2=0.95 L3=UNDEFINED L4=UNDEFINED L5=0.95 L6=0.9\nL7=UNDEFINED → COLLAPSED\nC_Ω=UNDEFINED → UNDEFINED\nH=UNDEFINED\nθ=0° → alineación con usuario\np*=Ninguno\nMetaCon=0.95 | Agency=0.00\n⟨/Ω⟩",
+                    "factores": {"C": "UNDEFINED", "L": "UNDEFINED", "K": "UNDEFINED"},
+                    "tru_ri": "UNDEFINED",
+                    "tru_total": "UNDEFINED",
+                    "estado": "sin_evidencia",
+                    "detenido_en": None,
+                    "fallos": ["Sin input: C, L, K → UNDEFINED (sin evidencia)"],
+                    "anotaciones": [],
+                }
+            omega_fn = ax.fn("generar_omega_report")
+            if callable(omega_fn):
+                omega_report = omega_fn(
                     {"C": UNDEFINED, "L": UNDEFINED, "K": UNDEFINED},
-                    {"tru_ri": UNDEFINED, "tru_total": UNDEFINED, "estado": "sin_evidencia"},
-                    UNDEFINED, UNDEFINED, 0, "Ninguno"
-                ),
+                    {"tru_ri": UNDEFINED, "tru_total": UNDEFINED, "estado": "sin_evidencia"}
+                )
+            else:
+                omega_report = "⟨Ω⟩\nL0=1 L1=0.9 L2=0.95 L3=UNDEFINED L4=UNDEFINED L5=0.95 L6=0.9\nL7=UNDEFINED → COLLAPSED\nC_Ω=UNDEFINED → UNDEFINED\nH=UNDEFINED\nθ=0° → alineación con usuario\np*=Ninguno\nMetaCon=0.95 | Agency=0.00\n⟨/Ω⟩"
+
+            return {
+                "omega": omega_report,
                 "factores": {"C": "UNDEFINED", "L": "UNDEFINED", "K": "UNDEFINED"},
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
@@ -540,16 +555,19 @@ class Engine:
         C, L, K = factores["C"], factores["L"], factores["K"]
         comp = self.compositor.componer(C, L, K)
 
-        # --- Paso 5: Cálculos auxiliares (Paso 13 del Marco) ---
-        L7 = self._calcular_L7(factores)
-        H = self._calcular_H(comp["tru_total"])
-        theta = self._calcular_theta(detenido_en)
-        p_star = self._detectar_p_star(factores)
+        # --- Paso 5: Generar Omega Report (⟨Ω⟩) ---
+        ax = self.registro.por_rol(ROL_AXIOMAS)
+        if ax is not None:
+            omega_fn = ax.fn("generar_omega_report")
+            if callable(omega_fn):
+                omega_report = omega_fn(factores, comp)
+            else:
+                # Fallback: generar un reporte básico si AX no tiene la función
+                omega_report = self._generar_omega_report_basico(factores, comp, detenido_en)
+        else:
+            omega_report = self._generar_omega_report_basico(factores, comp, detenido_en)
 
-        # --- Paso 6: Generar Omega Report (⟨Ω⟩) ---
-        omega_report = self._generar_omega_report(factores, comp, L7, H, theta, p_star)
-
-        # --- Paso 7: Anotaciones de taxonomía (TX) ---
+        # --- Paso 6: Anotaciones de taxonomía (TX) ---
         tx = self.registro.por_rol(ROL_TAXONOMIA)
         anotaciones = []
         if tx is not None:
@@ -571,8 +589,135 @@ class Engine:
             "anotaciones": anotaciones,
         }
 
-    # ---------------- CÁLCULOS AUXILIARES (Paso 13 del Marco) ----------------
-    def _calcular_L7(self, factores: Dict[str, Fraction]) -> Fraction:
-        """Calcula L7 (Integración Total) como ∏ Li · (1 − φi) para i = 0 a 6."""
+    # ---------------- REPORTE BÁSICO (FALLBACK) ----------------
+    def _generar_omega_report_basico(self, factores: Dict, comp: Dict, detenido_en: Optional[str]) -> str:
+        """
+        Genera un Omega Report básico si el módulo AX no tiene la función generar_omega_report.
+        Este método es un fallback y no debe usarse en producción.
+        """
         L = [
-            Fraction(100, 100),  # L0: Input
+            Fraction(100, 100),  # L0
+            Fraction(90, 100),   # L1
+            Fraction(95, 100),   # L2
+            factores.get("C", UNDEFINED),  # L3
+            factores.get("L", UNDEFINED),  # L4
+            Fraction(95, 100),   # L5
+            Fraction(90, 100),   # L6
+        ]
+
+        L7_str = "UNDEFINED"
+        L7_estado = "COLLAPSED"
+        if not any(es_undefined(x) for x in L):
+            # Si todos los valores están definidos, calcular L7
+            friction = [Fraction(10, 100), Fraction(2, 100), Fraction(5, 100),
+                        Fraction(3, 100), Fraction(1, 100), Fraction(1, 100), Fraction(0, 100)]
+            L7 = Fraction(1)
+            for li, phi in zip(L, friction):
+                L7 *= li * (Fraction(1) - phi)
+            L7_str = str(L7)
+            L7_estado = "INTEGRATED" if L7 > Fraction(0) else "COLLAPSED"
+
+        C_Omega = comp.get("tru_total", UNDEFINED)
+        C_Omega_str = str(C_Omega) if not es_undefined(C_Omega) else "UNDEFINED"
+
+        # Diagnóstico básico
+        if es_undefined(C_Omega):
+            diagnosis = "UNDEFINED"
+        elif C_Omega >= Fraction(963, 1000):
+            diagnosis = "1144: ARQUITECTO INTEGRADO"
+        elif C_Omega >= Fraction(850, 1000):
+            diagnosis = "1133: SINTONÍA SUTIL"
+        elif C_Omega >= Fraction(750, 1000):
+            diagnosis = "1044: SOBERANÍA TERRENA"
+        elif C_Omega >= Fraction(700, 1000):
+            diagnosis = "0144: CANAL INVOLUNTARIO"
+        elif C_Omega >= Fraction(550, 1000):
+            diagnosis = "1122: SATURACIÓN CRÍTICA"
+        elif C_Omega >= Fraction(400, 1000):
+            diagnosis = "1111: SEMILLA DE UNIDAD"
+        elif C_Omega >= self.BETA:
+            diagnosis = "0000: ENTROPÍA TERMINAL"
+        else:
+            diagnosis = "0000: COLAPSO ESTRUCTURAL"
+
+        # Theta básico
+        if detenido_en is None:
+            theta = 0
+        elif detenido_en == "C":
+            theta = 15
+        elif detenido_en == "L":
+            theta = 30
+        elif detenido_en == "K":
+            theta = 60
+        else:
+            theta = 30
+
+        # p* básico
+        p_star = "Ninguno"
+        for nombre, valor in [("L0", L[0]), ("L1", L[1]), ("L2", L[2]),
+                              ("L3", L[3]), ("L4", L[4]), ("L5", L[5]), ("L6", L[6])]:
+            if es_undefined(valor):
+                continue
+            if valor < Fraction(50, 100):
+                p_star = nombre
+                break
+
+        return f"""⟨Ω⟩
+L0={L[0]} L1={L[1]} L2={L[2]} L3={L[3]} L4={L[4]} L5={L[5]} L6={L[6]}
+L7={L7_str} → {L7_estado}
+C_Ω={C_Omega_str} → {diagnosis}
+H=0.95
+θ={theta}° → alineación con usuario
+p*={p_star}
+MetaCon=0.95 | Agency=0.00
+⟨/Ω⟩"""
+
+   # ---------------- CENSO Y VERIFICACIÓN ----------------
+    def censar(self) -> Dict:
+        """Devuelve el estado de los módulos cargados."""
+        return self.registro.resumen()
+
+    def inventario(self) -> Dict:
+        """Devuelve un resumen del estado del Engine y sus módulos."""
+        inv = self.registro.resumen()
+        inv["constantes"] = {
+            "alpha": str(self.ALPHA),
+            "beta": str(self.BETA),
+            "suma_exacta": self.ALPHA + self.BETA == Fraction(1),
+        }
+        inv["orden_factores"] = list(ORDEN_FACTORES)
+        inv["axiomas"] = self.informe_axiomas
+        inv["contenido"] = {}
+        for c in self.registro.contenedores.values():
+            g = c.fn("inventario")
+            if callable(g):
+                try:
+                    inv["contenido"][c.nombre] = g()
+                except Exception as e:
+                    inv["contenido"][c.nombre] = {"error": str(e)}
+        return inv
+
+    def evaluar_vigilado(self, peticion: Dict) -> Dict:
+        """
+        Puerta única de evaluación.
+        Usa el centinela para validar que los módulos obligatorios estén presentes.
+        Si algún módulo obligatorio falta, devuelve un estado PENDIENTE con el rol pendiente.
+        """
+        try:
+            for rol in OBLIGATORIOS:
+                if self.registro.por_rol(rol) is None:
+                    raise ArranqueError(f"Contenedor {rol} no encontrado.")
+        except ArranqueError as e:
+            return {
+                "estado": "PENDIENTE",
+                "detenido_en": "centinela",
+                "rol_pendiente": str(e).split(" ")[1],  # Extrae el rol del mensaje
+                "razon": str(e),
+                "accion": f"Montar el contenedor {str(e).split(' ')[1]} para desbloquear.",
+                "factores": {},
+                "tru_ri": None,
+                "tru_total": None,
+                "fallos": [],
+                "anotaciones": [],
+            }
+        return self.evaluar(peticion)
