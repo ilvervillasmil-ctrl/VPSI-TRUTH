@@ -40,3 +40,17 @@ __all__ = [
     "BETA",
     "CONTENEDOR",
 ]
+
+CONTENEDOR = {
+    "nombre": "constante",
+    "rol": "CT",
+    "version": "1.0",
+    "requiere": [],
+    "descripcion": "Contenedor de constantes. Rol CT. Expone ALPHA y BETA, derivadas del cubo 3x3x3 en ℝ³.",
+    "capacidades": {
+        "alpha": "ALPHA",
+        "beta": "BETA",
+        "evaluar": None,  # Opcional: no tiene operación principal de evaluación
+        "inventario": None,  # Opcional: implementar si es necesario
+    }
+}
