@@ -1,23 +1,61 @@
 """
 Fórmula de la Verdad (VPSI v9.4).
 
-    Tru_Ri(D)    = min(C(D) * L(D) * K(D), ALPHA)  # Teorema 16: Tru_Ri ≤ α
+Definiciones canónicas:
+    Tru_Ri(D)    = C(D) * L(D) * K(D)
     Tru_total(D) = (Tru_Ri(D) * ALPHA) + BETA
+
+Donde:
+    - ALPHA = 26/27 (fracción observable del cubo 3×3×3)
+    - BETA  = 1/27  (fracción interior irreducible del cubo 3×3×3)
+    - Tru_Ri: Contribución del observador (R_i).
+    - Tru_total: Verdad total, incluyendo el piso estructural β.
+
+Fuente: Teorema de la Verdad, VPSI v9.4 (Sección 2.14, Definición 2.14).
 """
 
 from fractions import Fraction
 from modules.constante import ALPHA, BETA
 
+# Metadatos de la fórmula
 FORMULA = {
     "nombre": "verdad",
-    "expresion": "Tru_total = ( min(C * L * K, ALPHA) * ALPHA ) + BETA",
-    "fuente": "Teorema de la Verdad, VPSI v9.4 (Teorema 16: Techo Estructural α)",
+    "expresion": "Tru_total(D) = (C(D) * L(D) * K(D) * ALPHA) + BETA",
+    "fuente": "Teorema de la Verdad, VPSI v9.4",
+    "nota": "Tru_Ri(D) = C(D) * L(D) * K(D) (sin límites artificiales).",
 }
 
-def tru_ri(C, L, K):
-    """Tru_Ri = min(C * L * K, ALPHA) (Teorema 16: Tru_Ri ≤ α)."""
-    return min(C * L * K, ALPHA)
+def tru_ri(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
+    """
+    Calcula la contribución del observador (Tru_Ri).
 
-def tru_total(C, L, K):
-    """Tru_total = (Tru_Ri * ALPHA) + BETA."""
-    return (tru_ri(C, L, K) * ALPHA) + BETA
+    Fórmula:
+        Tru_Ri(D) = C(D) * L(D) * K(D)
+
+    Parámetros:
+        C (Fraction): Coherencia interna de la descripción D.
+        L (Fraction): Lógica estructural de la descripción D.
+        K (Fraction): Correlación con el dominio observado O.
+
+    Retorna:
+        Fraction: Valor de Tru_Ri(D) en el rango [0, 1].
+    """
+    return C * L * K
+
+def tru_total(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
+    """
+    Calcula la verdad total (Tru_total) según la fórmula canónica del framework VPSI.
+
+    Fórmula:
+        Tru_total(D) = (Tru_Ri(D) * ALPHA) + BETA
+                     = (C(D) * L(D) * K(D) * ALPHA) + BETA
+
+    Parámetros:
+        C (Fraction): Coherencia interna de la descripción D.
+        L (Fraction): Lógica estructural de la descripción D.
+        K (Fraction): Correlación con el dominio observado O.
+
+    Retorna:
+        Fraction: Valor de Tru_total(D) en el rango [β, 1], donde β = 1/27.
+    """
+    return (C * L * K * ALPHA) + BETA
