@@ -48,9 +48,9 @@ CONTENEDOR = {
     "requiere": [],
     "descripcion": "Contenedor de constantes. Rol CT. Expone ALPHA y BETA, derivadas del cubo 3x3x3 en ℝ³.",
     "capacidades": {
-        "alpha": "ALPHA",
-        "beta": "BETA",
-        "evaluar": None,  # Opcional: no tiene operación principal de evaluación
-        "inventario": None,  # Opcional: implementar si es necesario
+        "alpha": "ALPHA",  # ← Obligatorio para CT
+        "beta": "BETA",     # ← Obligatorio para CT
+        "evaluar": None,   # Opcional
+        "inventario": None, # Opcional
     }
 }
