@@ -281,3 +281,18 @@ __all__ = [
     "contradiccion_directa",
     "contradiccion_de_cota",
 ]
+
+CONTENEDOR = {
+    "nombre": "axiomas",
+    "rol": "AX",
+    "version": "1.0",
+    "requiere": [],
+    "descripcion": "Contenedor de axiomas. Rol AX.",
+    "capacidades": {
+        "verificar": "barrer",
+        "axiomas": "axiomas",
+        "evaluar": "barrer",  # Operación principal de evaluación
+        "inventario": "inventario",
+    }
+}
+
