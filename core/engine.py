@@ -515,27 +515,7 @@ def test_construccion_evaluar_sin_calculador_no_finge(engine):
         # Restaurar CA
         engine.registro.contenedores[ca.nombre] = ca
 
-VPSI-TRUTH --- tests/test_vpsi.py
 
-Suite única de verificación axiomática y estructural.
-Basada en los principios del framework VPSI-TRUTH (v9.4):
-
-1. **Ancla**: ALPHA y BETA (derivados del cubo 3x3x3 en ℝ³).
-2. **Fórmulas**: La ecuación canónica Tru_total = (C * L * K * α) + β.
-3. **Axiomas**: Barrido axiomático y coherencia (TA4, TA5, etc.).
-4. **Engine**: Arranque, descubrimiento de módulos y ejecución de contratos.
-5. **Contexto**: Filtro inicial (coherencia del repositorio).
-6. **Construcción**: Verificación de que lo que falta sea visible.
-
-Principios clave aplicados:
-- TA4: R ⊥ Observer (el Engine no modifica R).
-- TA5: Multiplicatividad de la verdad (Tru_Ri = C * L * K).
-- TA7: Sin acceso directo a R (solo a través de X).
-- Teorema 16: Techo estructural α (Tru_total ≤ 26/27).
-- Teorema 17: Imposibilidad de colapso total (Tru_total ≥ β = 1/27).
-- Teorema TR1: Generatividad estructural (el framework genera más verdades que postula).
-- Corolario Def-5.3.1: K es indefinido sin O_context explícito.
-"""
 
 from fractions import Fraction
 import pytest
