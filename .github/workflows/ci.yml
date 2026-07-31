@@ -307,7 +307,7 @@ jobs:
             diagnostics/axioms_report.json
             diagnostics/OMEGA_REPORT.md
 
-      # ==========================================================
+     # ==========================================================
       # COMMIT DE HISTORIA (solo en push a main y si hay cambios)
       # ==========================================================
       - name: Commit coherence history
@@ -331,18 +331,8 @@ jobs:
           git pull --rebase -X ours origin main || true
           git push origin HEAD:main
 
-          - name: Auditar librería de axiomas
-          run: |
-          python - <<'EOF'
-          import sys, json
-          from pathlib import Path
-          sys.path.insert(0, ".")
-          
-          # Importamos directamente tu librería
-          from modules.axiomas import barrer
-          
-               # ==========================================================
-      # AUDITORÍA DE AXIOMAS (Paso independiente corregido)
+      # ==========================================================
+      # AUDITORÍA DE LIBRERÍA DE AXIOMAS
       # ==========================================================
       - name: Auditar librería de axiomas
         run: |
@@ -351,6 +341,7 @@ jobs:
           from pathlib import Path
           sys.path.insert(0, ".")
           
+          # Importamos directamente tu librería
           from modules.axiomas import barrer
           
           print("============================================================")
