@@ -1,592 +1,528 @@
 """
-VPSI-TRUTH --- core/engine.py
+VPSI-TRUTH --- tests/test_vpsi.py
 
-El Engine es el ejecutor universal de contratos del framework VPSI-TRUTH.
+Suite única de verificación axiomática y estructural.
+Basada en los principios del framework VPSI-TRUTH (v9.4):
 
-Principio fundamental:
-- Posee conocimiento completo de la arquitectura (módulos, contratos, dependencias,
-  estados, capacidades, variables, archivos internos y estructura de cada módulo).
-- Su capacidad de actuación está estrictamente limitada por lo que cada contrato
-  declara explícitamente en CONTENEDOR["capacidades"].
-- Nunca inventa operaciones.
-- Nunca modifica resultados.
-- Nunca sustituye la lógica de un módulo.
-- Nunca interpreta la información producida por un módulo.
-- Todo comportamiento de acción proviene exclusivamente de los contratos.
+1. **Ancla**: ALPHA y BETA (derivados del cubo 3x3x3 en ℝ³).
+2. **Fórmulas**: La ecuación canónica Tru_total = (C * L * K * α) + β.
+3. **Axiomas**: Barrido axiomático y coherencia (TA4, TA5, etc.).
+4. **Engine**: Arranque, descubrimiento de módulos y ejecución de contratos.
+5. **Contexto**: Filtro inicial (coherencia del repositorio).
+6. **Construcción**: Verificación de que lo que falta sea visible.
+
+Principios clave aplicados:
+- TA4: R ⊥ Observer (el Engine no modifica R).
+- TA5: Multiplicatividad de la verdad (Tru_Ri = C * L * K).
+- TA7: Sin acceso directo a R (solo a través de X).
+- Teorema 16: Techo estructural α (Tru_total ≤ 26/27).
+- Teorema 17: Imposibilidad de colapso total (Tru_total ≥ β = 1/27).
+- Teorema TR1: Generatividad estructural (el framework genera más verdades que postula).
+- Corolario Def-5.3.1: K es indefinido sin O_context explícito.
 """
 
-from __future__ import annotations
-import importlib.util
-import sys
-import traceback
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from fractions import Fraction
+import pytest
+from core.engine import Engine, AutoridadError, es_undefined, UNDEFINED
+
+# Constantes para pruebas
+F = Fraction
+ALPHA = F(26, 27)
+BETA = F(1, 27)
+
+# Fixture para el Engine (evita reinicializar en cada prueba)
+@pytest.fixture(scope="module")
+def engine():
+    """Fixture para el Engine. Se inicializa una vez por módulo de pruebas."""
+    return Engine(raiz_modulos="modules", invocador_id="core")
+
+# Fixture para declaraciones axiomáticas (evita duplicación de lógica)
+@pytest.fixture
+def declaraciones_axiomaticas(engine):
+    """Recopila declaraciones axiomáticas de todos los módulos con capacidad 'axiomas'."""
+    declaraciones = {}
+    for contenedor in engine.registro.contenedores.values():
+        if contenedor.tiene_capacidad("axiomas"):
+            result = engine.invocador.ejecutar_capacidad(contenedor, "axiomas")
+            if not es_undefined(result):
+                declaraciones[contenedor.nombre] = result
+    return declaraciones
+
+# Fixture para reiniciar el invocador (evita estado global compartido)
+@pytest.fixture(autouse=True)
+def reiniciar_invocador(engine):
+    """Reinicia el invocador antes de cada prueba para evitar estado compartido."""
+    engine.invocador.reiniciar()
+    yield
+    engine.invocador.reiniciar()
 
 # ===============================================================
-# CONSTANTES GLOBALES: ROLES DE MÓDULOS
+# SEGMENTO 1 --- ANCLA (ALPHA y BETA)
 # ===============================================================
-# Nota: Los roles son parte de la arquitectura, no de la lógica de negocio.
-ROL_AXIOMAS = "AX"
-ROL_CONSTANTE = "CT"
-ROL_FORMULAS = "FO"
-ROL_CALCULATOR = "CA"
-ROL_CONTEXTO = "CX"
-ROL_TAXONOMIA = "TX"
-ROL_REALIDAD = "RE"
-ROL_VERIFICACION = "VX"
-ROL_CORRELACION_MECANICA = "MC"
-
-ROLES = (
-    ROL_AXIOMAS,
-    ROL_CONSTANTE,
-    ROL_FORMULAS,
-    ROL_CALCULATOR,
-    ROL_CONTEXTO,
-    ROL_TAXONOMIA,
-    ROL_REALIDAD,
-    ROL_VERIFICACION,
-    ROL_CORRELACION_MECANICA,
-)
-
-# Módulos obligatorios para el arranque (parte de la arquitectura)
-OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS, ROL_CORRELACION_MECANICA)
-
+# Axioma β: β = 1/27 es la fracción interior irreducible del cubo 3x3x3.
+# Teorema M.1: N=3 es el mínimo único con interior estructural.
 # ===============================================================
-# ESTADO INDEFINIDO (UNDEFINED)
-# ===============================================================
-class _Undefined:
-    """Estado para valores sin evidencia. Propaga limpiamente sin intervencionismo."""
-    __slots__ = ()
 
-    def __repr__(self):
-        return "UNDEFINED"
+def test_ancla_alpha_y_beta_son_fracciones_exactas(engine):
+    """Axioma β: ALPHA y BETA deben ser Fraction (no float)."""
+    ct = engine.registro.por_rol("CT")
+    assert ct is not None, "Módulo CT no encontrado"
 
-    def __bool__(self):
-        raise TypeError("UNDEFINED no admite conversión a booleano")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-    def __eq__(self, otro):
-        return isinstance(otro, _Undefined)
+    assert isinstance(alpha, Fraction), "ALPHA debe ser Fraction"
+    assert isinstance(beta, Fraction), "BETA debe ser Fraction"
+    assert alpha == ALPHA, f"ALPHA debe ser {ALPHA}"
+    assert beta == BETA, f"BETA debe ser {BETA}"
 
-    def __hash__(self):
-        return hash("VPSI_UNDEFINED")
+def test_ancla_suma_es_uno_exacto(engine):
+    """Teorema: ALPHA + BETA = 1 (Ley de Conservación)."""
+    ct = engine.registro.por_rol("CT")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-UNDEFINED = _Undefined()
+    assert alpha + beta == F(1), "ALPHA + BETA debe ser 1 exacto"
 
-def es_undefined(v) -> bool:
-    """Verifica si un valor es UNDEFINED."""
-    return v is UNDEFINED or isinstance(v, _Undefined)
+def test_ancla_derivados_del_cubo_3x3x3(engine):
+    """Teorema M.1: ALPHA y BETA se derivan del cubo 3x3x3 (26/27 y 1/27)."""
+    ct = engine.registro.por_rol("CT")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-# ===============================================================
-# EXCEPCIONES (CONTRATOS Y ERRORES)
-# ===============================================================
-class AutoridadError(Exception):
-    """Solo el core puede ejecutar el Engine."""
-    pass
+    n = 3
+    total_celdas = n ** 3
+    celdas_interiores = (n - 2) ** 3
+    celdas_exteriores = total_celdas - celdas_interiores
 
-class ContratoError(Exception):
-    """Un módulo no cumple con su interfaz / contrato."""
-    pass
+    assert beta == F(celdas_interiores, total_celdas), "BETA debe ser 1/27 (celdas interiores)"
+    assert alpha == F(celdas_exteriores, total_celdas), "ALPHA debe ser 26/27 (celdas exteriores)"
 
-class ArranqueError(Exception):
-    """Falta un módulo obligatorio o hay contradicción axiomática/mecánica."""
-    pass
+def test_ancla_techo_no_alcanza_unidad(engine):
+    """Teorema 16: ALPHA < 1 (techo estructural)."""
+    ct = engine.registro.por_rol("CT")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    assert alpha < F(1), "ALPHA debe ser < 1"
+
+def test_ancla_piso_es_positivo(engine):
+    """Axioma β: BETA > 0 (piso estructural)."""
+    ct = engine.registro.por_rol("CT")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
+    assert beta > F(0), "BETA debe ser > 0"
 
 # ===============================================================
-# REGISTRO DE MÓDULOS (DESCUBRIMIENTO Y CARGA)
+# SEGMENTO 1.1 --- COROLARIO β-GÖDEL
 # ===============================================================
-# Claves mínimas obligatorias del contrato CONTENEDOR
-CLAVES_CONTENEDOR = (
-    "nombre",
-    "rol",
-    "version",
-    "requiere",
-    "descripcion",
-    "capacidades",
-)
+# Corolario β-Gödel: La incompletud formal es una instancia de β en el dominio lógico.
+# Teorema 17: Tru_total(D) ≥ β siempre (imposibilidad de colapso total).
+# ===============================================================
 
-@dataclass
-class Contenedor:
-    """
-    Representa un módulo en el sistema.
-    El Engine tiene conocimiento total de él, pero nunca interviene en su lógica interna.
-    Toda acción se obtiene exclusivamente del contrato.
-    """
-    nombre: str
-    rol: str
-    version: str
-    requiere: List[str] = field(default_factory=list)
-    ruta: Optional[str] = None
-    modulo: Any = None
-    descripcion: Optional[str] = None
-    capacidades: Dict[str, str] = field(default_factory=dict)  # capacidad -> nombre_función
+def test_corolario_beta_godel(engine):
+    """Corolario β-Gödel: β > 0 es la raíz de la incompletud formal."""
+    ct = engine.registro.por_rol("CT")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
+    assert beta > F(0), "β debe ser > 0 (Axioma β)"
+    assert beta == F(1, 27), "β debe ser 1/27 (derivado del cubo 3x3x3)"
 
-    def obtener_funcion(self, capacidad: str) -> Any:
-        """
-        Devuelve la función asociada a una capacidad declarada en el contrato.
-        Nunca asume nombres. Solo consulta el contrato.
-        """
-        if self.modulo is None:
-            return None
-        nombre_fn = self.capacidades.get(capacidad)
-        if not nombre_fn:
-            return None
-        return getattr(self.modulo, nombre_fn, None)
+def test_corolario_beta_persistencia(engine):
+    """Teorema 17: Tru_total(0,0,0) = β (piso estructural)."""
+    fo = engine.registro.por_rol("FO")
+    assert fo is not None, "Módulo FO no encontrado"
 
-    def tiene_capacidad(self, capacidad: str) -> bool:
-        """Indica si el contrato declara la capacidad y la función existe y es callable."""
-        fn = self.obtener_funcion(capacidad)
-        return callable(fn)
+    # Tru_total(0,0,0) = (0 * 0 * 0 * α) + β = β
+    tru_total = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(0), "L": F(0), "K": F(0)}
+    )
+    assert tru_total == beta, f"Tru_total(0,0,0) debe ser β = {beta}"
 
-    def como_dict(self) -> Dict:
-        """Metadata del módulo (solo lectura)."""
-        return {
-            "nombre": self.nombre,
-            "rol": self.rol,
-            "version": self.version,
-            "requiere": list(self.requiere),
-            "ruta": self.ruta,
-            "descripcion": self.descripcion,
-            "capacidades": dict(self.capacidades),
-        }
+# ===============================================================
+# SEGMENTO 2 --- FÓRMULAS (Tru_Ri y Tru_total)
+# ===============================================================
+# Axioma TA5: Tru_Ri = C * L * K (multiplicatividad de la verdad).
+# Teorema 16: Tru_total = (Tru_Ri * α) + β (techo estructural α).
+# Teorema 17: Tru_total ≥ β (piso estructural β).
+# ===============================================================
 
-    def conocimiento_completo(self) -> Dict:
-        """
-        Devuelve todo lo que el Engine conoce de este módulo
-        (introspección total, sin actuar).
-        """
-        info = self.como_dict()
-        if self.modulo is None:
-            info["atributos"] = {}
-            info["callables"] = []
-            return info
+VECTORES_PRUEBA = [
+    (F(1), F(1), F(1), "sincronización total"),
+    (F(1), F(1), F(0), "K colapsada: forma impecable, ancla rota"),
+    (F(0), F(1), F(1), "C colapsada"),
+    (F(1), F(0), F(1), "L colapsada"),
+    (F(0), F(0), F(0), "colapso de los tres factores"),
+    (F(85, 100), F(9, 10), F(7, 10), "caso intermedio"),
+]
 
-        atributos = {}
-        callables = []
-        for nombre in dir(self.modulo):
-            if nombre.startswith("_"):
-                continue
-            try:
-                valor = getattr(self.modulo, nombre)
-                if callable(valor):
-                    callables.append(nombre)
-                else:
-                    # Solo valores simples para no saturar
-                    if isinstance(valor, (str, int, float, bool, type(None))):
-                        atributos[nombre] = valor
-                    else:
-                        atributos[nombre] = repr(valor)[:120]
-            except Exception:
-                atributos[nombre] = "<error al leer>"
+def test_formula_tru_ri_es_producto(engine):
+    """Axioma TA5: Tru_Ri = C * L * K."""
+    fo = engine.registro.por_rol("FO")
+    assert fo is not None, "Módulo FO no encontrado"
 
-        info["atributos"] = atributos
-        info["callables"] = callables
-        return info
+    for C, L, K, _ in VECTORES_PRUEBA:
+        tru_ri = engine.invocador.ejecutar_capacidad(
+            fo, "evaluar", {"C": C, "L": L, "K": K}
+        ).get("tru_ri")
+        assert tru_ri == C * L * K, f"Tru_Ri debe ser C*L*K = {C*L*K}"
 
+def test_formula_tru_total_es_canonica(engine):
+    """Teorema: Tru_total = (Tru_Ri * α) + β."""
+    fo = engine.registro.por_rol("FO")
+    ct = engine.registro.por_rol("CT")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-class Registro:
-    """Registro de módulos. Descubre y carga sin alterar su esencia."""
-    def __init__(self, raiz: str):
-        self.raiz = Path(raiz)
-        self.contenedores: Dict[str, Contenedor] = {}
-        self.rechazados: List[Dict] = []
-
-    def descubrir(self) -> Dict[str, Contenedor]:
-        """Descubre módulos en el directorio. No inventa rutas ni maquilla vacíos."""
-        self.contenedores = {}
-        self.rechazados = []
-
-        if not self.raiz.exists():
-            raise ArranqueError(f"Directorio {self.raiz} no existe.")
-
-        ocupados = {}
-
-        for d in sorted(p for p in self.raiz.iterdir() if p.is_dir()):
-            if d.name.startswith(("_", ".")):
-                continue
-
-            init = d / "__init__.py"
-            if not init.exists():
-                self.rechazados.append({"ruta": d.name, "razon": "sin __init__.py"})
-                continue
-
-            try:
-                c = self._cargar(d, init)
-            except ContratoError as e:
-                self.rechazados.append({"ruta": d.name, "razon": str(e)})
-                continue
-            except Exception as e:
-                self.rechazados.append({"ruta": d.name, "razon": f"{type(e).__name__}: {e}"})
-                continue
-
-            if c.rol in ocupados:
-                raise ArranqueError(
-                    f"Rol '{c.rol}' duplicado: '{ocupados[c.rol]}' y '{c.nombre}'."
-                )
-
-            ocupados[c.rol] = c.nombre
-            self.contenedores[c.nombre] = c
-
-        faltan = [r for r in OBLIGATORIOS if r not in ocupados]
-        if faltan:
-            raise ArranqueError(f"Módulos obligatorios ausentes: {faltan}")
-
-        return self.contenedores
-
-    def _cargar(self, directorio: Path, init: Path) -> Contenedor:
-        """Carga un módulo desde su directorio. No modifica su comportamiento."""
-        clave = f"vpsi_{directorio.name}"
-        spec = importlib.util.spec_from_file_location(
-            clave, init, submodule_search_locations=[str(directorio)]
-        )
-        if spec is None or spec.loader is None:
-            raise ContratoError("No se pudo crear spec para el módulo.")
-
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[clave] = mod
-        spec.loader.exec_module(mod)
-
-        meta = getattr(mod, "CONTENEDOR", None)
-        if not isinstance(meta, dict):
-            raise ContratoError("Falta el diccionario CONTENEDOR.")
-
-        for k in CLAVES_CONTENEDOR:
-            if k not in meta:
-                raise ContratoError(f"CONTENEDOR sin clave '{k}'.")
-
-        capacidades = meta.get("capacidades")
-        if not isinstance(capacidades, dict):
-            raise ContratoError("CONTENEDOR['capacidades'] debe ser un diccionario.")
-
-        return Contenedor(
-            nombre=str(meta["nombre"]),
-            rol=str(meta["rol"]),
-            version=str(meta["version"]),
-            requiere=list(meta.get("requiere", [])),
-            ruta=directorio.name,
-            modulo=mod,
-            descripcion=str(meta.get("descripcion", "")),
-            capacidades={str(k): str(v) for k, v in capacidades.items()},
+    for C, L, K, _ in VECTORES_PRUEBA:
+        tru_ri = C * L * K
+        tru_total_esperado = (tru_ri * alpha) + beta
+        tru_total = engine.invocador.ejecutar_capacidad(
+            fo, "evaluar", {"C": C, "L": L, "K": K}
+        ).get("tru_total")
+        assert tru_total == tru_total_esperado, (
+            f"Tru_total debe ser (Tru_Ri * α) + β = {tru_total_esperado}"
         )
 
-    def por_rol(self, rol: str) -> Optional[Contenedor]:
-        """Busca un módulo por su rol (sin asumir su existencia)."""
-        for c in self.contenedores.values():
-            if c.rol == rol:
-                return c
-        return None
+def test_formula_devuelve_fraction(engine):
+    """Axioma F4: Las fórmulas deben devolver Fraction (no float)."""
+    fo = engine.registro.por_rol("FO")
+    for C, L, K, _ in VECTORES_PRUEBA:
+        resultado = engine.invocador.ejecutar_capacidad(
+            fo, "evaluar", {"C": C, "L": L, "K": K}
+        )
+        assert isinstance(resultado.get("tru_ri"), Fraction), "Tru_Ri debe ser Fraction"
+        assert isinstance(resultado.get("tru_total"), Fraction), "Tru_total debe ser Fraction"
 
-    def resumen(self) -> Dict:
-        """Resumen de módulos cargados y rechazados (transparencia total)."""
-        return {
-            "cargados": [c.como_dict() for c in self.contenedores.values()],
-            "rechazados": self.rechazados,
-            "roles": {c.rol: c.nombre for c in self.contenedores.values()},
-            "roles_vacios": [
-                r for r in ROLES
-                if r not in {c.rol for c in self.contenedores.values()}
-            ],
-        }
+def test_formula_piso_es_beta(engine):
+    """Teorema 17: Tru_total(0,0,0) = β (piso estructural)."""
+    fo = engine.registro.por_rol("FO")
+    ct = engine.registro.por_rol("CT")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-    def conocimiento_total(self) -> Dict:
-        """
-        Devuelve el conocimiento completo que el Engine tiene del sistema.
-        Esto es introspección pura: no ejecuta ninguna capacidad.
-        """
-        return {
-            "raiz": str(self.raiz),
-            "modulos": {
-                nombre: c.conocimiento_completo()
-                for nombre, c in self.contenedores.items()
-            },
-            "rechazados": self.rechazados,
-            "roles_ocupados": {
-                c.rol: c.nombre for c in self.contenedores.values()
-            },
-            "roles_vacios": [
-                r for r in ROLES
-                if r not in {c.rol for c in self.contenedores.values()}
-            ],
-        }
+    tru_total = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(0), "L": F(0), "K": F(0)}
+    ).get("tru_total")
+    assert tru_total == beta, f"Tru_total(0,0,0) debe ser β = {beta}"
 
+def test_formula_techo_es_alpha_mas_beta(engine):
+    """Teorema 16: Tru_total(1,1,1) = α + β = 1."""
+    fo = engine.registro.por_rol("FO")
+    ct = engine.registro.por_rol("CT")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-# ===============================================================
-# INVOCADOR (DELEGACIÓN ESTRICTA POR CAPACIDAD)
-# ===============================================================
-class Invocador:
-    """
-    Invoca capacidades declaradas en los contratos.
-    Nunca conoce nombres de funciones. Solo usa el contrato.
-    """
-    def __init__(self):
-        self.fallos: List[Dict] = []
+    tru_total = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(1), "L": F(1), "K": F(1)}
+    ).get("tru_total")
+    assert tru_total == alpha + beta, f"Tru_total(1,1,1) debe ser α + β = 1"
 
-    def reiniciar(self):
-        """Reinicia el registro de fallos (para cada evaluación independiente)."""
-        self.fallos = []
+def test_formula_siempre_dentro_de_cota(engine):
+    """Teorema 16 y 17: β ≤ Tru_total ≤ α + β = 1."""
+    fo = engine.registro.por_rol("FO")
+    ct = engine.registro.por_rol("CT")
+    alpha = engine.invocador.ejecutar_capacidad(ct, "alpha")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-    def ejecutar_capacidad(
-        self,
-        contenedor: Contenedor,
-        capacidad: str,
-        *args,
-        **kwargs,
-    ) -> Any:
-        """
-        Ejecuta una capacidad declarada en el contrato del módulo.
-        Si la capacidad no existe o falla, registra el error y devuelve UNDEFINED.
-        """
-        fn = contenedor.obtener_funcion(capacidad)
-        if not callable(fn):
-            self.fallos.append({
-                "contenedor": contenedor.nombre,
-                "rol": contenedor.rol,
-                "capacidad": capacidad,
-                "razon": f"capacidad '{capacidad}' no declarada o función no callable",
-            })
-            return UNDEFINED
+    for C, L, K, _ in VECTORES_PRUEBA:
+        tru_total = engine.invocador.ejecutar_capacidad(
+            fo, "evaluar", {"C": C, "L": L, "K": K}
+        ).get("tru_total")
+        assert beta <= tru_total <= alpha + beta, (
+            f"Tru_total debe estar en [β, 1]. Recibido: {tru_total}"
+        )
 
-        # Verificar claves requeridas solo cuando se pasa una petición (dict)
-        if args and isinstance(args[0], dict):
-            peticion = args[0]
-            faltan = [r for r in contenedor.requiere if r not in peticion]
-            if faltan:
-                self.fallos.append({
-                    "contenedor": contenedor.nombre,
-                    "rol": contenedor.rol,
-                    "capacidad": capacidad,
-                    "razon": f"petición sin claves: {faltan}",
-                })
-                return UNDEFINED
+def test_formula_sin_compensacion_entre_factores(engine):
+    """Axioma TA5: Un factor nulo anula Tru_Ri (no hay compensación)."""
+    fo = engine.registro.por_rol("FO")
+    ct = engine.registro.por_rol("CT")
+    beta = engine.invocador.ejecutar_capacidad(ct, "beta")
 
-        try:
-            return fn(*args, **kwargs)
-        except Exception as e:
-            self.fallos.append({
-                "contenedor": contenedor.nombre,
-                "rol": contenedor.rol,
-                "capacidad": capacidad,
-                "razon": f"{type(e).__name__}: {e}",
-                "traza": traceback.format_exc(limit=3),
-            })
-            return UNDEFINED
+    # Tru_total(1,1,0) = (1*1*0 * α) + β = β
+    tru_total_1 = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(1), "L": F(1), "K": F(0)}
+    ).get("tru_total")
+    # Tru_total(0,0,0) = (0*0*0 * α) + β = β
+    tru_total_2 = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(0), "L": F(0), "K": F(0)}
+    ).get("tru_total")
+    assert tru_total_1 == tru_total_2 == beta, (
+        "Tru_total debe ser β cuando cualquier factor es 0"
+    )
 
+def test_formula_es_monotona(engine):
+    """Teorema: Tru_total aumenta si C, L o K aumentan (monotonicidad)."""
+    fo = engine.registro.por_rol("FO")
+
+    # Tru_total(1,1,0.9) > Tru_total(1,1,0.5)
+    tru_total_alto = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(1), "L": F(1), "K": F(9, 10)}
+    ).get("tru_total")
+    tru_total_bajo = engine.invocador.ejecutar_capacidad(
+        fo, "evaluar", {"C": F(1), "L": F(1), "K": F(5, 10)}
+    ).get("tru_total")
+    assert tru_total_alto > tru_total_bajo, (
+        "Tru_total debe ser monotónico con respecto a K"
+    )
 
 # ===============================================================
-# ENGINE (EJECUTOR UNIVERSAL DE CONTRATOS)
+# SEGMENTO 3 --- AXIOMAS
 # ===============================================================
-class Engine:
-    _AUTORIZADO = "core"  # Solo el core puede ejecutar el Engine
+# Axioma TA4: R ⊥ Observer (independencia de la realidad).
+# Teorema 12: La confusión de R_i con R es la fuente de colapso.
+# Corolario Def-5.3.1: K es indefinido sin O_context explícito.
+# ===============================================================
 
-    def __init__(
-        self,
-        raiz_modulos: str,
-        invocador_id: str = _AUTORIZADO,
-        verificar_contratos: bool = True,
-    ):
-        """
-        Inicializa el Engine:
+PISO_DECLARACIONES = 147  # Mínimo de declaraciones para evitar coherencia por vacuidad
 
-        1. Descubre y carga todos los módulos (conocimiento total).
-        2. Valida que los contratos de los módulos obligatorios declaren
-           las capacidades mínimas requeridas.
-        3. Ejecuta las verificaciones de coherencia (AX y MC) exclusivamente
-           a través de las capacidades declaradas en los contratos.
-        4. Queda listo para actuar solo según lo que cada contrato autorice.
-        """
-        if invocador_id != self._AUTORIZADO:
-            raise AutoridadError(
-                f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. "
-                f"Invocador='{invocador_id}'"
-            )
+def test_axiomas_barrido_coherente(engine):
+    """Teorema: El barrido axiomático debe ser coherente (sin choques)."""
+    ax = engine.registro.por_rol("AX")
+    assert ax is not None, "Módulo AX no encontrado"
+    assert ax.tiene_capacidad("verificar"), "AX debe declarar capacidad 'verificar'"
 
-        self.registro = Registro(raiz_modulos)
-        self.registro.descubrir()
-        self.invocador = Invocador()
+    informe_ax = engine.invocador.ejecutar_capacidad(ax, "verificar")
+    assert isinstance(informe_ax, dict), "El informe debe ser un diccionario"
+    assert informe_ax.get("coherente", False) is True, (
+        f"Barrido axiomático incoherente: {informe_ax.get('choques', [])}"
+    )
+    assert informe_ax.get("choques", []) == [], "No debe haber choques axiomáticos"
 
-        # Verificar presencia de módulos obligatorios
-        for rol in OBLIGATORIOS:
-            if self.registro.por_rol(rol) is None:
-                raise ArranqueError(f"Contenedor {rol} no encontrado.")
+def test_axiomas_piso_de_carga(engine, declaraciones_axiomaticas):
+    """Teorema: Coherencia por coherencia, no por vacuidad (mínimo de declaraciones)."""
+    ax = engine.registro.por_rol("AX")
+    informe_ax = engine.invocador.ejecutar_capacidad(ax, "verificar", declaraciones_axiomaticas)
+    n_declaraciones = informe_ax.get("declaraciones", 0)
+    assert n_declaraciones >= PISO_DECLARACIONES, (
+        f"Se exigen al menos {PISO_DECLARACIONES} declaraciones. Recibido: {n_declaraciones}"
+    )
 
-        if verificar_contratos:
-            self._verificar_contratos_obligatorios()
+def test_axiomas_ids_unicos(engine):
+    """Teorema: Los IDs de las declaraciones axiomáticas deben ser únicos."""
+    ax = engine.registro.por_rol("AX")
+    axiomas = engine.invocador.ejecutar_capacidad(ax, "axiomas")
+    assert isinstance(axiomas, list), "axiomas() debe devolver una lista"
 
-    # ---------------- VERIFICACIÓN DE CONTRATOS OBLIGATORIOS ----------------
-    def _verificar_contratos_obligatorios(self) -> None:
-        """
-        Verifica que los módulos obligatorios declaren las capacidades mínimas
-        necesarias para el arranque. Todo se obtiene del contrato.
-        El Engine conoce los módulos, pero solo actúa por lo declarado.
-        """
-        # AX debe declarar capacidad de verificación
-        ax = self.registro.por_rol(ROL_AXIOMAS)
-        if ax is None:
-            raise ArranqueError(f"Contenedor {ROL_AXIOMAS} no encontrado.")
-        if not ax.tiene_capacidad("verificar"):
-            raise ContratoError(
-                f"Contenedor {ROL_AXIOMAS} debe declarar capacidad 'verificar'."
-            )
+    ids = [d.get("id") for d in axiomas if isinstance(d, dict)]
+    ids_unicos = set(ids)
+    assert len(ids) == len(ids_unicos), f"IDs duplicados: {sorted(set(ids) - ids_unicos)}"
 
-        # CT debe declarar capacidades de constantes
-        ct = self.registro.por_rol(ROL_CONSTANTE)
-        if ct is None:
-            raise ArranqueError(f"Contenedor {ROL_CONSTANTE} no encontrado.")
-        if not ct.tiene_capacidad("alpha") or not ct.tiene_capacidad("beta"):
-            raise ContratoError(
-                f"Contenedor {ROL_CONSTANTE} debe declarar capacidades 'alpha' y 'beta'."
-            )
+def test_axiomas_forma_de_cada_declaracion(engine):
+    """Corolario Def-5.3.1: Cada declaración debe tener claves obligatorias."""
+    ax = engine.registro.por_rol("AX")
+    axiomas = engine.invocador.ejecutar_capacidad(ax, "axiomas")
+    CLAVES_OBLIGATORIAS = ("id", "tipo", "sujeto", "relacion", "objeto", "polaridad")
 
-        # FO debe declarar al menos una capacidad
-        fo = self.registro.por_rol(ROL_FORMULAS)
-        if fo is None:
-            raise ArranqueError(f"Contenedor {ROL_FORMULAS} no encontrado.")
-        if not fo.capacidades:
-            raise ContratoError(
-                f"Contenedor {ROL_FORMULAS} debe declarar al menos una capacidad."
-            )
+    for d in axiomas:
+        assert isinstance(d, dict), f"Declaración {d} no es un diccionario"
+        for clave in CLAVES_OBLIGATORIAS:
+            assert clave in d, f"Declaración {d.get('id')} falta clave '{clave}'"
+        assert isinstance(d["polaridad"], bool), (
+            f"Declaración {d.get('id')}: polaridad debe ser bool"
+        )
 
-        # MC debe declarar capacidad de verificación
-        mc = self.registro.por_rol(ROL_CORRELACION_MECANICA)
-        if mc is None:
-            raise ArranqueError(f"Contenedor {ROL_CORRELACION_MECANICA} no encontrado.")
-        if not mc.tiene_capacidad("verificar"):
-            raise ContratoError(
-                f"Contenedor {ROL_CORRELACION_MECANICA} debe declarar capacidad 'verificar'."
-            )
+def test_axiomas_inventario_cuadra(engine):
+    """Teorema: El inventario de AX debe ser consistente con sus declaraciones."""
+    ax = engine.registro.por_rol("AX")
+    assert ax.tiene_capacidad("inventario"), "AX debe declarar capacidad 'inventario'"
 
-        # --- Verificación mecánica (solo a través de la capacidad declarada) ---
-        informe_mc = self.invocador.ejecutar_capacidad(mc, "verificar")
-        if es_undefined(informe_mc):
-            raise ArranqueError("Fallo al ejecutar capacidad 'verificar' de MC.")
-        if not isinstance(informe_mc, dict) or not informe_mc.get("coherente", False):
-            choques = informe_mc.get("choques", []) if isinstance(informe_mc, dict) else []
-            choques_str = "\n".join(str(c) for c in choques)
-            raise ArranqueError(
-                f"CONTRADICCIÓN MECÁNICA. Los módulos no pueden ejecutarse en orden.\n{choques_str}"
-            )
+    inventario = engine.invocador.ejecutar_capacidad(ax, "inventario")
+    assert isinstance(inventario, dict), "inventario() debe devolver un diccionario"
+    assert "declaraciones" in inventario, "Inventario debe incluir 'declaraciones'"
+    assert "por_tipo" in inventario, "Inventario debe incluir 'por_tipo'"
 
-        # --- Verificación axiomática (solo a través de la capacidad declarada) ---
-        declaraciones = {}
-        for c in self.registro.contenedores.values():
-            if c.tiene_capacidad("axiomas"):
-                result = self.invocador.ejecutar_capacidad(c, "axiomas")
-                if not es_undefined(result):
-                    declaraciones[c.nombre] = result
+    # Verificar que la suma de declaraciones por tipo iguale al total
+    total_por_tipo = sum(inventario["por_tipo"].values())
+    assert total_por_tipo == inventario["declaraciones"], (
+        "La suma de declaraciones por tipo debe igualar al total"
+    )
 
-        informe_ax = self.invocador.ejecutar_capacidad(ax, "verificar", declaraciones)
-        if es_undefined(informe_ax):
-            raise ArranqueError("Fallo al ejecutar capacidad 'verificar' de AX.")
-        if not isinstance(informe_ax, dict) or "coherente" not in informe_ax:
-            raise ContratoError(
-                "Capacidad 'verificar' de AX debe devolver dict con clave 'coherente'."
-            )
-        if not informe_ax["coherente"]:
-            choques = informe_ax.get("choques", [])
-            choques_str = "\n".join(
-                f"  - {ch.get('tipo', 'Desconocido')}: {ch.get('mensaje', 'Sin mensaje')}"
-                if isinstance(ch, dict) else f"  - {ch}"
-                for ch in choques
-            )
-            raise ArranqueError(f"CONTRADICCIÓN AXIOMÁTICA.\n{choques_str}")
+# ===============================================================
+# SEGMENTO 4 --- ENGINE (EJECUTOR DE CONTRATOS)
+# ===============================================================
+# Axioma TA4: R ⊥ Observer (el Engine no modifica R).
+# Axioma F4: Y = g(X, U) (el Engine opera sobre contratos, no sobre R).
+# Teorema 17: Tru_total ≥ β (el Engine garantiza módulos obligatorios).
+# ===============================================================
 
-    # ---------------- EJECUCIÓN DE CAPACIDADES (ÚNICA VÍA DE ACCIÓN) ----------------
-    def ejecutar_capacidad(
-        self,
-        rol: str,
-        capacidad: str,
-        *args,
-        **kwargs,
-    ) -> Any:
-        """
-        Ejecuta una capacidad de un módulo identificado por rol.
-        El Engine solo consulta el contrato. Nunca conoce el nombre real de la función.
-        """
-        contenedor = self.registro.por_rol(rol)
-        if contenedor is None:
-            return UNDEFINED
-        return self.invocador.ejecutar_capacidad(contenedor, capacidad, *args, **kwargs)
+def test_engine_arranca(engine):
+    """Axioma TA4: El Engine debe arrancar si los módulos obligatorios están presentes."""
+    assert engine is not None, "El Engine debe inicializarse correctamente"
 
-    def ejecutar_contratos(self, peticion: Dict) -> Dict:
-        """
-        Ejecuta la capacidad canónica "evaluar" de cada módulo
-        según lo declarado en su contrato.
-        El Engine no conoce nombres de funciones; solo capacidades.
-        """
-        self.invocador.reiniciar()
-        reportes = {}
+def test_engine_solo_core_puede_ejecutarlo():
+    """Axioma de Autoridad: Solo el módulo 'core' puede ejecutar el Engine."""
+    with pytest.raises(AutoridadError):
+        Engine(raiz_modulos="modules", invocador_id="no_core")
 
-        for contenedor in self.registro.contenedores.values():
-            if not contenedor.tiene_capacidad("evaluar"):
-                continue
+def test_engine_verifica_contratos_obligatorios(engine):
+    """Teorema 17: El Engine verifica que los módulos obligatorios declaren sus capacidades."""
+    # AX debe declarar 'verificar'
+    ax = engine.registro.por_rol("AX")
+    assert ax is not None, "Módulo AX no encontrado"
+    assert ax.tiene_capacidad("verificar"), "AX debe declarar capacidad 'verificar'"
 
-            reporte = self.invocador.ejecutar_capacidad(
-                contenedor, "evaluar", peticion
-            )
-            if isinstance(reporte, dict):
-                reportes[contenedor.rol] = reporte
+    # CT debe declarar 'alpha' y 'beta'
+    ct = engine.registro.por_rol("CT")
+    assert ct is not None, "Módulo CT no encontrado"
+    assert ct.tiene_capacidad("alpha"), "CT debe declarar capacidad 'alpha'"
+    assert ct.tiene_capacidad("beta"), "CT debe declarar capacidad 'beta'"
 
-        return {
-            "reportes": reportes,
-            "fallos": list(self.invocador.fallos),
-        }
+    # FO debe declarar al menos una capacidad
+    fo = engine.registro.por_rol("FO")
+    assert fo is not None, "Módulo FO no encontrado"
+    assert fo.capacidades, "FO debe declarar al menos una capacidad"
 
-    # ---------------- EVALUACIÓN ----------------
-    def evaluar(self, peticion: Dict) -> Dict:
-        """
-        Evalúa una petición ejecutando las capacidades declaradas.
-        El Engine no interpreta resultados; solo recopila reportes.
-        """
-        return self.ejecutar_contratos(peticion)
+    # MC debe declarar 'verificar'
+    mc = engine.registro.por_rol("MC")
+    assert mc is not None, "Módulo MC no encontrado"
+    assert mc.tiene_capacidad("verificar"), "MC debe declarar capacidad 'verificar'"
 
-    def evaluar_vigilado(self, peticion: Dict) -> Dict:
-        """
-        Puerta única de evaluación.
-        Verifica que los módulos obligatorios estén presentes antes de evaluar.
-        """
-        try:
-            for rol in OBLIGATORIOS:
-                if self.registro.por_rol(rol) is None:
-                    raise ArranqueError(f"Contenedor {rol} no encontrado.")
-        except ArranqueError as e:
-            rol_pendiente = str(e).split(" ")[1] if " " in str(e) else "desconocido"
-            return {
-                "estado": "PENDIENTE",
-                "detenido_en": "centinela",
-                "rol_pendiente": rol_pendiente,
-                "razon": str(e),
-                "accion": f"Montar el contenedor {rol_pendiente} para desbloquear.",
-                "reportes": {},
-                "fallos": [],
-            }
-        return self.evaluar(peticion)
+def test_engine_roles_obligatorios_presentes(engine):
+    """Axioma TA4: Los módulos obligatorios (AX, CT, FO, MC) deben estar presentes."""
+    roles = engine.registro.resumen()["roles"]
+    for rol in ("AX", "CT", "FO", "MC"):
+        assert rol in roles, f"Rol {rol} no cargado"
 
-    # ---------------- CONOCIMIENTO TOTAL (SIN ACTUAR) ----------------
-    def censar(self) -> Dict:
-        """Devuelve el estado de los módulos cargados (transparencia total)."""
-        return self.registro.resumen()
+def test_engine_ningun_modulo_rechazado(engine):
+    """Teorema: El Engine no debe rechazar módulos válidos."""
+    rechazados = engine.registro.resumen()["rechazados"]
+    assert rechazados == [], f"Módulos rechazados: {rechazados}"
 
-    def conocimiento(self) -> Dict:
-        """
-        Devuelve el conocimiento completo que el Engine tiene del sistema.
-        Esta operación es puramente introspectiva: no ejecuta ninguna capacidad.
-        """
-        return self.registro.conocimiento_total()
+def test_engine_conocimiento_total_incluye_modulos(engine):
+    """Teorema: El Engine debe tener conocimiento completo de los módulos."""
+    conocimiento = engine.conocimiento()
+    assert "modulos" in conocimiento, "Conocimiento debe incluir 'modulos'"
+    assert len(conocimiento["modulos"]) > 0, "Debe haber al menos un módulo"
 
-    def inventario(self) -> Dict:
-        """
-        Devuelve un resumen del estado del Engine y de los módulos
-        que declaran la capacidad 'inventario'.
-        Solo actúa sobre módulos que explícitamente autorizan esta capacidad.
-        """
-        inv = self.registro.resumen()
-        inv["contenido"] = {}
+    for nombre, info in conocimiento["modulos"].items():
+        assert "nombre" in info, f"Módulo {nombre} falta clave 'nombre'"
+        assert "rol" in info, f"Módulo {nombre} falta clave 'rol'"
+        assert "capacidades" in info, f"Módulo {nombre} falta clave 'capacidades'"
 
-        for c in self.registro.contenedores.values():
-            if c.tiene_capacidad("inventario"):
-                result = self.invocador.ejecutar_capacidad(c, "inventario")
-                if not es_undefined(result):
-                    inv["contenido"][c.nombre] = result
-                else:
-                    inv["contenido"][c.nombre] = {"error": "capacidad 'inventario' falló"}
-        return inv
+def test_engine_ejecutar_capacidad_inexistente(engine):
+    """Axioma F4: El Engine debe devolver UNDEFINED si la capacidad no existe."""
+    resultado = engine.ejecutar_capacidad("AX", "capacidad_inexistente")
+    assert es_undefined(resultado), "Debe devolver UNDEFINED para capacidad inexistente"
+    assert len(engine.invocador.fallos) == 1, "Debe registrar un fallo"
+    assert engine.invocador.fallos[0]["capacidad"] == "capacidad_inexistente"
+
+def test_engine_ejecutar_capacidad_con_peticion_invalida(engine):
+    """Corolario Def-5.3.1: Si falta una clave requerida, debe devolver UNDEFINED."""
+    ca = engine.registro.por_rol("CA")
+    if ca is None:
+        pytest.skip("Módulo CA no disponible")
+
+    # Suponiendo que CA requiere "mensaje" y "contexto"
+    resultado = engine.ejecutar_capacidad("CA", "evaluar", {"mensaje": "prueba"})
+    if ca.requiere and "contexto" in ca.requiere:
+        assert es_undefined(resultado), "Debe devolver UNDEFINED si falta 'contexto'"
+        assert len(engine.invocador.fallos) == 1, "Debe registrar un fallo"
+
+def test_engine_evaluar_sin_modulo_ca(engine):
+    """Teorema: Si CA no está disponible, evaluar() debe devolver reportes vacíos."""
+    # Simular que CA no está disponible (no es obligatorio para evaluar)
+    ca = engine.registro.por_rol("CA")
+    if ca is not None:
+        # Temporalmente eliminar CA del registro (solo para esta prueba)
+        engine.registro.contenedores.pop(ca.nombre, None)
+
+    resultado = engine.evaluar({"mensaje": "prueba"})
+    assert "reportes" in resultado, "Debe devolver 'reportes'"
+    assert "CA" not in resultado["reportes"], "CA no debe estar en reportes si no está disponible"
+
+    # Restaurar CA
+    if ca is not None:
+        engine.registro.contenedores[ca.nombre] = ca
+
+# ===============================================================
+# SEGMENTO 4.5 --- CONTEXTO (FILTRO INICIAL)
+# ===============================================================
+# Axioma TA4: R ⊥ Observer (el contexto no modifica R).
+# Teorema 12: La confusión de R_i con R es la fuente de colapso.
+# ===============================================================
+
+@pytest.mark.skipif(
+    not any(c.rol == "CX" for c in Engine("modules", "core").registro.contenedores.values()),
+    reason="Módulo CX no disponible"
+)
+def test_contexto_modulo_cargado(engine):
+    """Axioma TA4: El módulo CX debe estar cargado si existe."""
+    cx = engine.registro.por_rol("CX")
+    assert cx is not None, "Módulo CX no encontrado"
+
+@pytest.mark.skipif(
+    not any(c.rol == "CX" for c in Engine("modules", "core").registro.contenedores.values()),
+    reason="Módulo CX no disponible"
+)
+def test_contexto_tiene_capacidad_evaluar(engine):
+    """Teorema: CX debe declarar capacidad 'evaluar' o 'resolver'."""
+    cx = engine.registro.por_rol("CX")
+    assert cx is not None, "Módulo CX no encontrado"
+
+    # Verificar que tenga al menos una capacidad de evaluación
+    assert cx.tiene_capacidad("evaluar") or cx.tiene_capacidad("resolver"), (
+        "CX debe declarar capacidad 'evaluar' o 'resolver'"
+    )
+
+@pytest.mark.skipif(
+    not any(c.rol == "CX" for c in Engine("modules", "core").registro.contenedores.values()),
+    reason="Módulo CX no disponible"
+)
+def test_contexto_resolver_con_peticion_vacia(engine):
+    """Teorema: CX debe poder resolver una petición vacía (o devolver UNDEFINED)."""
+    cx = engine.registro.por_rol("CX")
+    assert cx is not None, "Módulo CX no encontrado"
+
+    capacidad = "evaluar" if cx.tiene_capacidad("evaluar") else "resolver"
+    resultado = engine.ejecutar_capacidad("CX", capacidad, {})
+
+    # Puede ser UNDEFINED o un dict, pero no debe fallar
+    assert isinstance(resultado, (dict, type(UNDEFINED))), (
+        "CX debe devolver un dict o UNDEFINED"
+    )
+
+# ===============================================================
+# SEGMENTO 5 --- REALIDAD (ACCESO A R)
+# ===============================================================
+# Axioma TA7: Sin acceso directo a R (solo a través de X).
+# Teorema 14: La propiedad de la verdad pertenece al sistema que la produce.
+# ===============================================================
+
+@pytest.mark.skipif(
+    not any(c.rol == "RE" for c in Engine("modules", "core").registro.contenedores.values()),
+    reason="Módulo RE no disponible"
+)
+def test_realidad_modulo_cargado(engine):
+    """Axioma TA7: El módulo RE debe estar cargado si existe."""
+    re = engine.registro.por_rol("RE")
+    assert re is not None, "Módulo RE no encontrado"
+
+# ===============================================================
+# SEGMENTO 6 --- CONSTRUCCIÓN (VERIFICACIÓN DE LO QUE FALTA)
+# ===============================================================
+# Teorema TR1: El framework debe ser generativo (|Im(⊕)| > |Θ|).
+# Corolario 17.1: Tru_total ∈ [β, 1] (lo que falta debe ser visible).
+# ===============================================================
+
+def test_construccion_roles_pendientes_son_visibles(engine):
+    """Teorema TR1: Los roles vacíos deben ser visibles para el Engine."""
+    vacios = engine.registro.resumen()["roles_vacios"]
+    assert isinstance(vacios, list), "roles_vacios debe ser una lista"
+
+    # Los módulos obligatorios no deben estar en roles_vacios
+    for rol in ("AX", "CT", "FO", "MC"):
+        assert rol not in vacios, f"{rol} debe estar montado (es obligatorio)"
+
+def test_construccion_evaluar_sin_calculador_no_finge(engine):
+    """Teorema: Si CA no está disponible, evaluar() no debe fingir resultados."""
+    ca = engine.registro.por_rol("CA")
+    if ca is None:
+        pytest.skip("Módulo CA no disponible")
+
+    # Temporalmente eliminar CA
+    engine.registro.contenedores.pop(ca.nombre, None)
+    try:
+        resultado = engine.evaluar({"mensaje": "sonda", "contexto": "Octx"})
+        # CA no debe estar en reportes
+        assert "CA" not in resultado.get("reportes", {}), (
+            "CA no debe estar en reportes si no está disponible"
+        )
+    finally:
+        # Restaurar CA
+        engine.registro.contenedores[ca.nombre] = ca
