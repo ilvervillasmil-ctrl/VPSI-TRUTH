@@ -1,33 +1,82 @@
 """
-VPSI-TRUTH / modules/formulas
+VPSI-TRUTH --- modules/formulas/__init__.py
 
 Contenedor de fórmulas. Rol FO.
-Expone tru_ri y tru_total al Engine. Cada fórmula vive en su propio
-archivo y se descubre por el directorio.
+Expone tru_ri y tru_total al Engine.
+Cada fórmula vive en su propio archivo y se descubre por el directorio.
+No asume acceso a R: solo opera sobre C, L, K (Axioma TA7).
 """
 
+from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
 from fractions import Fraction
+from typing import Any, Callable, Dict, List
 
-# Importar las fórmulas canónicas (REQUERIDO por el rol FO)
-from .truth import tru_ri, tru_total
-
+# ===============================================================
+# SEGMENTO 1 --- IDENTIDAD
+# ===============================================================
 CONTENEDOR = {
     "nombre": "formulas",
     "rol": "FO",
     "version": "1.0",
-    "requiere": [],
+    "requiere": ["CT"],  # Depende de constante (ALPHA, BETA)
+    "descripcion": "Expone tru_ri y tru_total. Descubre fórmulas por directorio.",
 }
 
 _DIR = Path(__file__).parent
 
 # ===============================================================
-# DESCUBRIMIENTO DE FÓRMULAS
+# SEGMENTO 2 --- ERRORES
 # ===============================================================
+class FormulaError(Exception):
+    """Error en el cálculo de fórmulas."""
+    pass
 
-def _descubrir():
+class FormulaNoEncontradaError(Exception):
+    """Fórmula requerida no encontrada en el directorio."""
+    pass
+
+# ===============================================================
+# SEGMENTO 3 --- CONSTANTES Y CONTRATOS
+# ===============================================================
+PISO_FORMULAS = 1  # Mínimo de fórmulas para evitar coherencia por vacuidad
+
+# ===============================================================
+# SEGMENTO 4 --- ESTADO (Colecciones auto-llenables)
+# ===============================================================
+_DECLARACIONES: List[Dict[str, Any]] = []  # Axiomas/teoremas del módulo
+_REGLAS: List[Callable[[], List[str]]] = []  # Reglas de validación
+_FORMULAS: Dict[str, Dict[str, Any]] = {}  # Fórmulas descubiertas
+
+# ===============================================================
+# SEGMENTO 5 --- GANCHOS DE ANEXO (Decoradores)
+# ===============================================================
+def regla(fn: Callable[[], List[str]]) -> Callable[[], List[str]]:
+    """Registra una regla de validación."""
+    _REGLAS.append(fn)
+    return fn
+
+def declarar(d: Dict[str, Any]) -> Dict[str, Any]:
+    """Registra una declaración axiomática."""
+    _DECLARACIONES.append(d)
+    return d
+
+def registrar_formula(nombre: str, meta: Dict[str, Any]):
+    """Registra una fórmula en el inventario."""
+    def decorator(fn: Callable) -> Callable:
+        _FORMULAS[nombre] = {
+            **meta,
+            "funcion": fn,
+        }
+        return fn
+    return decorator
+
+# ===============================================================
+# SEGMENTO 6 --- LECTURA (Funciones privadas)
+# ===============================================================
+def _descubrir_formulas() -> Dict[str, Dict[str, Any]]:
     """
     Descubre todas las fórmulas en el directorio que declaran FORMULA.
     Cada archivo .py (excepto __init__.py) debe definir un diccionario FORMULA.
@@ -53,74 +102,127 @@ def _descubrir():
     return registro
 
 # ===============================================================
-# INVENTARIO
+# SEGMENTO 7 --- API DEL CONTENEDOR (Contrato con el Engine)
 # ===============================================================
+def barrer() -> Dict[str, Any]:
+    """Ejecuta todas las reglas y devuelve un informe."""
+    faltas: List[str] = []
+    for regla_fn in _REGLAS:
+        try:
+            faltas.extend(regla_fn() or [])
+        except Exception as e:
+            faltas.append(f"{regla_fn.__name__}: {type(e).__name__}: {e}")
 
-def inventario():
-    """
-    Devuelve el inventario de fórmulas cargadas.
-    """
+    return {
+        "contenedor": CONTENEDOR["nombre"],
+        "estado": "APROBADO" if not faltas else "RECHAZADO",
+        "coherente": not faltas,
+        "faltas": faltas,
+        "reglas": [r.__name__ for r in _REGLAS],
+    }
+
+def inventario() -> Dict[str, Any]:
+    """Devuelve metadatos del contenedor."""
     return {
         "contenedor": CONTENEDOR["nombre"],
         "version": CONTENEDOR["version"],
-        "formulas": _descubrir(),
+        "formulas": _descubrir_formulas(),
+        "reglas": len(_REGLAS),
+        "declaraciones": len(_DECLARACIONES),
     }
 
-# ===============================================================
-# AXIOMAS PARA EL BARRIDO AXIOMÁTICO
-# ===============================================================
-
-def axiomas():
-    """
-    Axiomas declarados por este contenedor para el barrido axiomático.
-    """
-    return [
-        {
-            "id": "FO-1",
-            "tipo": "axioma",
-            "sujeto": "Tru_total",
-            "relacion": "acotado_superiormente_por",
-            "objeto": "ALPHA",
-            "polaridad": True,
-            "cota": None,
-            "depende_de": [],
-            "gobierna": ["formulas"],
-            "enunciado": "Tru_total(D) ≤ ALPHA (Teorema 16: Structural Ceiling α).",
-        },
-        {
-            "id": "FO-2",
-            "tipo": "axioma",
-            "sujeto": "Tru_total",
-            "relacion": "acotado_inferiormente_por",
-            "objeto": "BETA",
-            "polaridad": True,
-            "cota": None,
-            "depende_de": [],
-            "gobierna": ["formulas"],
-            "enunciado": "Tru_total(D) ≥ BETA (Teorema 17: Impossibility of Total Collapse).",
-        },
-        {
-            "id": "FO-3",
-            "tipo": "axioma",
-            "sujeto": "Tru_Ri",
-            "relacion": "admite_compensacion_entre_factores",
-            "objeto": "C_L_K",
-            "polaridad": False,
-            "cota": None,
-            "depende_de": [],
-            "gobierna": ["formulas"],
-            "enunciado": "Tru_Ri no admite compensación entre C, L, K (TA5: Multiplicatividad).",
-        },
-    ]
+def axiomas() -> List[Dict[str, Any]]:
+    """Devuelve las declaraciones axiomáticas del módulo."""
+    return _DECLARACIONES
 
 # ===============================================================
-# EXPORTACIÓN (REQUERIDO POR EL ROL FO)
+# SEGMENTO 8 --- REGLAS (Validaciones internas)
 # ===============================================================
+@regla
+def _validar_piso_formulas() -> List[str]:
+    """Verifica que haya al menos PISO_FORMULAS fórmulas."""
+    if len(_descubrir_formulas()) < PISO_FORMULAS:
+        return [f"Menos de {PISO_FORMULAS} fórmulas: coherencia por vacuidad"]
+    return []
 
-__all__ = [
-    "CONTENEDOR",
-    "tru_ri",
-    "tru_total",
-    "inventario",
-    "axiomas",
-]
+@regla
+def _validar_formulas_canónicas() -> List[str]:
+    """Verifica que tru_ri y tru_total estén definidas."""
+    faltas = []
+    if "tru_ri" not in _FORMULAS:
+        faltas.append("Fórmula tru_ri no encontrada.")
+    if "tru_total" not in _FORMULAS:
+        faltas.append("Fórmula tru_total no encontrada.")
+    return faltas
+
+# ===============================================================
+# SEGMENTO 9 --- DECLARACIONES (Axiomas/Teoremas del módulo)
+# ===============================================================
+declarar({
+    "id": "FO-1",
+    "tipo": "axioma",
+    "sujeto": "Tru_Ri",
+    "relacion": "=",
+    "objeto": "C * L * K",
+    "polaridad": True,
+    "enunciado": "Tru_Ri(D) = C(D) * L(D) * K(D) (Axioma TA5: Multiplicatividad).",
+    "cota": None,
+    "depende_de": ["TA5"],
+    "gobierna": ["tru_ri"],
+})
+
+declarar({
+    "id": "FO-2",
+    "tipo": "axioma",
+    "sujeto": "Tru_total",
+    "relacion": "=",
+    "objeto": "(Tru_Ri * ALPHA) + BETA",
+    "polaridad": True,
+    "enunciado": "Tru_total(D) = (Tru_Ri(D) * ALPHA) + BETA (Definición 2.14).",
+    "cota": None,
+    "depende_de": ["Def-2.14"],
+    "gobierna": ["tru_total"],
+})
+
+declarar({
+    "id": "FO-3",
+    "tipo": "teorema",
+    "sujeto": "Tru_Ri",
+    "relacion": "≤",
+    "objeto": "ALPHA",
+    "polaridad": True,
+    "enunciado": "Tru_Ri(D) ≤ ALPHA = 26/27 (Teorema 16: Techo Estructural).",
+    "cota": "26/27",
+    "depende_de": ["T16"],
+    "gobierna": ["tru_ri"],
+})
+
+declarar({
+    "id": "FO-4",
+    "tipo": "teorema",
+    "sujeto": "Tru_total",
+    "relacion": "≥",
+    "objeto": "BETA",
+    "polaridad": True,
+    "enunciado": "Tru_total(D) ≥ BETA = 1/27 (Teorema 17: Piso Estructural).",
+    "cota": "1/27",
+    "depende_de": ["T17"],
+    "gobierna": ["tru_total"],
+})
+
+# ===============================================================
+# ZONA DE ANEXO
+# ===============================================================
+# Importar fórmulas canónicas (truth.py)
+from .truth import tru_ri, tru_total, FORMULA as TRUTH_FORMULA
+
+# Registrar fórmulas canónicas con el decorador
+@registrar_formula("tru_ri", TRUTH_FORMULA)
+def _tru_ri_wrapper(C, L, K):
+    """Wrapper para tru_ri (compatibilidad con el decorador)."""
+    return tru_ri(C, L, K)
+
+@registrar_formula("tru_total", TRUTH_FORMULA)
+def _tru_total_wrapper(C, L, K):
+    """Wrapper para tru_total (compatibilidad con el decorador)."""
+    return tru_total(C, L, K)
