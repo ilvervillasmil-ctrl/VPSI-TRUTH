@@ -533,8 +533,6 @@ Tru_total(D) = (Tru_Ri(D) · α) + β
 | Observación 1.41 — dos techos declarados | §1.11 | Medio |
 | Definiciones de la §2.1 (6 items) | §2.1 | Bajo |
 
-- De las 147 declaraciones cargadas, solo 6 son de tipo definición, y todas están en `correlacion.py`.
-- Todo el aparato definicional del resto del documento está implícito.
 
 ---
 ---
