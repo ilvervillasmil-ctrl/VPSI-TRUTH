@@ -1,131 +1,190 @@
 """
-VPSI-TRUTH --- modules/constante/__init__.py
+VPSI-TRUTH --- modules/calculator/__init__.py
 
-THE SEED: Punto de anclaje del sistema.
-Single source of truth. Every module reads from here. Nothing here reads from anywhere else.
+Contenedor de cálculo. Rol CA.
 
-El Engine depende absolutamente de este módulo. Sin ALPHA y BETA, el sistema no funciona.
+Este módulo es responsable de calcular las variables C, L, K de manera independiente y auditable.
+- No calcula Tru_Ri ni Tru_total (eso es responsabilidad de formulas).
+- Expone la función calcular() para que el Engine pueda delegar el cálculo de C, L, K.
+- Usa Fraction para precisión matemática.
+- Devuelve UNDEFINED si falta información (ej: O_context para K).
+
+Dependencias:
+- CT (constantes ALPHA, BETA).
+- MC (correlacion_mecanica para validar orden causal).
 """
 
+from __future__ import annotations
 from fractions import Fraction
-import math
+from typing import Dict, List, Optional, Union, Any
 
 # ===============================================================
-# CONTENEDOR
+# CONTENEDOR: Metadatos del módulo
 # ===============================================================
 CONTENEDOR = {
-    "nombre": "constante",
-    "rol": "CT",
+    "nombre": "calculator",
+    "rol": "CA",  # Rol: Cálculo de variables de verdad (C, L, K)
     "version": "1.0",
-    "requiere": [],
+    "requiere": ["CT", "MC"],  # Depende de constantes y correlación mecánica
+    "descripcion": (
+        "Calcula las variables fundamentales de verdad (C, L, K) usando métodos "
+        "teóricos (IlverVillasmil.pdf) u operacionales (PROTOCOLO.pdf). "
+        "Expone la función calcular() para el Engine."
+    ),
 }
 
 # ===============================================================
-# THE 3D PLANE
+# ESTADO UNDEFINIDO (UNDEFINED)
 # ===============================================================
-DIMENSION = 3
-AXES = ("x", "y", "z")
+class _Undefined:
+    """Estado para valores sin evidencia. Propaga limpiamente sin intervencionismo."""
+    __slots__ = ()
+
+    def __repr__(self):
+        return "UNDEFINED"
+
+    def __bool__(self):
+        raise TypeError("UNDEFINED no admite conversión a booleano")
+
+    def __eq__(self, otro):
+        return isinstance(otro, _Undefined)
+
+    def __hash__(self):
+        return hash("VPSI_UNDEFINED")
+
+UNDEFINED = _Undefined()
+
+def es_undefined(v) -> bool:
+    """Verifica si un valor es UNDEFINED."""
+    return v is UNDEFINED or isinstance(v, _Undefined)
 
 # ===============================================================
-# THE PARTITION
+# EXCEPCIONES: Errores específicos del módulo
 # ===============================================================
-DIVISIONES_PER_AXIS = 3
-CUBE_TOTAL = DIVISIONES_PER_AXIS ** DIMENSION
-CUBE_CENTER = 1
-CUBE_EXTERIOR = CUBE_TOTAL - CUBE_CENTER
-N_CUBE = CUBE_TOTAL
+class DominioError(Exception):
+    """Un valor está fuera del dominio permitido [0, 1]."""
+    pass
+
+class ContextoError(Exception):
+    """Falta O_context para calcular K."""
+    pass
+
+class MetodoError(Exception):
+    """Método no soportado (debe ser 'teorico' o 'operacional')."""
+    pass
 
 # ===============================================================
-# THE SEED
+# FUNCIÓN PRINCIPAL: calcular()
 # ===============================================================
-ALPHA = Fraction(CUBE_EXTERIOR, CUBE_TOTAL)  # 26/27
-BETA = Fraction(CUBE_CENTER, CUBE_TOTAL)     # 1/27
-C_MAX = ALPHA
+def calcular(
+    descripcion: Optional[str] = None,
+    compromisos: Optional[List[str]] = None,
+    contradicciones: Optional[int] = None,
+    posturas: Optional[List[str]] = None,
+    reversiones: Optional[int] = None,
+    afirmaciones: Optional[List[str]] = None,
+    afirmaciones_falsas: Optional[int] = None,
+    o_context: Optional[str] = None,
+    metodo: str = "operacional"
+) -> Dict[str, Union[Fraction, type(UNDEFINED)]]:
+    """
+    Función principal para calcular C, L, K.
+    Esta función es llamada por el Engine para delegar el cálculo de las variables.
+
+    Args:
+        descripcion (str): Descripción D (para método teórico).
+        compromisos (List[str]): Lista de compromisos estructurales (para método operacional).
+        contradicciones (int): Número de contradicciones (para método operacional).
+        posturas (List[str]): Lista de posturas asumidas (para método operacional).
+        reversiones (int): Número de reversiones de postura (para método operacional).
+        afirmaciones (List[str]): Lista de afirmaciones verificables (para método operacional).
+        afirmaciones_falsas (int): Número de afirmaciones falsas (para método operacional).
+        o_context (str): Contexto observable (obligatorio para K).
+        metodo (str): "teorico" o "operacional" (default: "operacional").
+
+    Returns:
+        Dict[str, Union[Fraction, type(UNDEFINED)]]:
+            - "C": Valor de C (Fraction o UNDEFINED).
+            - "L": Valor de L (Fraction o UNDEFINED).
+            - "K": Valor de K (Fraction o UNDEFINED).
+            - "metodo": Método usado ("teorico" o "operacional").
+            - "o_context": Contexto observable usado (o None).
+    """
+    # Calcular C
+    if metodo == "teorico":
+        C = _calcular_c_teorico(descripcion) if descripcion is not None else UNDEFINED
+    else:
+        C = _calcular_c_operacional(compromisos, contradicciones)
+
+    # Calcular L
+    if metodo == "teorico":
+        L = _calcular_l_teorico(descripcion) if descripcion is not None else UNDEFINED
+    else:
+        L = _calcular_l_operacional(posturas, reversiones)
+
+    # Calcular K
+    if o_context is None:
+        K = UNDEFINED
+    else:
+        if metodo == "teorico":
+            K = _calcular_k_teorico(descripcion, o_context) if descripcion is not None else UNDEFINED
+        else:
+            K = _calcular_k_operacional(afirmaciones, afirmaciones_falsas, o_context)
+
+    return {
+        "C": C,
+        "L": L,
+        "K": K,
+        "metodo": metodo,
+        "o_context": o_context,
+    }
 
 # ===============================================================
-# ANATOMY OF THE SURFACE
+# FUNCIONES INTERNAS: Delegación a sub-módulos
 # ===============================================================
-LAYER_FACES = 6
-LAYER_EDGES = 12
-LAYER_VERTICES = 8
-SURFACE = LAYER_FACES + LAYER_EDGES + LAYER_VERTICES
+def _calcular_c_teorico(descripcion: str) -> Union[Fraction, type(UNDEFINED)]:
+    """Delegación a coherencia.py para método teórico."""
+    from .coherencia import _calcular_c_teorico as _c_teorico
+    return _c_teorico(descripcion)
 
-# ===============================================================
-# TRANSITIONS
-# ===============================================================
-TRANS_CENTER = 6
-TRANS_PER_FACE = 9
-TRANS_PER_EDGE = 6
-TRANS_PER_VERTEX = 3
-TRANSITIONS = (
-    TRANS_CENTER
-    + LAYER_FACES * TRANS_PER_FACE
-    + LAYER_EDGES * TRANS_PER_EDGE
-    + LAYER_VERTICES * TRANS_PER_VERTEX
-)
-PERCEPTUAL_MODE = 5
+def _calcular_c_operacional(compromisos: Optional[List[str]], contradicciones: Optional[int]) -> Union[Fraction, type(UNDEFINED)]:
+    """Delegación a coherencia.py para método operacional."""
+    from .coherencia import _calcular_c_operacional as _c_operacional
+    return _c_operacional(compromisos, contradicciones)
 
-# ===============================================================
-# TOPOLOGY
-# ===============================================================
-SIN2_THETA = BETA
-COS2_THETA = ALPHA
-TAN2_THETA = BETA / ALPHA
-R_FIN = Fraction(1) + BETA
+def _calcular_l_teorico(descripcion: str) -> Union[Fraction, type(UNDEFINED)]:
+    """Delegación a logica.py para método teórico."""
+    from .logica import _calcular_l_teorico as _l_teorico
+    return _l_teorico(descripcion)
 
-def theta():
-    return math.asin(math.sqrt(float(SIN2_THETA)))
+def _calcular_l_operacional(posturas: Optional[List[str]], reversiones: Optional[int]) -> Union[Fraction, type(UNDEFINED)]:
+    """Delegación a logica.py para método operacional."""
+    from .logica import _calcular_l_operacional as _l_operacional
+    return _l_operacional(posturas, reversiones)
 
-def theta_degrees():
-    return math.degrees(theta())
+def _calcular_k_teorico(descripcion: str, o_context: str) -> Union[Fraction, type(UNDEFINED)]:
+    """Delegación a correlacion_k.py para método teórico."""
+    from .correlacion_k import _calcular_k_teorico as _k_teorico
+    return _k_teorico(descripcion, o_context)
+
+def _calcular_k_operacional(afirmaciones: Optional[List[str]], afirmaciones_falsas: Optional[int], o_context: str) -> Union[Fraction, type(UNDEFINED)]:
+    """Delegación a correlacion_k.py para método operacional."""
+    from .correlacion_k import _calcular_k_operacional as _k_operacional
+    return _k_operacional(afirmaciones, afirmaciones_falsas, o_context)
 
 # ===============================================================
-# CLOSURE
+# EXPORTACIÓN: Lo que el módulo expone al exterior
 # ===============================================================
-assert DIMENSION == 3
-assert DIVISIONES_PER_AXIS ** DIMENSION == CUBE_TOTAL
-assert CUBE_EXTERIOR + CUBE_CENTER == CUBE_TOTAL
-assert SURFACE == CUBE_EXTERIOR
-assert CUBE_CENTER + SURFACE == CUBE_TOTAL
-assert TRANSITIONS == TRANS_CENTER * CUBE_EXTERIOR
-assert ALPHA + BETA == Fraction(1)
-assert SIN2_THETA + COS2_THETA == Fraction(1)
-assert TAN2_THETA == SIN2_THETA / COS2_THETA
-assert C_MAX == ALPHA
-assert R_FIN == Fraction(1) + BETA
-
-# ===============================================================
-# CONNECTION
-# ===============================================================
-_SCOPE = {
-    "ALPHA": ALPHA,
-    "BETA": BETA,
-    "Fraction": Fraction,
-}
-
-def derives(value, expression):
-    try:
-        got = eval(expression, {"__builtins__": {}}, _SCOPE)
-    except Exception as e:
-        raise ValueError(
-            f"does not connect to the seed: {expression!r} is not "
-            f"evaluable in ALPHA and BETA ({type(e).__name__}: {e})"
-        )
-
-    if not isinstance(got, Fraction):
-        try:
-            got = Fraction(got)
-        except (TypeError, ValueError):
-            raise ValueError(
-                f"does not connect to the seed: {expression!r} yields "
-                f"{type(got).__name__}, not a rational"
-            )
-
-    want = value if isinstance(value, Fraction) else Fraction(value)
-
-    if got != want:
-        raise ValueError(
-            f"does not connect to the seed: {expression} = {got}, declared {want}"
-        )
-
-    return want
+__all__ = [
+    # Metadatos
+    "CONTENEDOR",
+    # Estado y utilidades
+    "UNDEFINED",
+    "es_undefined",
+    # Excepciones
+    "DominioError",
+    "ContextoError",
+    "MetodoError",
+    # Función principal para el Engine
+    "calcular",
+]
