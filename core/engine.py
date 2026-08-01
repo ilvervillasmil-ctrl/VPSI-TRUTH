@@ -502,13 +502,13 @@ class Engine:
             "fallos": list(self.fallos),
         }
 
-    # -----------------------------------------------------------
+        # -----------------------------------------------------------
     # Introspección (sin actuar de más)
     # -----------------------------------------------------------
     def censar(self) -> Dict:
         return self.registro.resumen()
 
-        def inventario(self) -> Dict:
+    def inventario(self) -> Dict:
         contenido = {}
         for cont in self.registro.contenedores.values():
             if cont.tiene("inventario"):
