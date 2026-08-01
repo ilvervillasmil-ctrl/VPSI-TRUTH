@@ -394,7 +394,164 @@ def generatividad() -> Dict:
             "Sin interpretación. Tru_total lo calculan CA/FO."
         ),
     }
+# --- ids canónicos del paper (TR1, |Θ|=24) ---
+THETA_CANONICO = frozenset({
+    "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
+    "T11", "T12", "T13", "T14", "T15", "T16", "T17",
+    "U0", "U1", "M1", "M.1", "B-Canonical", "TT.6.1", "TR1",
+})
 
+# aliases frecuentes en gobierna → dominio canónico del paper
+DOMINIO_CANONICO = {
+    "ontologia": "ONT",
+    "ont": "ONT",
+    "informacion": "INF",
+    "info": "INF",
+    "logica": "LOG",
+    "log": "LOG",
+    "epistemologia": "EPI",
+    "epi": "EPI",
+    "semantica": "SEM",
+    "sem": "SEM",
+    "temporal": "TMP",
+    "tmp": "TMP",
+    "meta": "MET",
+    "met": "MET",
+    "constantes": "MET",          # ancla estructural → MET en el paper
+    "self": "EPI",
+    "inferencia_causal": "INF",
+    "verificacion": "EPI",
+    "ver": "VER",
+}
+
+
+def _dominios_canonicos(gobierna) -> set:
+    out = set()
+    for g in gobierna or []:
+        key = str(g).lower().strip()
+        out.add(DOMINIO_CANONICO.get(key, key.upper()[:3]))
+    return out
+
+
+def _medir_pares(theta: list) -> dict:
+    """theta: lista de dicts con clave 'dominios' (set)."""
+    n = len(theta)
+    pares_tot = n * (n - 1) // 2 if n >= 2 else 0
+    compatibles = 0
+    novedosos = 0
+    for i in range(n):
+        Di = theta[i]["dominios"]
+        for j in range(i + 1, n):
+            Dj = theta[j]["dominios"]
+            if not (Di & Dj):
+                continue
+            compatibles += 1
+            union = Di | Dj
+            if union > Di and union > Dj:
+                novedosos += 1
+    return {
+        "theta_n": n,
+        "pares_totales": pares_tot,
+        "pares_compatibles": compatibles,
+        "pares_novedosos": novedosos,
+        "im_vs_theta": (
+            "GENERATIVO" if n > 0 and novedosos > n
+            else ("ESTANCADO" if n > 0 else "SIN_DATOS")
+        ),
+    }
+
+
+def generatividad() -> dict:
+    """
+    TR1 en dos capas (saber, no creer):
+
+    1) operativa  — todo axioma/teorema con gobierna (grafo del repo)
+    2) canonica   — solo los 24 ids del paper + dominios normalizados
+
+    U1 proxy: novedad canónica > 0 o residual de arquitectura (lo añade Engine).
+    """
+    decls, errores = recolectar()
+
+    # ----- capa operativa -----
+    oper = []
+    for d in decls:
+        if d.get("tipo") not in ("teorema", "axioma"):
+            continue
+        gob = d.get("gobierna") or []
+        if not gob:
+            continue
+        oper.append({
+            "id": d["id"],
+            "tipo": d["tipo"],
+            "dominios": set(gob),
+        })
+    m_op = _medir_pares(oper)
+    dominios_op = sorted({g for n in oper for g in n["dominios"]})
+
+    # ----- capa canónica (paper) -----
+    por_id = {}
+    for d in decls:
+        i = str(d.get("id", ""))
+        if i in THETA_CANONICO:
+            # si hay duplicados de id, se queda el que tenga más gobierna
+            cand = {
+                "id": i,
+                "tipo": d.get("tipo"),
+                "dominios": _dominios_canonicos(d.get("gobierna")),
+            }
+            prev = por_id.get(i)
+            if prev is None or len(cand["dominios"]) >= len(prev["dominios"]):
+                por_id[i] = cand
+
+    can = [por_id[i] for i in sorted(por_id.keys()) if por_id[i]["dominios"]]
+    m_can = _medir_pares(can)
+    dominios_can = sorted({g for n in can for g in n["dominios"]})
+    faltan = sorted(THETA_CANONICO - set(por_id.keys()))
+    sin_dominio = sorted(
+        i for i, n in por_id.items() if not n["dominios"]
+    )
+
+    # veredicto U1 sobre la capa que importa al paper
+    u1_proxy = (
+        "NO_STAGNANT"
+        if m_can.get("pares_novedosos", 0) > 0 or m_op.get("pares_novedosos", 0) > 0
+        else "REVISAR"
+    )
+
+    return {
+        "contenedor": "axiomas",
+        # compat con Omega Report actual (capa operativa)
+        "theta_n": m_op["theta_n"],
+        "pares_totales": m_op["pares_totales"],
+        "pares_compatibles": m_op["pares_compatibles"],
+        "pares_novedosos": m_op["pares_novedosos"],
+        "im_vs_theta": m_op["im_vs_theta"],
+        "dominios": dominios_op,
+        "u1_proxy": u1_proxy,
+        "errores_recoleccion": len(errores),
+        "por_tipo_theta": {
+            "axioma": sum(1 for n in oper if n["tipo"] == "axioma"),
+            "teorema": sum(1 for n in oper if n["tipo"] == "teorema"),
+        },
+        # precisión TR1 paper
+        "canonica": {
+            **m_can,
+            "ids_presentes": sorted(por_id.keys()),
+            "ids_faltantes": faltan,
+            "ids_sin_dominio": sin_dominio,
+            "dominios": dominios_can,
+            "objetivo_paper": {
+                "theta_n": 24,
+                "im_esperada": 153,
+                "nota": "|Im(⊕)|=153 > 24=|Θ| en enumeración del texto",
+            },
+        },
+        "nota": (
+            "Capa operativa = grafo del repo. "
+            "Capa canonica = solo ids TR1 del paper. "
+            "Saber ≠ creer: comparar canonica con 24/153."
+        ),
+    }
 
 # ===============================================================
 # Contrato (AL FINAL: todas las funciones ya existen)
