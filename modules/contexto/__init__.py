@@ -11,18 +11,18 @@ from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 # ===============================================================
 CONTENEDOR = {
     "nombre": "contexto",
-    "rol": "CX",  # Rol: Contexto
+    "rol": "CX",
     "version": "1.0",
-    "requiere": ["AX", "CT", "MC"],  # Depende de axiomas, constantes y correlación mecánica
+    "requiere": ["AX", "CT", "MC"],
     "descripcion": (
         "Filtro inicial del sistema VPSI-TRUTH. "
         "Valida el contexto base del repositorio (axiomas, orden causal, constantes) "
         "y expone la función resolver(peticion) para el Engine."
     ),
     "capacidades": {
-        "verificar": "resolver",  # Capacidad para validar el contexto
-        "inventario": "inventario",  # Capacidad de introspección (opcional)
-    }
+        "verificar": resolver,
+        "inventario": inventario,
+    },
 }
 
 # ===============================================================
