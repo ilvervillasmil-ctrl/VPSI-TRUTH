@@ -8,24 +8,9 @@ from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 
 from .acceso import Canal, hay_acceso, hay_dns, HAY_REQUESTS
 
-# ===============================================================
-# CONTENEDOR (Contrato del módulo)
-# ===============================================================
-CONTENEDOR = {
-    "nombre": "realidad",
-    "rol": "RE",
-    "version": "1.0",
-    "requiere": [],
-    "descripcion": (
-        "Contenedor de realidad. Rol RE. "
-        "Filtro de funciones únicas. Descubre funciones en la carpeta y "
-        "comprueba que no se contradigan entre sí."
-    ),
-    "capacidades": {
-        "verificar": barrer,
-        "inventario": inventario,
-    },
-}
+_DIR = Path(__file__).parent
+CLAVES_FUNCION = ("nombre", "hace")
+
 
 # ===============================================================
 # DESCUBRIMIENTO (Engine: Lógica interna)
@@ -47,7 +32,14 @@ def _descubrir() -> Dict[str, Dict[str, Any]]:
             continue
         mod = importlib.util.module_from_spec(spec)
         sys.modules[clave] = mod
-        spec.loader.exec_module(mod)
+        try:
+            spec.loader.exec_module(mod)
+        except Exception as e:
+            registro[f.name] = {
+                "archivo": f.name,
+                "error": f"{type(e).__name__}: {e}",
+            }
+            continue
 
         meta = getattr(mod, "FUNCION", None)
         if not isinstance(meta, dict):
@@ -62,8 +54,9 @@ def _descubrir() -> Dict[str, Dict[str, Any]]:
 
     return registro
 
+
 # ===============================================================
-# ENGINE (Orquestador)
+# ENGINE (Orquestador del módulo / filtro)
 # ===============================================================
 
 def barrer() -> Dict[str, Any]:
@@ -71,13 +64,21 @@ def barrer() -> Dict[str, Any]:
     Filtro de paso al Engine. Orquesta la lógica del módulo:
     1. Descubre funciones en la carpeta.
     2. Comprueba que no se contradigan entre sí.
+    3. Carpeta vacía = vacío legítimo (aún no hay anclas montadas).
+
+    No calcula Tru_total. Eso corresponde a CA / FO.
+    El Engine solo ejecuta lo que el CONTENEDOR de este módulo declara.
     """
     hallado = _descubrir()
     choques: List[str] = []
     errores: List[str] = []
+    notas: List[str] = []
 
     # Validar que cada declaración tenga las claves requeridas
     for archivo, meta in sorted(hallado.items()):
+        if "error" in meta:
+            errores.append(f"{archivo}: {meta['error']}")
+            continue
         for clave in CLAVES_FUNCION:
             if not meta.get(clave):
                 errores.append(f"{archivo}: FUNCION sin '{clave}'")
@@ -85,6 +86,8 @@ def barrer() -> Dict[str, Any]:
     # Validar unicidad: dos archivos no pueden reclamar la misma función
     por_nombre: Dict[str, List[str]] = {}
     for archivo, meta in sorted(hallado.items()):
+        if "error" in meta:
+            continue
         n = meta.get("nombre")
         if n:
             por_nombre.setdefault(n, []).append(archivo)
@@ -96,25 +99,29 @@ def barrer() -> Dict[str, Any]:
                 "no se sabe cuál responde"
             )
 
-    # Validar piso: una carpeta vacía es coherente con todo
+    # Carpeta vacía: vacío legítimo, no error por vacuidad
     if not hallado:
-        errores.append("ninguna funcion declarada: coherente por vacuidad")
+        notas.append("ninguna funcion declarada todavía (vacío legítimo)")
 
     # Enviar reporte a DiagnosticoGlobal si hay choques o errores (Reporte Omega)
     if choques or errores:
         DiagnosticoGlobal.recibir_reporte(
             modulo="realidad",
-            errores=[{"tipo": "choque", "detalle": choque} for choque in choques] +
-                    [{"tipo": "error", "detalle": error} for error in errores]
+            errores=(
+                [{"tipo": "choque", "detalle": choque} for choque in choques]
+                + [{"tipo": "error", "detalle": error} for error in errores]
+            ),
         )
 
     return {
-        "contenedor": CONTENEDOR["nombre"],
+        "contenedor": "realidad",
         "coherente": not (choques or errores),
         "choques": choques,
         "errores": errores,
         "funciones": sorted(por_nombre),
+        "notas": notas,
     }
+
 
 # ===============================================================
 # CENTINELA (Eyenet)
@@ -126,7 +133,8 @@ def verificar_salida(salida: Dict[str, Any]) -> bool:
     - Si la salida es coherente, devuelve True.
     - Si no lo es, ya se envió un reporte a DiagnosticoGlobal en barrer().
     """
-    return salida.get("coherente", False)
+    return bool(salida.get("coherente", False))
+
 
 # ===============================================================
 # INTROSPECCIÓN
@@ -136,10 +144,40 @@ def inventario() -> Dict[str, Any]:
     """Devuelve un resumen de las funciones descubiertas."""
     hallado = _descubrir()
     return {
-        "contenedor": CONTENEDOR["nombre"],
-        "version": CONTENEDOR["version"],
-        "funciones": {m["nombre"]: m for m in hallado.values() if m.get("nombre")},
+        "contenedor": "realidad",
+        "version": "1.0",
+        "funciones": {
+            m["nombre"]: m
+            for m in hallado.values()
+            if m.get("nombre") and "error" not in m
+        },
     }
+
+
+# ===============================================================
+# CONTENEDOR (Contrato del módulo — al final, funciones ya definidas)
+# ===============================================================
+# Contrato literal para el Engine:
+# conoce este mapa y solo actúa según lo que aquí se declara.
+CONTENEDOR = {
+    "nombre": "realidad",
+    "rol": "RE",
+    "version": "1.0",
+    "requiere": [],
+    "descripcion": (
+        "Contenedor de realidad. Rol RE. "
+        "Ancla de lo establecido y filtro de funciones únicas. "
+        "Descubre funciones en la carpeta y comprueba que no se contradigan entre sí. "
+        "Si hay contradicción interna, no pasa hacia arriba. "
+        "No calcula Tru_total (eso es CA/FO). "
+        "El Engine no tiene poder propio: ejecuta solo lo que este contrato declara."
+    ),
+    "capacidades": {
+        "verificar": barrer,
+        "inventario": inventario,
+    },
+}
+
 
 # ===============================================================
 # EXPORTACIÓN
