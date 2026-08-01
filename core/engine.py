@@ -9,6 +9,11 @@ import importlib
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+# Excepción para errores de arranque
+class ArranqueError(Exception):
+    """Excepción de arranque para la validación del sistema."""
+    pass
+
 class Engine:
     """
     Orquestador principal del sistema VPSI-TRUTH.
@@ -59,7 +64,6 @@ class Engine:
         func = contenedor["capacidades"][capacidad]
         # Si la capacidad es un string (error en calculator), intentar resolverlo
         if isinstance(func, str):
-            # Intentar obtener la función del módulo
             modulo = importlib.import_module(f"modules.{modulo_name}")
             func = getattr(modulo, func, None)
             if func is None:
@@ -128,4 +132,4 @@ class Engine:
         return self.descubrir_modulos()
 
 # Exportar las clases para que puedan ser importadas
-__all__ = ["Engine"]
+__all__ = ["Engine", "ArranqueError"]
