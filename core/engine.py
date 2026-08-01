@@ -8,7 +8,7 @@ import importlib
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-class GlobalEngine:
+class Engine:
     """
     Orquestador principal del sistema VPSI-TRUTH.
     - Descubre automáticamente todos los módulos en `modules/`.
