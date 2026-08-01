@@ -337,13 +337,30 @@ class Engine:
             "informe_mecanica": self.informe_mecanica,
         }
 
+# ===============================================================
+# RE-EXPORTS PÚBLICOS (compatibilidad con tests y otros módulos)
+# ===============================================================
+try:
+    from modules.axiomas import normalizar
+except ImportError:
+    normalizar = None  # type: ignore
+
+try:
+    from modules.axiomas import contradiccion_directa, contradiccion_de_cota
+except ImportError:
+    contradiccion_directa = None  # type: ignore
+    contradiccion_de_cota = None  # type: ignore
 
 # ===============================================================
 __all__ = [
+    "__all__ = [
     "Engine",
     "Contenedor",
     "Registro",
     "ROLES",
     "ArranqueError",
     "EvaluacionError",
+    "normalizar",
+    "contradiccion_directa",
+    "contradiccion_de_cota",
 ]
