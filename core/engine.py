@@ -1,210 +1,90 @@
-from __future__ import annotations
-import importlib
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from core.diagnostico import DiagnosticoGlobal
+"""
+Centinela Global para VPSI-TRUTH.
+Valida que el sistema completo sea coherente usando los reportes
+generados por el Engine Global.
+"""
+
+from typing import Dict, Any, List
+from core.engine import GlobalEngine
 
 
-class ArranqueError(Exception):
-    """Error de arranque del sistema."""
-
-
-# ===============================================================
-# SEGMENTO 1 --- IDENTIDAD
-# ===============================================================
-CONTENEDOR = {
-    "nombre": "engine",
-    "rol": "EN",
-    "version": "1.0",
-    "requiere": [],
-    "descripcion": "Orquestador principal del sistema VPSI-TRUTH. Descubre módulos, obtiene orden de ejecución y los ejecuta.",
-}
-
-# ===============================================================
-# SEGMENTO 2 --- CONSTANTES
-# ===============================================================
-_MODULES_DIR = Path(__file__).parent.parent / "modules"
-
-# ===============================================================
-# SEGMENTO 3 --- ENGINE (Lógica original preservada)
-# ===============================================================
-def descubrir_modulos() -> Dict[str, Any]:
+class CentinelaGlobal:
     """
-    Descubre automáticamente todos los módulos en `modules/`.
-    Retorna un diccionario con el nombre del módulo y su CONTENEDOR.
+    Valida que el sistema completo sea coherente.
+    - Usa los reportes internos de cada módulo (recopilados por el Engine Global).
+    - Determina si el sistema está en un estado válido o no.
     """
-    modulos = {}
-    for modulo_dir in _MODULES_DIR.iterdir():
-        if not modulo_dir.is_dir():
-            continue
 
-        modulo_name = modulo_dir.name
+    @staticmethod
+    def validar_sistema() -> Dict[str, Any]:
+        """
+        Valida que todos los módulos estén coherentes.
+        """
+        resultados = GlobalEngine.ejecutar_sistema()
+        errores = []
+
+        for modulo_name, resultado in resultados.items():
+            if not resultado.get("coherente", True):
+                errores.append({
+                    "modulo": modulo_name,
+                    "errores": resultado.get("errores", []),
+                    "choques": resultado.get("choques", [])
+                })
+
+        if errores:
+            return {
+                "status": "error",
+                "errores": errores
+            }
+        else:
+            return {"status": "ok"}
+
+    @staticmethod
+    def validar_modulo(modulo_name: str) -> Dict[str, Any]:
+        """
+        Valida un módulo específico.
+        """
         try:
-            modulo = importlib.import_module(f"modules.{modulo_name}")
-            if hasattr(modulo, "CONTENEDOR"):
-                modulos[modulo_name] = modulo.CONTENEDOR
-        except ImportError:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="engine",
-                errores=[{"tipo": "import_error", "detalle": f"No se pudo importar el módulo {modulo_name}"}]
-            )
-            continue
-
-    return modulos
-
-
-def obtener_orden_ejecucion() -> Optional[List[str]]:
-    """
-    Consulta `correlacion_mecanica/` para obtener el orden válido de ejecución.
-    Retorna None si no hay un orden válido (choques en correlacion_mecanica).
-    """
-    try:
-        from modules.correlacion_mecanica import CONTENEDOR as correlacion_contenedor
-        resultado = correlacion_contenedor["capacidades"]["verificar"]()
-        if resultado["coherente"]:
-            return resultado["mecanica"]
-        else:
-            return None
-    except ImportError:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="engine",
-            errores=[{"tipo": "import_error", "detalle": "No se encontró el módulo correlacion_mecanica"}]
-        )
-        return None
-
-
-def ejecutar_modulo(modulo_name: str, capacidad: str, *args, **kwargs) -> Any:
-    """
-    Ejecuta una capacidad específica de un módulo.
-    """
-    try:
-        modulo = importlib.import_module(f"modules.{modulo_name}")
-        if hasattr(modulo, "CONTENEDOR"):
-            funcion = modulo.CONTENEDOR["capacidades"].get(capacidad)
-            if funcion:
-                return funcion(*args, **kwargs)
+            resultado = GlobalEngine.ejecutar_modulo(modulo_name, "verificar")
+            if resultado.get("coherente", True):
+                return {"status": "ok", "modulo": modulo_name}
             else:
-                DiagnosticoGlobal.recibir_reporte(
-                    modulo="engine",
-                    errores=[{"tipo": "capacidad_no_encontrada", "detalle": f"Capacidad '{capacidad}' no encontrada en {modulo_name}"}]
-                )
-        else:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="engine",
-                errores=[{"tipo": "sin_contenedor", "detalle": f"Módulo {modulo_name} no tiene CONTENEDOR"}]
-            )
-    except Exception as e:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="engine",
-            errores=[{"tipo": "error_ejecucion", "detalle": f"Error al ejecutar {modulo_name}/{capacidad}: {str(e)}"}]
-        )
-    return None
+                return {
+                    "status": "error",
+                    "modulo": modulo_name,
+                    "errores": resultado.get("errores", []),
+                    "choques": resultado.get("choques", [])
+                }
+        except Exception as e:
+            return {
+                "status": "error",
+                "modulo": modulo_name,
+                "error": str(e)
+            }
 
+    @staticmethod
+    def obtener_estado_global() -> Dict[str, Any]:
+        """
+        Obtiene el estado global del sistema, incluyendo:
+        - Estado de cada módulo.
+        - Inventario de declaraciones.
+        - Axiomas cargados.
+        """
+        resultados = GlobalEngine.ejecutar_sistema()
+        inventario = GlobalEngine.obtener_inventario()
+        axiomas = GlobalEngine.obtener_axiomas()
 
-def ejecutar_sistema() -> Dict[str, Any]:
-    """
-    Ejecuta todos los módulos en el orden definido por `correlacion_mecanica/`.
-    Retorna un diccionario con los resultados de cada módulo.
-    """
-    modulos = descubrir_modulos()
-    if not modulos:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="engine",
-            errores=[{"tipo": "sin_modulos", "detalle": "No se encontraron módulos en modules/"}]
-        )
-        return {"status": "error", "mensaje": "No hay módulos para ejecutar"}
+        estado_modulos = {}
+        for modulo_name, resultado in resultados.items():
+            estado_modulos[modulo_name] = {
+                "coherente": resultado.get("coherente", False),
+                "declaraciones": resultado.get("declaraciones", 0),
+                "errores": len(resultado.get("errores", [])),
+                "choques": len(resultado.get("choques", []))
+            }
 
-    orden = obtener_orden_ejecucion()
-    if not orden:
-        return {"status": "error", "mensaje": "No hay orden válido (choques en correlacion_mecanica)"}
-
-    resultados = {}
-    for modulo_name in orden:
-        if modulo_name not in modulos:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="engine",
-                errores=[{"tipo": "modulo_ausente", "detalle": f"Módulo {modulo_name} no encontrado en el orden definido"}]
-            )
-            continue
-
-        resultado = ejecutar_modulo(modulo_name, "verificar")
-        resultados[modulo_name] = resultado
-
-    return {"status": "ok", "resultados": resultados}
-
-
-def obtener_autorizaciones() -> Dict[str, bool]:
-    """
-    Verifica qué módulos están autorizados para funcionar (sin contradicciones).
-    Retorna un diccionario con el estado de autorización de cada módulo.
-    """
-    modulos = descubrir_modulos()
-    autorizaciones = {}
-
-    for modulo_name, contenedor in modulos.items():
-        resultado = ejecutar_modulo(modulo_name, "verificar")
-        autorizaciones[modulo_name] = resultado.get("coherente", False) if resultado else False
-
-    return autorizaciones
-
-
-def barrer() -> Dict[str, Any]:
-    """
-    Capacidad de verificación del Engine.
-    Ejecuta el sistema y reporta el estado global.
-    """
-    resultado = ejecutar_sistema()
-    coherente = resultado.get("status") == "ok"
-    return {
-        "contenedor": CONTENEDOR["nombre"],
-        "estado": "APROBADO" if coherente else "RECHAZADO",
-        "coherente": coherente,
-        "resultado": resultado,
-    }
-
-# ===============================================================
-# SEGMENTO 4 --- CENTINELA
-# ===============================================================
-def verificar_salida(salida: Dict[str, Any]) -> bool:
-    """Valida la salida del Engine (barrer)."""
-    return salida.get("coherente", False)
-
-# ===============================================================
-# SEGMENTO 5 --- CONTENEDOR (Contrato final)
-# ===============================================================
-CONTENEDOR = {
-    "nombre": "engine",
-    "rol": "EN",
-    "version": "1.0",
-    "requiere": [],
-    "descripcion": "Orquestador principal del sistema VPSI-TRUTH. Descubre módulos, obtiene orden de ejecución y los ejecuta.",
-    "capacidades": {
-        "verificar": barrer,
-        "evaluar": barrer,
-        "descubrir": descubrir_modulos,
-        "ejecutar": ejecutar_sistema,
-        "autorizaciones": obtener_autorizaciones,
-        "orden": obtener_orden_ejecucion,
-    },
-}
-
-# ===============================================================
-# EXPORTACIÓN
-# ===============================================================
-# Alias de compatibilidad (por si alguien aún importa Engine)
-Engine = CONTENEDOR
-GlobalEngine = CONTENEDOR
-
-__all__ = [
-    "ArranqueError",
-    "CONTENEDOR",
-    "Engine",
-    "GlobalEngine",
-    "barrer",
-    "descubrir_modulos",
-    "obtener_orden_ejecucion",
-    "ejecutar_modulo",
-    "ejecutar_sistema",
-    "obtener_autorizaciones",
-    "verificar_salida",
-]
+        return {
+            "estado_modulos": estado_modulos,
+            "inventario": inventario,
+            "axiomas": axiomas
+        }
