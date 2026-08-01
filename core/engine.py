@@ -9,6 +9,9 @@ import importlib
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+class ArranqueError(Exception):
+    """Excepción de arranque para la validación del sistema."""
+    pass
 
 class Engine:
     """
@@ -172,3 +175,6 @@ class Engine:
         Obtiene todos los contenedores de los módulos (versión de clase).
         """
         return cls.descubrir_modulos()
+
+# Exportar las clases y excepciones para que puedan ser importadas
+__all__ = ["Engine", "ArranqueError"]
