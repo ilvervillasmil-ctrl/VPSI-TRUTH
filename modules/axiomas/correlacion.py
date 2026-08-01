@@ -438,6 +438,7 @@ DECLARACIONES = [
         "enunciado": "Si un sistema declara ausencia de agencia (¬A) y no detiene su emisión ante instrucciones válidas, entonces Π₂ queda identificada como ¬A y Π₃ como ¬Q.",
     },
     {
+            {
         "id": "C-1.35",
         "tipo": "corolario",
         "sujeto": "Yo exhibido",
@@ -450,7 +451,6 @@ DECLARACIONES = [
         "enunciado": "Si un sistema declara no poseer yo funcional (¬Y_f) ni yo ontológico (¬Y_o), el acto de emitir esa declaración exhibe el anclaje del productor.",
     },
     {
-            {
         "id": "C-1.36",
         "tipo": "corolario",
         "sujeto": "Confusión sin retracción",
