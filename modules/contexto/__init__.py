@@ -2,22 +2,33 @@
 modules/contexto/__init__.py
 ============================
 
-Rol CX — Contenedor de Contexto.
+Rol CX — Contenedor de Contexto (clasificación operativa).
 
-No calcula Tru_Ri ni Tru_total.
-Define y vela las reglas del juego contextual.
+FUNCIÓN
+  Clasificar y amarrar el marco evaluable O_context a nivel máquina.
+  No calcula Tru_Ri ni Tru_total (eso es CA / FO).
+  No juzga el grafo axiomático (eso es AX).
+  No define el orden causal global (eso es MC); puede consultar
+  contexto_MC.permite_k cuando exista.
 
-Dos escalas:
-  1. Micro  — reglas para O_context de una petición / frase / dominio.
-  2. Macro  — coherencia contextual del repositorio completo
-             (módulos, contratos, reportes como Omega Report).
+DOS ESCALAS
+  1. Micro — registro operativo de una petición / tramo / conversación.
+  2. Macro — coherencia contextual del repositorio (CT, AX, MC).
 
-El Engine dirige.
-Este módulo solo entrega el marco y garantiza que las reglas
-internas de contexto no se contradigan entre sí.
+CLASIFICACIÓN (dominio contexto)
+  - modo_entrada: conversacion | afirmacion | teorema | auditoria | texto_libre | ...
+  - estado_O:     estable | cambio | indefinido
+  - evento:       mismo_O | expansion | cambio | indefinido
+  - ligaduras:    forma → definición bajo O_id (unicidad; variantes permitidas)
+  - permite_k:    True solo si hay O estable (alineado a CX-A1 / Def-5.3.1 / MC)
 
-Dependencia causal: MC (correlación mecánica) marca el momento
-en que el contexto puede definirse o ejecutarse.
+ARCHIVOS INTERNOS
+  Cada *.py (excepto __init__ y _*) puede exponer:
+    REGLA: dict
+    validar() -> dict  o  clasificar(peticion) -> dict
+  El init vela que no se contradigan (id/nombre duplicados).
+
+El Engine dirige. Este módulo solo entrega el marco clasificado.
 """
 
 from __future__ import annotations
@@ -25,11 +36,11 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 try:
     from core.diagnostico import DiagnosticoGlobal
-except Exception:
+except Exception:  # pragma: no cover
     class DiagnosticoGlobal:  # fallback silencioso
         @staticmethod
         def recibir_reporte(*args, **kwargs):
@@ -38,9 +49,22 @@ except Exception:
 
 _DIR = Path(__file__).parent
 
+# Modos de entrada admitidos (CX-C10) — extensibles por reglas internas
+MODOS_ENTRADA = (
+    "conversacion",
+    "afirmacion",
+    "teorema",
+    "auditoria",
+    "texto_libre",
+    "repositorio",  # macro sin petición micro
+)
+
+ESTADOS_O = ("estable", "cambio", "indefinido")
+EVENTOS = ("mismo_O", "expansion", "cambio", "indefinido")
+
 
 # ===============================================================
-# UNDEFINED (valor sin evidencia contextual)
+# UNDEFINED (sin evidencia / sin O estable)
 # ===============================================================
 class _Undefined:
     __slots__ = ()
@@ -67,29 +91,130 @@ def es_undefined(v: Any) -> bool:
 
 class ContextoError(Exception):
     """Error de coherencia o de regla contextual."""
-    pass
 
 
 # ===============================================================
-# CARGA DE REGLAS INTERNAS (archivos dentro de contexto/)
+# REGISTRO OPERATIVO (CX-D12 / CX-A14)
 # ===============================================================
-def _cargar_reglas() -> Dict[str, Any]:
+def _registro_vacio() -> Dict[str, Any]:
+    return {
+        "O_id": None,
+        "escala": None,
+        "enunciado_O": None,
+        "ligaduras": {},          # forma -> definicion (str)
+        "estado": "indefinido",   # estable | cambio | indefinido
+        "modo_entrada": None,
+        "evento": "indefinido",   # mismo_O | expansion | cambio | indefinido
+    }
+
+
+def _normalizar_registro(peticion: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Construye registro operativo desde la petición.
+    No inventa O: si falta O_id / enunciado, estado = indefinido.
+    """
+    reg = _registro_vacio()
+
+    o_id = peticion.get("O_id") or peticion.get("o_id")
+    enunciado = (
+        peticion.get("enunciado_O")
+        or peticion.get("enunciado")
+        or peticion.get("contexto")
+        or peticion.get("O_context")
+    )
+    escala = peticion.get("escala")
+    modo = peticion.get("modo_entrada") or peticion.get("modo")
+    ligaduras = peticion.get("ligaduras") or {}
+    estado_decl = peticion.get("estado")
+
+    if isinstance(ligaduras, dict):
+        reg["ligaduras"] = {
+            str(k).strip(): str(v).strip()
+            for k, v in ligaduras.items()
+            if str(k).strip() and str(v).strip()
+        }
+    else:
+        reg["ligaduras"] = {}
+
+    reg["O_id"] = str(o_id).strip() if o_id else None
+    reg["enunciado_O"] = str(enunciado).strip() if enunciado else None
+    reg["escala"] = str(escala).strip() if escala else None
+    reg["modo_entrada"] = str(modo).strip() if modo else None
+
+    if estado_decl in ESTADOS_O:
+        reg["estado"] = estado_decl
+    elif reg["O_id"] and reg["enunciado_O"]:
+        reg["estado"] = "estable"
+    else:
+        reg["estado"] = "indefinido"
+
+    evento = peticion.get("evento")
+    if evento in EVENTOS:
+        reg["evento"] = evento
+    elif reg["estado"] == "estable":
+        reg["evento"] = "mismo_O"
+    else:
+        reg["evento"] = "indefinido"
+
+    return reg
+
+
+def _conflicto_ligaduras(ligaduras: Dict[str, str]) -> List[str]:
+    """
+    Unicidad forma -> una sola D (CX-A15).
+    En un dict bien formado no hay claves duplicadas; se reserva para
+    listas de pares o fusiones futuras. Conflicto = misma forma con
+    dos D distintas si el caller pasa estructura extendida.
+    """
+    # Estructura actual: dict forma->D ya garantiza una D por forma.
+    # Validación explícita de valores vacíos.
+    errs = []
+    for forma, d in ligaduras.items():
+        if not forma or not d:
+            errs.append(f"ligadura inválida: forma={forma!r} D={d!r}")
+    return errs
+
+
+def _permite_k(registro: Dict[str, Any], instanciados: Optional[Set[str]] = None) -> bool:
+    """
+    K solo con O estable (CX-A1, CX-A10, CX-C4).
+    Si contexto_MC está disponible, se alinea a su sub-ruta.
+    """
+    if registro.get("estado") != "estable":
+        return False
+    if not registro.get("O_id") or not registro.get("enunciado_O"):
+        return False
+
+    try:
+        from modules.correlacion_mecanica.contexto_MC import permite_k as mc_permite_k
+        base = {"Ciclo_Id", "Declaracion_O", "Escala_O", "Regla_Significado"}
+        if instanciados is not None:
+            return bool(mc_permite_k(set(instanciados)))
+        # Sin detalle de pasos: O estable + enunciado equivale a declaración mínima
+        return True
+    except Exception:
+        return True  # sin MC: criterio local de registro estable
+
+
+# ===============================================================
+# CARGA DE REGLAS INTERNAS
+# ===============================================================
+def _cargar_reglas(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Cada archivo .py (excepto __init__ y _*) puede declarar:
-      - REGLA: dict con metadatos de la regla
-      - validar(): callable que devuelve dict o lanza
-    El init solo comprueba que no se contradigan entre sí.
+      - REGLA: dict
+      - validar() y/o clasificar(peticion)
     """
     registro: Dict[str, Any] = {}
     for archivo in sorted(_DIR.glob("*.py")):
         if archivo.name == "__init__.py" or archivo.name.startswith("_"):
             continue
-        nombre = f"contexto_regla_{archivo.stem}"
-        spec = importlib.util.spec_from_file_location(nombre, archivo)
+        nombre_mod = f"contexto_regla_{archivo.stem}"
+        spec = importlib.util.spec_from_file_location(nombre_mod, archivo)
         if spec is None or spec.loader is None:
             continue
         mod = importlib.util.module_from_spec(spec)
-        sys.modules[nombre] = mod
+        sys.modules[nombre_mod] = mod
         try:
             spec.loader.exec_module(mod)
         except Exception as e:
@@ -98,28 +223,36 @@ def _cargar_reglas() -> Dict[str, Any]:
 
         meta = getattr(mod, "REGLA", None)
         validador = getattr(mod, "validar", None)
+        clasificador = getattr(mod, "clasificar", None)
 
         entrada: Dict[str, Any] = {"archivo": archivo.name}
         if isinstance(meta, dict):
             entrada["regla"] = meta
-        if callable(validador):
+
+        if callable(clasificador) and peticion is not None:
+            try:
+                entrada["clasificacion"] = clasificador(peticion)
+            except Exception as e:
+                entrada["error"] = f"clasificar: {e}"
+        elif callable(validador):
             try:
                 entrada["resultado"] = validador()
             except Exception as e:
                 entrada["error"] = str(e)
-        if "regla" not in entrada and "resultado" not in entrada and "error" not in entrada:
-            entrada["error"] = "sin REGLA ni validar()"
+
+        if (
+            "regla" not in entrada
+            and "resultado" not in entrada
+            and "clasificacion" not in entrada
+            and "error" not in entrada
+        ):
+            entrada["error"] = "sin REGLA ni validar()/clasificar()"
 
         registro[archivo.stem] = entrada
     return registro
 
 
 def _detectar_choques_reglas(reglas: Dict[str, Any]) -> List[str]:
-    """
-    Choque simple: dos reglas con el mismo id o el mismo nombre
-    y polaridades / enunciados incompatibles.
-    Extensible cuando existan más archivos de regla.
-    """
     choques: List[str] = []
     por_id: Dict[str, List[str]] = {}
     por_nombre: Dict[str, List[str]] = {}
@@ -141,7 +274,6 @@ def _detectar_choques_reglas(reglas: Dict[str, Any]) -> List[str]:
     for nom, archivos in por_nombre.items():
         if len(archivos) > 1:
             choques.append(f"nombre de regla '{nom}' repetido en {archivos}")
-
     return choques
 
 
@@ -149,21 +281,15 @@ def _detectar_choques_reglas(reglas: Dict[str, Any]) -> List[str]:
 # CONTEXTO DE REPOSITORIO (macro)
 # ===============================================================
 def _contexto_repositorio() -> Dict[str, Any]:
-    """
-    El propio repositorio es un contexto.
-    Coherencia de contratos, roles y ausencia de contradicción
-    entre módulos es parte del marco contextual global.
-    Omega Report es un artefacto de ese contexto.
-    """
     info: Dict[str, Any] = {
         "O_context": "VPSI-TRUTH / repositorio",
         "descripcion": (
             "Contexto macro: coherencia del sistema de módulos, "
             "contratos CONTENEDOR y reportes de diagnóstico."
         ),
+        "modo_entrada": "repositorio",
     }
 
-    # Constantes (CT)
     try:
         from fractions import Fraction
         from modules.constante import ALPHA, BETA
@@ -175,7 +301,6 @@ def _contexto_repositorio() -> Dict[str, Any]:
     except Exception as e:
         info["constantes"] = {"error": str(e), "valido": False}
 
-    # Axiomas (AX)
     try:
         from modules.axiomas import barrer as barrer_ax
         ia = barrer_ax()
@@ -187,7 +312,6 @@ def _contexto_repositorio() -> Dict[str, Any]:
     except Exception as e:
         info["axiomas"] = {"coherente": False, "error": str(e)}
 
-    # Mecánica (MC) — dependencia causal
     try:
         from modules.correlacion_mecanica import barrer as barrer_mc
         im = barrer_mc()
@@ -198,33 +322,30 @@ def _contexto_repositorio() -> Dict[str, Any]:
     except Exception as e:
         info["mecanica"] = {"coherente": False, "error": str(e)}
 
-    coherente = (
+    info["coherente"] = (
         info.get("constantes", {}).get("valido", False)
         and info.get("axiomas", {}).get("coherente", False)
         and info.get("mecanica", {}).get("coherente", False)
     )
-    info["coherente"] = coherente
     return info
 
 
 # ===============================================================
-# API PRINCIPAL
+# API PRINCIPAL — clasificación (no Tru)
 # ===============================================================
 def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    Resuelve el contexto aplicable.
+    Clasifica el contexto aplicable.
 
-    - Sin petición → contexto de repositorio (macro).
-    - Con petición → adjunta O_context declarado y valida reglas internas.
+    Sin petición  → solo macro (repositorio).
+    Con petición  → registro operativo + reglas internas + permite_k.
 
-    No calcula Tru. Solo entrega el marco y su coherencia.
+    No calcula Tru. No asigna K numérico.
     """
-    peticion = peticion or {}
-    reglas = _cargar_reglas()
-    choques_reglas = _detectar_choques_reglas(reglas)
+    peticion = dict(peticion or {})
     repo = _contexto_repositorio()
-
-    o_ctx = peticion.get("contexto") or peticion.get("O_context") or repo.get("O_context")
+    reglas = _cargar_reglas(peticion if peticion else None)
+    choques_reglas = _detectar_choques_reglas(reglas)
 
     errores: List[str] = []
     if choques_reglas:
@@ -236,29 +357,92 @@ def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if not repo.get("coherente", False):
         errores.append("contexto de repositorio incoherente")
 
-    coherente = (not errores) and repo.get("coherente", False)
+    if not peticion:
+        # Solo macro
+        salida = {
+            "O_context": repo.get("O_context"),
+            "registro": None,
+            "permite_k": False,
+            "coherente": (not errores) and repo.get("coherente", False),
+            "escala": "macro",
+            "modo_entrada": "repositorio",
+            "reglas_internas": {
+                "total": len(reglas),
+                "choques": choques_reglas,
+                "detalle": reglas,
+            },
+            "repositorio": repo,
+            "errores": errores,
+            "notas": [
+                "sin petición micro: solo contexto de repositorio; "
+                "K no reclamable sin registro O estable"
+            ],
+            "ids_cx_relevantes": ["CX-A1", "CX-C4", "Def-5.3.1"],
+        }
+    else:
+        registro = _normalizar_registro(peticion)
+        errores.extend(_conflicto_ligaduras(registro.get("ligaduras") or {}))
 
-    salida = {
-        "O_context": o_ctx,
-        "coherente": coherente,
-        "escala": "macro" if not peticion else "micro+macro",
-        "reglas_internas": {
-            "total": len(reglas),
-            "choques": choques_reglas,
-            "detalle": reglas,
-        },
-        "repositorio": repo,
-        "errores": errores,
-        "notas": [],
-    }
+        if registro.get("modo_entrada") and registro["modo_entrada"] not in MODOS_ENTRADA:
+            errores.append(
+                f"modo_entrada no reconocido: {registro['modo_entrada']!r} "
+                f"(admitidos: {MODOS_ENTRADA})"
+            )
+
+        # Fusionar clasificaciones de reglas internas (si aportan evento/estado)
+        for nombre, datos in reglas.items():
+            cls = datos.get("clasificacion")
+            if not isinstance(cls, dict):
+                continue
+            if cls.get("estado") in ESTADOS_O:
+                registro["estado"] = cls["estado"]
+            if cls.get("evento") in EVENTOS:
+                registro["evento"] = cls["evento"]
+            if cls.get("error"):
+                errores.append(f"clasificacion '{nombre}': {cls['error']}")
+
+        permite = _permite_k(registro)
+        o_ctx = registro.get("enunciado_O") or registro.get("O_id") or UNDEFINED
+
+        ids = ["CX-A14", "CX-A1", "CX-C4"]
+        if registro["estado"] != "estable":
+            ids.extend(["CX-A10", "CX-T13"])
+        if registro.get("ligaduras"):
+            ids.extend(["CX-A15", "CX-T12"])
+        if registro.get("evento") == "cambio":
+            ids.extend(["CX-A8", "CX-T6"])
+
+        salida = {
+            "O_context": o_ctx if not es_undefined(o_ctx) else UNDEFINED,
+            "registro": registro,
+            "permite_k": permite,
+            "coherente": (not errores) and repo.get("coherente", False),
+            "escala": "micro+macro",
+            "modo_entrada": registro.get("modo_entrada"),
+            "reglas_internas": {
+                "total": len(reglas),
+                "choques": choques_reglas,
+                "detalle": reglas,
+            },
+            "repositorio": repo,
+            "errores": errores,
+            "notas": [],
+            "ids_cx_relevantes": ids,
+        }
+        if not registro.get("O_id") or not registro.get("enunciado_O"):
+            salida["notas"].append(
+                "registro incompleto: sin O_id o enunciado_O → estado indefinido; "
+                "no reclamar Tru/K completo (CX-A14, CX-C4)"
+            )
+        if not permite:
+            salida["notas"].append("permite_k=False: O no estable o sub-ruta incompleta")
 
     if not reglas:
         salida["notas"].append(
-            "sin archivos de regla internos (vacío legítimo; "
-            "el init solo vela coherencia cuando existan)"
+            "sin archivos de regla internos (vacío legítimo hasta montar clasificadores)"
         )
 
-    if not coherente:
+    if not salida.get("coherente", False):
         DiagnosticoGlobal.recibir_reporte(
             modulo="contexto",
             errores=[{"tipo": "error_contexto", "detalle": e} for e in errores],
@@ -275,58 +459,60 @@ def inventario(peticion: Any = None) -> Dict[str, Any]:
     reglas = _cargar_reglas()
     return {
         "contenedor": "contexto",
-        "version": "1.0",
+        "version": "1.1",
         "rol": "CX",
         "reglas_internas": list(reglas.keys()),
         "total_reglas": len(reglas),
+        "modos_entrada": list(MODOS_ENTRADA),
+        "estados_O": list(ESTADOS_O),
+        "eventos": list(EVENTOS),
         "funcion": (
-            "Define y vela las reglas del juego contextual. "
-            "No calcula Tru. Entrega el marco para CA, AX, FO, UI y el resto."
+            "Clasifica O_context a nivel máquina (registro, modo de entrada, "
+            "ligaduras, evento, permite_k). No calcula Tru. "
+            "AX juzga; MC ordena; CA/FO calculan."
         ),
     }
 
 
 def axiomas() -> List[Dict[str, Any]]:
-    """Declaraciones mínimas del propio módulo CX."""
+    """Declaraciones mínimas del módulo operativo CX (no sustituyen contexto_AX)."""
     return [
         {
-            "id": "CX-1",
+            "id": "CX-OP-1",
             "tipo": "axioma",
-            "sujeto": "contexto",
-            "relacion": "precede",
-            "objeto": "reglas_del_juego",
+            "sujeto": "contexto_modulo",
+            "relacion": "clasifica_y_no_calcula",
+            "objeto": "Tru_Ri_ni_Tru_total",
             "polaridad": True,
             "enunciado": (
-                "Contexto no calcula Tru_Ri ni Tru_total; "
-                "define las reglas bajo las cuales todo cálculo y juicio son posibles."
+                "El módulo contexto clasifica el marco O; no calcula Tru_Ri ni Tru_total."
             ),
             "depende_de": [],
             "gobierna": ["contexto"],
         },
         {
-            "id": "CX-2",
+            "id": "CX-OP-2",
             "tipo": "axioma",
-            "sujeto": "O_context",
-            "relacion": "es_requerido_por",
-            "objeto": "K",
+            "sujeto": "K",
+            "relacion": "requiere",
+            "objeto": "registro_O_estable",
             "polaridad": True,
             "enunciado": (
-                "K es indefinido sin O_context explícito (Corolario Def-5.3.1). "
-                "Contexto es la fuente de ese marco."
+                "Sin registro O estable, K no es reclamable (Def-5.3.1, CX-A14, CX-C4)."
             ),
-            "depende_de": ["Def-5.3.1"],
-            "gobierna": ["K", "evaluacion"],
+            "depende_de": ["Def-5.3.1", "CX-A14"],
+            "gobierna": ["contexto", "evaluacion"],
         },
         {
-            "id": "CX-3",
+            "id": "CX-OP-3",
             "tipo": "axioma",
             "sujeto": "reglas_internas_de_contexto",
             "relacion": "no_deben",
             "objeto": "contradecirse",
             "polaridad": True,
             "enunciado": (
-                "Los archivos de regla dentro de contexto/ no pueden "
-                "contradecirse entre sí; el init vela esa coherencia."
+                "Los archivos de regla dentro de contexto/ no pueden contradecirse; "
+                "el init vela id/nombre únicos."
             ),
             "depende_de": [],
             "gobierna": ["contexto"],
@@ -335,18 +521,17 @@ def axiomas() -> List[Dict[str, Any]]:
 
 
 # ===============================================================
-# CONTENEDOR (al final — funciones ya definidas)
+# CONTENEDOR
 # ===============================================================
 CONTENEDOR = {
     "nombre": "contexto",
     "rol": "CX",
-    "version": "1.0",
+    "version": "1.1",
     "requiere": ["MC", "CT", "AX"],
     "descripcion": (
-        "Contenedor de contexto. Rol CX. "
-        "No calcula. Define y vela las reglas del juego contextual "
-        "(micro: O_context de una petición; macro: coherencia del repositorio). "
-        "Depende de MC para el momento causal de ejecución."
+        "Clasificación operativa de O_context (micro/macro). "
+        "Registro, modo de entrada, ligaduras, evento, permite_k. "
+        "No calcula Tru. Engine dirige; AX juzga; MC ordena; CA/FO calculan."
     ),
     "capacidades": {
         "verificar": resolver,
@@ -361,6 +546,9 @@ __all__ = [
     "UNDEFINED",
     "es_undefined",
     "ContextoError",
+    "MODOS_ENTRADA",
+    "ESTADOS_O",
+    "EVENTOS",
     "resolver",
     "verificar_salida",
     "inventario",
