@@ -351,9 +351,11 @@ except ImportError:
     contradiccion_directa = None  # type: ignore
     contradiccion_de_cota = None  # type: ignore
 
+
+# ===============================================================
+# EXPORTACIÓN
 # ===============================================================
 __all__ = [
-    "__all__ = [
     "Engine",
     "Contenedor",
     "Registro",
