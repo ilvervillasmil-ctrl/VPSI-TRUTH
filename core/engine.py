@@ -15,6 +15,21 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # ===============================================================
+# EXCEPCIONES
+# ===============================================================
+class AutoridadError(Exception):
+    """Solo el core puede ejecutar el Engine."""
+    pass
+
+class ContratoError(Exception):
+    """Un módulo no cumple con su interfaz / contrato."""
+    pass
+
+class ArranqueError(Exception):
+    """Falta un módulo obligatorio o hay contradicción axiomática/mecánica."""
+    pass
+
+# ===============================================================
 # CONSTANTES GLOBALES: ROLES DE MÓDULOS
 # ===============================================================
 ROL_AXIOMAS = "AX"
@@ -78,7 +93,7 @@ class Registro:
         self.rechazados = []
 
         if not self.raiz.exists():
-            raise Exception(f"Directorio {self.raiz} no existe.")
+            raise ArranqueError(f"Directorio {self.raiz} no existe.")
 
         ocupados = {}
 
@@ -98,14 +113,14 @@ class Registro:
                 continue
 
             if c.rol in ocupados:
-                raise Exception(f"Rol '{c.rol}' duplicado: '{ocupados[c.rol]}' y '{c.nombre}'.")
+                raise ArranqueError(f"Rol '{c.rol}' duplicado: '{ocupados[c.rol]}' y '{c.nombre}'.")
 
             ocupados[c.rol] = c.nombre
             self.contenedores[c.nombre] = c
 
         faltan = [r for r in OBLIGATORIOS if r not in ocupados]
         if faltan:
-            raise Exception(f"Módulos obligatorios ausentes: {faltan}")
+            raise ArranqueError(f"Módulos obligatorios ausentes: {faltan}")
 
         return self.contenedores
 
@@ -115,7 +130,7 @@ class Registro:
             clave, init, submodule_search_locations=[str(directorio)]
         )
         if spec is None or spec.loader is None:
-            raise Exception("No se pudo crear spec para el módulo.")
+            raise ContratoError("No se pudo crear spec para el módulo.")
 
         mod = importlib.util.module_from_spec(spec)
         sys.modules[clave] = mod
@@ -123,15 +138,15 @@ class Registro:
 
         meta = getattr(mod, "CONTENEDOR", None)
         if not isinstance(meta, dict):
-            raise Exception("Falta el diccionario CONTENEDOR.")
+            raise ContratoError("Falta el diccionario CONTENEDOR.")
 
         for k in ("nombre", "rol", "version", "requiere", "descripcion", "capacidades"):
             if k not in meta:
-                raise Exception(f"CONTENEDOR sin clave '{k}'.")
+                raise ContratoError(f"CONTENEDOR sin clave '{k}'.")
 
         capacidades = meta.get("capacidades")
         if not isinstance(capacidades, dict):
-            raise Exception("CONTENEDOR['capacidades'] debe ser un diccionario.")
+            raise ContratoError("CONTENEDOR['capacidades'] debe ser un diccionario.")
 
         return Contenedor(
             nombre=str(meta["nombre"]),
@@ -202,7 +217,7 @@ class Engine:
 
     def __init__(self, raiz_modulos: str, invocador_id: str = _AUTORIZADO):
         if invocador_id != self._AUTORIZADO:
-            raise Exception(f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. Invocador='{invocador_id}'")
+            raise AutoridadError(f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. Invocador='{invocador_id}'")
 
         self.registro = Registro(raiz_modulos)
         self.registro.descubrir()
@@ -210,26 +225,26 @@ class Engine:
 
         for rol in OBLIGATORIOS:
             if self.registro.por_rol(rol) is None:
-                raise Exception(f"Contenedor {rol} no encontrado.")
+                raise ArranqueError(f"Contenedor {rol} no encontrado.")
 
         self._verificar_contratos_obligatorios()
 
     def _verificar_contratos_obligatorios(self):
         ax = self.registro.por_rol(ROL_AXIOMAS)
         if ax is None or not ax.tiene_capacidad("verificar"):
-            raise Exception(f"Contenedor {ROL_AXIOMAS} debe declarar capacidad 'verificar'.")
+            raise ContratoError(f"Contenedor {ROL_AXIOMAS} debe declarar capacidad 'verificar'.")
 
         ct = self.registro.por_rol(ROL_CONSTANTE)
         if ct is None or not ct.tiene_capacidad("alpha") or not ct.tiene_capacidad("beta"):
-            raise Exception(f"Contenedor {ROL_CONSTANTE} debe declarar capacidades 'alpha' y 'beta'.")
+            raise ContratoError(f"Contenedor {ROL_CONSTANTE} debe declarar capacidades 'alpha' y 'beta'.")
 
         fo = self.registro.por_rol(ROL_FORMULAS)
         if fo is None or not fo.capacidades:
-            raise Exception(f"Contenedor {ROL_FORMULAS} debe declarar al menos una capacidad.")
+            raise ContratoError(f"Contenedor {ROL_FORMULAS} debe declarar al menos una capacidad.")
 
         mc = self.registro.por_rol(ROL_CORRELACION_MECANICA)
         if mc is None or not mc.tiene_capacidad("verificar"):
-            raise Exception(f"Contenedor {ROL_CORRELACION_MECANICA} debe declarar capacidad 'verificar'.")
+            raise ContratoError(f"Contenedor {ROL_CORRELACION_MECANICA} debe declarar capacidad 'verificar'.")
 
         declaraciones = {}
         for c in self.registro.contenedores.values():
@@ -241,12 +256,12 @@ class Engine:
         informe_mc = self.invocador.ejecutar_capacidad(mc, "verificar")
         if informe_mc is None or not isinstance(informe_mc, dict) or not informe_mc.get("coherente", False):
             choques = informe_mc.get("choques", []) if isinstance(informe_mc, dict) else []
-            raise Exception(f"CONTRADICCIÓN MECÁNICA.\n{choques}")
+            raise ArranqueError(f"CONTRADICCIÓN MECÁNICA.\n{choques}")
 
         informe_ax = self.invocador.ejecutar_capacidad(ax, "verificar", declaraciones)
         if informe_ax is None or not isinstance(informe_ax, dict) or not informe_ax.get("coherente", False):
             choques = informe_ax.get("choques", []) if isinstance(informe_ax, dict) else []
-            raise Exception(f"CONTRADICCIÓN AXIOMÁTICA.\n{choques}")
+            raise ArranqueError(f"CONTRADICCIÓN AXIOMÁTICA.\n{choques}")
 
     def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
         contenedor = self.registro.por_rol(rol)
