@@ -52,30 +52,6 @@ ROLES = (
 # Módulos obligatorios para el arranque (parte de la arquitectura)
 OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS, ROL_CORRELACION_MECANICA)
 
-# ===============================================================
-# ESTADO INDEFINIDO (UNDEFINED)
-# ===============================================================
-class _Undefined:
-    """Estado para valores sin evidencia. Propaga limpiamente sin intervencionismo."""
-    __slots__ = ()
-
-    def __repr__(self):
-        return "UNDEFINED"
-
-    def __bool__(self):
-        raise TypeError("UNDEFINED no admite conversión a booleano")
-
-    def __eq__(self, otro):
-        return isinstance(otro, _Undefined)
-
-    def __hash__(self):
-        return hash("VPSI_UNDEFINED")
-
-UNDEFINED = _Undefined()
-
-def es_undefined(v) -> bool:
-    """Verifica si un valor es UNDEFINED."""
-    return v is UNDEFINED or isinstance(v, _Undefined)
 
 # ===============================================================
 # EXCEPCIONES (CONTRATOS Y ERRORES)
@@ -589,7 +565,7 @@ class Engine:
                     inv["contenido"][c.nombre] = result
                 else:
                     inv["contenido"][c.nombre] = {"error": "capacidad 'inventario' falló"}
-        return inv
+        return 
       
         # ===============================================================
         # REPORTES DE CONTRATOS
@@ -613,4 +589,4 @@ class Engine:
             self.reportes["AX"] = self.informe_axiomas
 
         # Finaliza la inicialización del Engine.
-        return
+        return inv
