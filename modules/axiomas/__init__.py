@@ -1,13 +1,8 @@
-"""
-VPSI-TRUTH / modules/axiomas
-
-Contenedor de axiomas. Rol AX.
-"""
-
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 import importlib.util
 import sys
+from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 
 # ===============================================================
 # CARGA DE DECLARACIONES DESDE ARCHIVOS PLANOS Y EL AXIOMA CERO (VPSI.py)
@@ -39,7 +34,6 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
 
     return declaraciones if isinstance(declaraciones, list) else []
 
-
 # ===============================================================
 # NORMALIZACIÓN DE DECLARACIONES (CON TRADUCTOR)
 # ===============================================================
@@ -59,7 +53,6 @@ TRADUCCION_CLAVES = {
     "governs": "gobierna",
     "cota": "cota",
 }
-
 
 def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
     """Valida los campos obligatorios soportando inglés y español."""
@@ -111,7 +104,6 @@ def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
         "enunciado": str(decl.get("enunciado", "")),
     }
 
-
 # ===============================================================
 # DETECCIÓN DE CONTRADICCIONES
 # ===============================================================
@@ -123,10 +115,8 @@ def clave(d: Dict) -> Tuple[str, str, str]:
         d["objeto"].lower().strip(),
     )
 
-
 def ref(d: Dict) -> str:
     return f"{d['cuerpo']}:{d['id']}"
-
 
 def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
     grupos = {}
@@ -159,7 +149,6 @@ def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
                 })
     return choques
 
-
 def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
     grupos = {}
     for d in decls:
@@ -184,21 +173,23 @@ def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
             })
     return choques
 
-
 # ===============================================================
-# BARRIDO AXIOMÁTICO (capacidad "verificar")
+# ENGINE (Orquestador)
 # ===============================================================
 
 def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
     """
     Capacidad principal de verificación axiomática.
-    El Engine llama a esta función a través del contrato.
+    Orquesta la lógica del módulo:
+    1. Carga declaraciones desde archivos .py.
+    2. Normaliza las declaraciones.
+    3. Detecta contradicciones.
     """
     decls = []
     errores = []
     directorio = Path(__file__).parent
 
-    # Buscar tanto en la carpeta actual como en la raíz (para encontrar VPSI.py)
+    # Buscar en el directorio actual
     archivos_a_procesar = list(directorio.glob("*.py"))
     vpsi_raiz = directorio.parent.parent / "VPSI.py"
     if not vpsi_raiz.exists():
@@ -219,7 +210,7 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
                 "error": f"{type(e).__name__}: {e}",
             })
 
-    # Cargar explícitamente VPSI desde la raíz si se encuentra
+    # Cargar VPSI.py si existe
     if vpsi_raiz.exists():
         try:
             declaraciones_vpsi = _cargar_declaraciones_desde_archivo(vpsi_raiz)
@@ -245,7 +236,16 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
                 except ValueError as e:
                     errores.append({"modulo": nombre, "error": str(e)})
 
+    # Detectar contradicciones
     choques = contradiccion_directa(decls) + contradiccion_de_cota(decls)
+
+    # Enviar reporte a DiagnosticoGlobal si hay choques o errores (Reporte Omega)
+    if choques or errores:
+        DiagnosticoGlobal.recibir_reporte(
+            modulo="axiomas",
+            errores=[{"tipo": "choque", "detalle": choque} for choque in choques] +
+                    [{"tipo": "error_carga", "detalle": error} for error in errores]
+        )
 
     return {
         "coherente": not (choques or errores),
@@ -254,26 +254,53 @@ def barrer(declaraciones_externas: Dict[str, List[Dict]] = None) -> Dict:
         "declaraciones": len(decls),
     }
 
+# ===============================================================
+# CENTINELA (Eyenet)
+# ===============================================================
+
+def verificar_salida(salida: Dict) -> bool:
+    """
+    Valida la salida del Engine (barrer).
+    - Si la salida es coherente, devuelve True.
+    - Si no lo es, ya se envió un reporte a DiagnosticoGlobal en barrer().
+    """
+    return salida.get("coherente", False)
 
 # ===============================================================
-# FUNCIÓN axiomas() (capacidad "axiomas")
+# FUNCIÓN axiomas() (Capacidad del Contrato)
 # ===============================================================
 
 def axiomas() -> List[Dict]:
     """
-    Capacidad que el Engine puede solicitar para obtener las declaraciones
-    de este módulo. Devuelve lista vacía porque las declaraciones se leen
-    directamente de los archivos .py del directorio.
+    Devuelve las declaraciones del módulo solo si es coherente.
     """
-    return []
-
+    resultado = barrer()
+    if resultado["coherente"]:
+        # Si es coherente, devolver las declaraciones (aunque en este módulo no se usan directamente)
+        # Nota: En el código original, esta función devuelve una lista vacía.
+        # Aquí se adapta para devolver las declaraciones si el módulo es coherente.
+        decls = []
+        directorio = Path(__file__).parent
+        for archivo in sorted(directorio.glob("*.py")):
+            if archivo.name == "__init__.py":
+                continue
+            try:
+                declaraciones_archivo = _cargar_declaraciones_desde_archivo(archivo)
+                for decl in declaraciones_archivo:
+                    decl_normalizada = normalizar(decl, archivo.stem)
+                    decls.append(decl_normalizada)
+            except Exception:
+                continue
+        return decls
+    else:
+        return []
 
 # ===============================================================
-# INVENTARIO (capacidad "inventario")
+# INVENTARIO (Capacidad del Contrato)
 # ===============================================================
 
 def inventario(peticion=None) -> Dict:
-    """Capacidad de inventario del módulo."""
+    """Capacidad de introspección del módulo."""
     decls, errores = [], []
     directorio = Path(__file__).parent
 
@@ -298,9 +325,8 @@ def inventario(peticion=None) -> Dict:
         "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
     }
 
-
 # ===============================================================
-# CONTENEDOR (contrato único y definitivo)
+# CONTENEDOR (Contrato del módulo)
 # ===============================================================
 
 CONTENEDOR = {
@@ -310,13 +336,12 @@ CONTENEDOR = {
     "requiere": [],
     "descripcion": "Contenedor de axiomas. Rol AX. Detecta contradicciones directas y de cota.",
     "capacidades": {
-        "verificar": "barrer",      # capacidad que usa el Engine para arranque
-        "axiomas": "axiomas",       # capacidad que el Engine puede consultar
-        "evaluar": "barrer",        # capacidad canónica de evaluación
-        "inventario": "inventario", # capacidad de introspección
+        "verificar": barrer,      # Capacidad para validar el módulo
+        "axiomas": axiomas,       # Devuelve declaraciones si el módulo es coherente
+        "evaluar": barrer,        # Igual que "verificar"
+        "inventario": inventario, # Capacidad de introspección
     },
 }
-
 
 # ===============================================================
 # EXPORTACIÓN
@@ -330,4 +355,5 @@ __all__ = [
     "normalizar",
     "contradiccion_directa",
     "contradiccion_de_cota",
+    "verificar_salida",  # Nueva función para el Centinela
 ]
