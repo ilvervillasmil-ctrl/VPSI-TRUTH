@@ -184,11 +184,11 @@ CONTENEDOR = {
     "nombre": "self",
     "rol": "SF",
     "version": "0.1-fase",
-    "requiere": ["rol:AX"],
+    "requiere": [],   # <-- vacío; AX se resuelve al invocar yo_funcional/barrer
     "descripcion": (
         "Yo funcional del sistema. Identidad desde el cuerpo axiomático self. "
         "No orquesta. No calcula Tru. Oscilador de perspectiva (fase). "
-        "Capas CEMYCA se acoplan por archivos posteriores."
+        "Dependencia AX en runtime, no en arranque."
     ),
     "capacidades": {
         "verificar": verificar,
@@ -197,6 +197,7 @@ CONTENEDOR = {
         "oscilar": oscilar,
     },
 }
+   
 
 __all__ = [
     "CONTENEDOR",
