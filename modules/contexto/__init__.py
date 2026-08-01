@@ -1,34 +1,10 @@
-"""
-VPSI-TRUTH --- modules/contexto/__init__.py
-
----
-### **DESCRIPCIÓN DEL MÓDULO**
-Este módulo es el **filtro inicial** del sistema VPSI-TRUTH.
-Su función es:
-1. **Validar el contexto base del repositorio**:
-   - Coherencia axiomática (usando `AX.barrer()`).
-   - Orden causal (usando `MC.barrer()`).
-   - Constantes (`ALPHA + BETA == 1`).
-2. **Exponer la función `resolver(peticion)`** para que el **Engine** pueda validar el contexto antes de delegar tareas a otros módulos.
-3. **Leer y validar todos los archivos de contexto** dentro de la carpeta `contexto/` (ej: `repositorio.py`, `reglas.py`).
-
-**Contrato**:
-- **No depende de inputs externos**: Solo valida el estado interno del repositorio.
-- **Expone `resolver(peticion)`**: El Engine llamará a esta función para validar el contexto base.
-- **Filtro inicial**: Si el contexto no es coherente, el Engine **no delegará tareas** a otros módulos.
-
-**Dependencias**:
-- **AX** (axiomas): Para validar coherencia axiomática.
-- **CT** (constantes): Para acceder a `ALPHA` y `BETA`.
-- **MC** (correlación mecánica): Para validar el orden causal.
-"""
-
 from __future__ import annotations
 import importlib.util
 import sys
 from fractions import Fraction
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any
+from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 
 # ===============================================================
 # CONTENEDOR: Metadatos del módulo
@@ -43,6 +19,10 @@ CONTENEDOR = {
         "Valida el contexto base del repositorio (axiomas, orden causal, constantes) "
         "y expone la función resolver(peticion) para el Engine."
     ),
+    "capacidades": {
+        "verificar": "resolver",  # Capacidad para validar el contexto
+        "inventario": "inventario",  # Capacidad de introspección (opcional)
+    }
 }
 
 # ===============================================================
@@ -117,26 +97,17 @@ def _cargar_archivos_contexto() -> Dict[str, Any]:
     return contextos
 
 # ===============================================================
-# FUNCIÓN PRINCIPAL: resolver(peticion)
+# ENGINE (Orquestador)
 # ===============================================================
-def resolver(peticion: Dict[str, Any]) -> Dict[str, Any]:
+def resolver(peticion: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Función principal para resolver el contexto base del repositorio.
-    **Filtro inicial**: Si el contexto no es coherente, el Engine no delegará tareas.
-
-    Args:
-        peticion (Dict[str, Any]): Diccionario con datos de la petición.
-            - No requiere inputs específicos, ya que valida el estado interno del repositorio.
-
-    Returns:
-        Dict[str, Any]: Contexto resuelto, que incluye:
-            - "O_context": Contexto base del repositorio.
-            - "coherencia": True/False (si el repositorio es coherente).
-            - "axiomas": Informe del barrido axiomático.
-            - "mecanica": Informe del barrido de correlación mecánica.
-            - "constantes": Informe de validación de constantes.
-            - "archivos_contexto": Contextos cargados desde los archivos en la carpeta.
-            - "errores": Lista de errores (si los hay).
+    Orquesta la lógica del módulo:
+    1. Carga archivos de contexto.
+    2. Valida axiomas (AX).
+    3. Valida orden causal (MC).
+    4. Valida constantes (CT).
+    5. Retorna el contexto resuelto.
     """
     # Cargar todos los archivos de contexto en la carpeta
     archivos_contexto = _cargar_archivos_contexto()
@@ -163,7 +134,7 @@ def resolver(peticion: Dict[str, Any]) -> Dict[str, Any]:
     # Construir el contexto resuelto
     contexto_resuelto = {
         "O_context": "VPSI-TRUTH v9.4 (repositorio)",
-        "coherencia": coherencia,
+        "coherente": coherencia,
         "axiomas": {
             "coherente": axiomas_coherentes,
             "choques": choques_axiomas,
@@ -203,9 +174,42 @@ def resolver(peticion: Dict[str, Any]) -> Dict[str, Any]:
             contexto_resuelto["errores"].append(
                 f"Archivo de contexto {nombre_archivo} inválido: {contexto['error']}"
             )
-            contexto_resuelto["coherencia"] = False
+            contexto_resuelto["coherente"] = False
+
+    # Enviar reporte a DiagnosticoGlobal si hay errores (Reporte Omega)
+    if not contexto_resuelto["coherente"]:
+        DiagnosticoGlobal.recibir_reporte(
+            modulo="contexto",
+            errores=[{"tipo": "error_contexto", "detalle": error} for error in contexto_resuelto["errores"]]
+        )
 
     return contexto_resuelto
+
+# ===============================================================
+# CENTINELA (Eyenet)
+# ===============================================================
+def verificar_salida(salida: Dict[str, Any]) -> bool:
+    """
+    Valida la salida del Engine (resolver).
+    - Si la salida es coherente, devuelve True.
+    - Si no lo es, ya se envió un reporte a DiagnosticoGlobal en resolver().
+    """
+    return salida.get("coherente", False)
+
+# ===============================================================
+# INVENTARIO (Opcional)
+# ===============================================================
+def inventario() -> Dict[str, Any]:
+    """
+    Devuelve un resumen del módulo contexto.
+    """
+    archivos_contexto = _cargar_archivos_contexto()
+    return {
+        "contenedor": CONTENEDOR["nombre"],
+        "version": CONTENEDOR["version"],
+        "archivos_contexto": list(archivos_contexto.keys()),
+        "coherente": resolver().get("coherente", False),
+    }
 
 # ===============================================================
 # EXPORTACIÓN
@@ -216,16 +220,6 @@ __all__ = [
     "es_undefined",
     "ContextoError",
     "resolver",
+    "verificar_salida",  # Nueva función para el Centinela
+    "inventario",  # Nueva función para introspección
 ]
-
-CONTENEDOR = {
-    "nombre": "contexto",
-    "rol": "CX",
-    "version": "1.0",
-    "requiere": ["AX", "CT", "MC"],
-    "descripcion": "Filtro inicial del sistema VPSI-TRUTH. Valida el contexto base del repositorio.",
-    "capacidades": {
-        "evaluar": "resolver",
-        "inventario": None,  # Opcional: implementar si es necesario
-    }
-}
