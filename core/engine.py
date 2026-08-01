@@ -1,251 +1,143 @@
-"""
-VPSI-TRUTH --- core/engine.py
-
-El Engine es UNICAMENTE un ejecutor de contratos.
-- Carga módulos.
-- Ejecuta capacidades declaradas en los contratos.
-- No tiene lógica de negocio.
-- No interpreta resultados.
-- No modifica datos.
-"""
-
-from __future__ import annotations
-import importlib.util
-import sys
-from dataclasses import dataclass, field
+import importlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Any, Optional
+from core.diagnostico import DiagnosticoGlobal
 
-# ===============================================================
-# EXCEPCIONES (para compatibilidad con código externo)
-# ===============================================================
-class AutoridadError(Exception):
-    """Solo el core puede ejecutar el Engine."""
-    pass
+class GlobalEngine:
+    """
+    Orquestador principal del sistema VPSI-TRUTH.
+    - Descubre automáticamente todos los módulos en `modules/`.
+    - Consulta `correlacion_mecanica/` para obtener el orden de ejecución.
+    - Ejecuta los módulos en ese orden.
+    - No modifica la lógica interna de los módulos.
+    """
 
-class ContratoError(Exception):
-    """Un módulo no cumple con su interfaz."""
-    pass
+    # Ruta base donde están los módulos
+    _MODULES_DIR = Path(__file__).parent.parent / "modules"
 
-class ArranqueError(Exception):
-    """Falta un módulo obligatorio o hay contradicción axiomática/mecánica."""
-    pass
-
-# ===============================================================
-# CONSTANTES GLOBALES: ROLES DE MÓDULOS
-# ===============================================================
-ROL_AXIOMAS = "AX"
-ROL_CONSTANTE = "CT"
-ROL_FORMULAS = "FO"
-ROL_CALCULATOR = "CA"
-ROL_CONTEXTO = "CX"
-ROL_TAXONOMIA = "TX"
-ROL_REALIDAD = "RE"
-ROL_VERIFICACION = "VX"
-ROL_CORRELACION_MECANICA = "MC"
-
-ROLES = (
-    ROL_AXIOMAS,
-    ROL_CONSTANTE,
-    ROL_FORMULAS,
-    ROL_CALCULATOR,
-    ROL_CONTEXTO,
-    ROL_TAXONOMIA,
-    ROL_REALIDAD,
-    ROL_VERIFICACION,
-    ROL_CORRELACION_MECANICA,
-)
-
-OBLIGATORIOS = (ROL_AXIOMAS, ROL_CONSTANTE, ROL_FORMULAS, ROL_CORRELACION_MECANICA)
-
-# ===============================================================
-# REGISTRO DE MÓDULOS
-# ===============================================================
-@dataclass
-class Contenedor:
-    nombre: str
-    rol: str
-    version: str
-    requiere: List[str] = field(default_factory=list)
-    ruta: Optional[str] = None
-    modulo: Any = None
-    descripcion: Optional[str] = None
-    capacidades: Dict[str, str] = field(default_factory=dict)
-
-    def obtener_funcion(self, capacidad: str) -> Any:
-        if self.modulo is None:
-            return None
-        nombre_fn = self.capacidades.get(capacidad)
-        if not nombre_fn:
-            return None
-        return getattr(self.modulo, nombre_fn, None)
-
-    def tiene_capacidad(self, capacidad: str) -> bool:
-        fn = self.obtener_funcion(capacidad)
-        return callable(fn)
-
-class Registro:
-    def __init__(self, raiz: str):
-        self.raiz = Path(raiz)
-        self.contenedores: Dict[str, Contenedor] = {}
-        self.rechazados: List[Dict] = []
-
-    def descubrir(self) -> Dict[str, Contenedor]:
-        self.contenedores = {}
-        self.rechazados = []
-
-        if not self.raiz.exists():
-            raise ArranqueError(f"Directorio {self.raiz} no existe.")
-
-        ocupados = {}
-
-        for d in sorted(p for p in self.raiz.iterdir() if p.is_dir()):
-            if d.name.startswith(("_", ".")):
+    @classmethod
+    def descubrir_modulos(cls) -> Dict[str, Any]:
+        """
+        Descubre automáticamente todos los módulos en `modules/`.
+        Retorna un diccionario con el nombre del módulo y su CONTENEDOR.
+        """
+        modulos = {}
+        for modulo_dir in cls._MODULES_DIR.iterdir():
+            if not modulo_dir.is_dir():
                 continue
 
-            init = d / "__init__.py"
-            if not init.exists():
-                self.rechazados.append({"ruta": d.name, "razon": "sin __init__.py"})
-                continue
-
+            # Intentar importar el módulo
+            modulo_name = modulo_dir.name
             try:
-                c = self._cargar(d, init)
-            except Exception as e:
-                self.rechazados.append({"ruta": d.name, "razon": str(e)})
+                modulo = importlib.import_module(f"modules.{modulo_name}")
+                if hasattr(modulo, "CONTENEDOR"):
+                    modulos[modulo_name] = modulo.CONTENEDOR
+            except ImportError:
+                # Si no se puede importar, ignorar (o reportar error)
+                DiagnosticoGlobal.recibir_reporte(
+                    modulo=f"core/engine",
+                    errores=[f"No se pudo importar el módulo {modulo_name}"]
+                )
                 continue
 
-            if c.rol in ocupados:
-                raise ArranqueError(f"Rol '{c.rol}' duplicado: '{ocupados[c.rol]}' y '{c.nombre}'.")
+        return modulos
 
-            ocupados[c.rol] = c.nombre
-            self.contenedores[c.nombre] = c
+    @classmethod
+    def obtener_orden_ejecucion(cls) -> Optional[List[str]]:
+        """
+        Consulta `correlacion_mecanica/` para obtener el orden válido de ejecución.
+        Retorna None si no hay un orden válido (choques en correlacion_mecanica).
+        """
+        try:
+            from modules.correlacion_mecanica import CONTENEDOR as correlacion_contenedor
+            resultado = correlacion_contenedor["capacidades"]["verificar"]()
+            if resultado["coherente"]:
+                return resultado["mecanica"]  # Orden válido: ["axiomas", "realidad", ...]
+            else:
+                return None
+        except ImportError:
+            # Si no existe correlacion_mecanica, asumir orden alfabético (o reportar error)
+            DiagnosticoGlobal.recibir_reporte(
+                modulo="core/engine",
+                errores=["No se encontró el módulo correlacion_mecanica"]
+            )
+            return None
 
-        faltan = [r for r in OBLIGATORIOS if r not in ocupados]
-        if faltan:
-            raise ArranqueError(f"Módulos obligatorios ausentes: {faltan}")
-
-        return self.contenedores
-
-    def _cargar(self, directorio: Path, init: Path) -> Contenedor:
-        clave = f"vpsi_{directorio.name}"
-        spec = importlib.util.spec_from_file_location(
-            clave, init, submodule_search_locations=[str(directorio)]
-        )
-        if spec is None or spec.loader is None:
-            raise ContratoError("No se pudo crear spec para el módulo.")
-
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[clave] = mod
-        spec.loader.exec_module(mod)
-
-        meta = getattr(mod, "CONTENEDOR", None)
-        if not isinstance(meta, dict):
-            raise ContratoError("Falta el diccionario CONTENEDOR.")
-
-        for k in ("nombre", "rol", "version", "requiere", "descripcion", "capacidades"):
-            if k not in meta:
-                raise ContratoError(f"CONTENEDOR sin clave '{k}'.")
-
-        capacidades = meta.get("capacidades")
-        if not isinstance(capacidades, dict):
-            raise ContratoError("CONTENEDOR['capacidades'] debe ser un diccionario.")
-
-        return Contenedor(
-            nombre=str(meta["nombre"]),
-            rol=str(meta["rol"]),
-            version=str(meta["version"]),
-            requiere=list(meta.get("requiere", [])),
-            ruta=directorio.name,
-            modulo=mod,
-            descripcion=str(meta.get("descripcion", "")),
-            capacidades={str(k): str(v) for k, v in capacidades.items()},
-        )
-
-    def por_rol(self, rol: str) -> Optional[Contenedor]:
-        for c in self.contenedores.values():
-            if c.rol == rol:
-                return c
+    @classmethod
+    def ejecutar_modulo(cls, modulo_name: str, capacidad: str, *args, **kwargs) -> Any:
+        """
+        Ejecuta una capacidad específica de un módulo.
+        """
+        try:
+            modulo = importlib.import_module(f"modules.{modulo_name}")
+            if hasattr(modulo, "CONTENEDOR"):
+                funcion = modulo.CONTENEDOR["capacidades"].get(capacidad)
+                if funcion:
+                    return funcion(*args, **kwargs)
+                else:
+                    DiagnosticoGlobal.recibir_reporte(
+                        modulo=f"core/engine",
+                        errores=[f"Capacidad '{capacidad}' no encontrada en {modulo_name}"]
+                    )
+            else:
+                DiagnosticoGlobal.recibir_reporte(
+                    modulo=f"core/engine",
+                    errores=[f"Módulo {modulo_name} no tiene CONTENEDOR"]
+                )
+        except Exception as e:
+            DiagnosticoGlobal.recibir_reporte(
+                modulo=f"core/engine",
+                errores=[f"Error al ejecutar {modulo_name}/{capacidad}: {str(e)}"]
+            )
         return None
 
-# ===============================================================
-# INVOCADOR
-# ===============================================================
-class Invocador:
-    def __init__(self):
-        self.fallos: List[Dict] = []
+    @classmethod
+    def ejecutar_sistema(cls) -> Dict[str, Any]:
+        """
+        Ejecuta todos los módulos en el orden definido por `correlacion_mecanica/`.
+        Retorna un diccionario con los resultados de cada módulo.
+        """
+        # Descubrir todos los módulos
+        modulos = cls.descubrir_modulos()
+        if not modulos:
+            DiagnosticoGlobal.recibir_reporte(
+                modulo="core/engine",
+                errores=["No se encontraron módulos en modules/"]
+            )
+            return {"status": "error", "mensaje": "No hay módulos para ejecutar"}
 
-    def reiniciar(self):
-        self.fallos = []
+        # Obtener el orden de ejecución
+        orden = cls.obtener_orden_ejecucion()
+        if not orden:
+            return {"status": "error", "mensaje": "No hay orden válido (choques en correlacion_mecanica)"}
 
-    def ejecutar_capacidad(self, contenedor: Contenedor, capacidad: str, *args, **kwargs) -> Any:
-        fn = contenedor.obtener_funcion(capacidad)
-        if not callable(fn):
-            self.fallos.append({
-                "contenedor": contenedor.nombre,
-                "rol": contenedor.rol,
-                "capacidad": capacidad,
-                "razon": f"capacidad '{capacidad}' no declarada o función no callable",
-            })
-            return None
+        # Ejecutar módulos en el orden definido
+        resultados = {}
+        for modulo_name in orden:
+            if modulo_name not in modulos:
+                DiagnosticoGlobal.recibir_reporte(
+                    modulo="core/engine",
+                    errores=[f"Módulo {modulo_name} no encontrado en el orden definido"]
+                )
+                continue
 
-        if args and isinstance(args[0], dict):
-            peticion = args[0]
-            faltan = [r for r in contenedor.requiere if r not in peticion]
-            if faltan:
-                self.fallos.append({
-                    "contenedor": contenedor.nombre,
-                    "rol": contenedor.rol,
-                    "capacidad": capacidad,
-                    "razon": f"petición sin claves: {faltan}",
-                })
-                return None
+            # Ejecutar la capacidad "verificar" del módulo
+            resultado = cls.ejecutar_modulo(modulo_name, "verificar")
+            resultados[modulo_name] = resultado
 
-        try:
-            return fn(*args, **kwargs)
-        except Exception as e:
-            self.fallos.append({
-                "contenedor": contenedor.nombre,
-                "rol": contenedor.rol,
-                "capacidad": capacidad,
-                "razon": f"{type(e).__name__}: {e}",
-            })
-            return None
+        return {"status": "ok", "resultados": resultados}
 
-# ===============================================================
-# ENGINE
-# ===============================================================
-class Engine:
-    _AUTORIZADO = "core"
+    @classmethod
+    def obtener_autorizaciones(cls) -> Dict[str, bool]:
+        """
+        Verifica qué módulos están autorizados para funcionar (sin contradicciones).
+        Retorna un diccionario con el estado de autorización de cada módulo.
+        """
+        modulos = cls.descubrir_modulos()
+        autorizaciones = {}
 
-    def __init__(self, raiz_modulos: str, invocador_id: str = _AUTORIZADO):
-        if invocador_id != self._AUTORIZADO:
-            raise AutoridadError(f"Solo '{self._AUTORIZADO}' puede ejecutar el Engine. Invocador='{invocador_id}'")
+        for modulo_name, contenedor in modulos.items():
+            resultado = cls.ejecutar_modulo(modulo_name, "verificar")
+            autorizaciones[modulo_name] = resultado.get("coherente", False) if resultado else False
 
-        self.registro = Registro(raiz_modulos)
-        self.registro.descubrir()
-        self.invocador = Invocador()
-
-        for rol in OBLIGATORIOS:
-            if self.registro.por_rol(rol) is None:
-                raise ArranqueError(f"Contenedor {rol} no encontrado.")
-
-    def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
-        contenedor = self.registro.por_rol(rol)
-        if contenedor is None:
-            return None
-        return self.invocador.ejecutar_capacidad(contenedor, capacidad, *args, **kwargs)
-
-    def ejecutar_contratos(self, peticion: Dict) -> Dict:
-        self.invocador.reiniciar()
-        reportes = {}
-
-        for contenedor in self.registro.contenedores.values():
-            if contenedor.tiene_capacidad("evaluar"):
-                reporte = self.invocador.ejecutar_capacidad(contenedor, "evaluar", peticion)
-                if reporte is not None:
-                    reportes[contenedor.rol] = reporte
-
-        return {"reportes": reportes, "fallos": self.invocador.fallos}
-
-    def evaluar(self, peticion: Dict) -> Dict:
-        return self.ejecutar_contratos(peticion)
+        return autorizaciones
