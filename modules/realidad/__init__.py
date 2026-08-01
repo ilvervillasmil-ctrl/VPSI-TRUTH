@@ -1,40 +1,30 @@
-"""
-VPSI-TRUTH  ---  modules/realidad
-
-Contenedor de realidad. Rol RE.
-
-======================================================================
-Este archivo es el filtro. No habla de los archivos que hay en la
-carpeta: habla de la FUNCION que cada uno cumple.
-
-Cada archivo de la carpeta declara una funcion unica. Hoy hay una:
-
-    acceso.py    conexion a Internet
-
-Manana habra otras. El filtro no cambia por eso: descubre lo que hay,
-comprueba que no se contradigan entre si, y solo entonces deja pasar
-al Engine.
-
-Contradiccion aqui significa una cosa: dos archivos reclamando la
-misma funcion. Si dos declaran hacer lo mismo, no se sabe cual
-responde, y lo que cruzaria al Engine seria ambiguo.
-======================================================================
-"""
-
 from __future__ import annotations
 
 import importlib.util
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
+from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 
 from .acceso import Canal, hay_acceso, hay_dns, HAY_REQUESTS
 
+# ===============================================================
+# CONTENEDOR (Contrato del módulo)
+# ===============================================================
 CONTENEDOR = {
     "nombre": "realidad",
     "rol": "RE",
     "version": "1.0",
     "requiere": [],
+    "descripcion": (
+        "Contenedor de realidad. Rol RE. "
+        "Filtro de funciones únicas. Descubre funciones en la carpeta y "
+        "comprueba que no se contradigan entre sí."
+    ),
+    "capacidades": {
+        "verificar": "barrer",      # Capacidad para validar el módulo
+        "inventario": "inventario", # Capacidad de introspección
+    }
 }
 
 _DIR = Path(__file__).parent
@@ -42,7 +32,7 @@ _DIR = Path(__file__).parent
 CLAVES_FUNCION = ("nombre", "hace")
 
 # ===============================================================
-# DESCUBRIMIENTO
+# DESCUBRIMIENTO (Engine: Lógica interna)
 # ===============================================================
 
 def _descubrir() -> Dict[str, Dict[str, Any]]:
@@ -77,26 +67,26 @@ def _descubrir() -> Dict[str, Dict[str, Any]]:
     return registro
 
 # ===============================================================
-# FILTRO
+# ENGINE (Orquestador)
 # ===============================================================
 
 def barrer() -> Dict[str, Any]:
     """
-    Filtro de paso al Engine. No lanza: informa.
-
-    coherente == False  =>  realidad no cruza.
+    Filtro de paso al Engine. Orquesta la lógica del módulo:
+    1. Descubre funciones en la carpeta.
+    2. Comprueba que no se contradigan entre sí.
     """
     hallado = _descubrir()
     choques: List[str] = []
     errores: List[str] = []
 
-    # forma: cada declaracion completa
+    # Validar que cada declaración tenga las claves requeridas
     for archivo, meta in sorted(hallado.items()):
         for clave in CLAVES_FUNCION:
             if not meta.get(clave):
                 errores.append(f"{archivo}: FUNCION sin '{clave}'")
 
-    # unicidad: dos archivos no pueden reclamar la misma funcion
+    # Validar unicidad: dos archivos no pueden reclamar la misma función
     por_nombre: Dict[str, List[str]] = {}
     for archivo, meta in sorted(hallado.items()):
         n = meta.get("nombre")
@@ -107,12 +97,20 @@ def barrer() -> Dict[str, Any]:
         if len(archivos) > 1:
             choques.append(
                 f"funcion '{nombre}' reclamada por {archivos}: "
-                "no se sabe cual responde"
+                "no se sabe cuál responde"
             )
 
-    # piso: una carpeta vacia es coherente con todo
+    # Validar piso: una carpeta vacía es coherente con todo
     if not hallado:
         errores.append("ninguna funcion declarada: coherente por vacuidad")
+
+    # Enviar reporte a DiagnosticoGlobal si hay choques o errores (Reporte Omega)
+    if choques or errores:
+        DiagnosticoGlobal.recibir_reporte(
+            modulo="realidad",
+            errores=[{"tipo": "choque", "detalle": choque} for choque in choques] +
+                    [{"tipo": "error", "detalle": error} for error in errores]
+        )
 
     return {
         "contenedor": CONTENEDOR["nombre"],
@@ -123,10 +121,23 @@ def barrer() -> Dict[str, Any]:
     }
 
 # ===============================================================
-# INTROSPECCION
+# CENTINELA (Eyenet)
+# ===============================================================
+
+def verificar_salida(salida: Dict[str, Any]) -> bool:
+    """
+    Valida la salida del Engine (barrer).
+    - Si la salida es coherente, devuelve True.
+    - Si no lo es, ya se envió un reporte a DiagnosticoGlobal en barrer().
+    """
+    return salida.get("coherente", False)
+
+# ===============================================================
+# INTROSPECCIÓN
 # ===============================================================
 
 def inventario() -> Dict[str, Any]:
+    """Devuelve un resumen de las funciones descubiertas."""
     hallado = _descubrir()
     return {
         "contenedor": CONTENEDOR["nombre"],
@@ -135,7 +146,7 @@ def inventario() -> Dict[str, Any]:
     }
 
 # ===============================================================
-# EXPORTACION
+# EXPORTACIÓN
 # ===============================================================
 
 __all__ = [
@@ -143,4 +154,5 @@ __all__ = [
     "Canal", "hay_acceso", "hay_dns", "HAY_REQUESTS",
     "barrer",
     "inventario",
+    "verificar_salida",  # Nueva función para el Centinela
 ]
