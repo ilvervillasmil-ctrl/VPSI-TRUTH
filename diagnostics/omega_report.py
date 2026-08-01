@@ -22,7 +22,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 CURRENT_FILE = Path(__file__).resolve()
 DIAGNOSTICS_DIR = CURRENT_FILE.parent
@@ -88,25 +88,52 @@ def _tabla(headers: List[str], rows: List[List[str]], anchos: List[int] | None =
     return out
 
 
-def _bloque(titulo: str, lineas: List[str]) -> List[str]:
-    return [titulo, *lineas, ""]
+def _bloque(titulo: str, lineas_bloq: List[str]) -> List[str]:
+    return [titulo, *lineas_bloq, ""]
+
+
+def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
+    """Presenta TR1/U1. Solo lectura del paquete; no calcula."""
+    out: List[str] = [
+        "=" * 80,
+        "GENERATIVIDAD (TR1 / U1)",
+        "=" * 80,
+    ]
+    if not g or g.get("estado") == "UNDEFINED":
+        out.append("  (sin datos — AX.generatividad no disponible)")
+        if g:
+            out.append(f"  U1 (proxy roles): {g.get('u1_estado', 'REVISAR')}")
+            out.append(f"  roles vacíos    : {g.get('roles_vacios', [])}")
+            if g.get("razon"):
+                out.append(f"  razon           : {g.get('razon')}")
+        out.append("")
+        return out
+
+    out.append(f"  |Θ| (AX)           : {g.get('theta_n', '—')}")
+    out.append(f"  pares totales      : {g.get('pares_totales', '—')}")
+    out.append(f"  pares compatibles  : {g.get('pares_compatibles', '—')}")
+    out.append(f"  pares novedosos    : {g.get('pares_novedosos', '—')}")
+    out.append(f"  |Im(⊕)| ? |Θ|      : {g.get('im_vs_theta', '—')}")
+    out.append(f"  dominios           : {g.get('dominios', [])}")
+    out.append(f"  roles vacíos       : {g.get('roles_vacios', [])}")
+    out.append(f"  U1                 : {g.get('u1_estado', '—')}")
+    if g.get("por_tipo_theta"):
+        out.append(f"  por_tipo_theta     : {g.get('por_tipo_theta')}")
+    if g.get("nota"):
+        out.append(f"  nota               : {g['nota']}")
+    out.append("")
+    return out
 
 
 # =============================================================================
 # CONSTRUCCIÓN DEL MAPA DE TRABAJO
 # =============================================================================
 def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Genera la lista priorizada de acciones a partir de los datos reales.
-    Prioridad 1 = más urgente.
-    """
     acciones: List[Dict[str, Any]] = []
     reg = datos.get("registro_modulos") or {}
-    roles = reg.get("roles") or {}
     vacios = reg.get("roles_vacios") or []
     rechazados = reg.get("rechazados") or []
 
-    # 1. Engine no operativo
     if datos.get("estado_engine") != "OPERATIVO":
         acciones.append({
             "prioridad": 1,
@@ -118,20 +145,21 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "errores": datos.get("errores_arranque") or [],
         })
 
-    # 2. Axiomas incoherentes
     ia = datos.get("informe_axiomas") or {}
     if not ia.get("coherente", False):
         acciones.append({
             "prioridad": 1,
             "tipo": "BLOQUEANTE",
             "item": "Axiomas",
-            "detalle": f"choques={len(ia.get('choques', []))} errores={len(ia.get('errores', []))}",
+            "detalle": (
+                f"choques={len(ia.get('choques', []))} "
+                f"errores={len(ia.get('errores', []))}"
+            ),
             "impacto": "Sin axiomatización coherente el sistema no debe avanzar",
             "accion": "Resolver choques en modules/axiomas y VPSI.py",
             "errores": ia.get("choques", [])[:5],
         })
 
-    # 3. Módulos rechazados (roles desconocidos)
     for r in rechazados:
         ruta = r.get("ruta", "?")
         razon = r.get("razon", "?")
@@ -145,7 +173,6 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "errores": [f"{ruta} → {razon}"],
         })
 
-    # 4. Roles vacíos
     for rol in vacios:
         acciones.append({
             "prioridad": 3,
@@ -157,7 +184,6 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "errores": [],
         })
 
-    # 5. Datos no entregados al reporte
     if not datos.get("resultados_evaluacion"):
         acciones.append({
             "prioridad": 4,
@@ -180,7 +206,6 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "errores": [],
         })
 
-    # 6. Fórmulas / mecánica si faltan
     if not datos.get("informe_formulas"):
         acciones.append({
             "prioridad": 4,
@@ -189,6 +214,32 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "detalle": "no entregado",
             "impacto": "No se confirma el estado del módulo FO desde el reporte",
             "accion": "Engine debe invocar formulas.barrer() y adjuntar el resultado",
+            "errores": [],
+        })
+
+    # Generatividad ausente o estancada (no bloquea arranque; informa mapa)
+    g = datos.get("generatividad")
+    if not g or g.get("estado") == "UNDEFINED":
+        acciones.append({
+            "prioridad": 4,
+            "tipo": "DATOS",
+            "item": "generatividad",
+            "detalle": "AX.generatividad no entregada o UNDEFINED",
+            "impacto": "No se mide TR1/U1 desde el mapa",
+            "accion": "Asegurar capacidad generatividad en AX y censar_generatividad en Engine",
+            "errores": [g.get("razon")] if g and g.get("razon") else [],
+        })
+    elif g.get("im_vs_theta") == "ESTANCADO":
+        acciones.append({
+            "prioridad": 5,
+            "tipo": "TR1",
+            "item": "generatividad",
+            "detalle": (
+                f"|Θ|={g.get('theta_n')} novedosos={g.get('pares_novedosos')} "
+                f"→ ESTANCADO"
+            ),
+            "impacto": "El cuerpo axiomático no expande dominios por recombinación",
+            "accion": "Revisar campo gobierna en declaraciones o ampliar dominios cruzados",
             "errores": [],
         })
 
@@ -221,9 +272,6 @@ def presentar(datos: Dict[str, Any]) -> str:
             lineas.append(f"    - {f}")
         return "\n".join(lineas)
 
-    # ------------------------------------------------------------------
-    # ESTADO GLOBAL
-    # ------------------------------------------------------------------
     estado = datos["estado_engine"]
     ia = datos["informe_axiomas"]
     coherente = bool(ia.get("coherente"))
@@ -253,9 +301,6 @@ def presentar(datos: Dict[str, Any]) -> str:
         f"  Salud           : {salud}",
     ])
 
-    # ------------------------------------------------------------------
-    # TABLA DE MÓDULOS
-    # ------------------------------------------------------------------
     roles = reg.get("roles") or {}
     todos_roles = sorted(set(list(roles.keys()) + list(vacios)))
     rows = []
@@ -274,9 +319,6 @@ def presentar(datos: Dict[str, Any]) -> str:
     ))
     lineas.append("")
 
-    # ------------------------------------------------------------------
-    # MAPA DE ACCIONES (el corazón del reporte)
-    # ------------------------------------------------------------------
     lineas.append("=" * 80)
     lineas.append("MAPA DE INTERVENCIÓN (ordenado por prioridad)")
     lineas.append("=" * 80)
@@ -297,39 +339,36 @@ def presentar(datos: Dict[str, Any]) -> str:
                     lineas.append(f"       · {e}")
             lineas.append("")
 
-    # ------------------------------------------------------------------
-    # DETALLE DE SALUD POR CAPA
-    # ------------------------------------------------------------------
     lineas.append("=" * 80)
     lineas.append("SALUD POR CAPA")
     lineas.append("=" * 80)
     lineas.append("")
 
-    # Constantes
     const = datos.get("constantes") or {}
     lineas.append(f"  [{OK}] Constantes (CT)")
     lineas.append(f"      ALPHA = {const.get('ALPHA')}   BETA = {const.get('BETA')}")
     lineas.append("")
 
-    # Axiomas
     marca_ax = OK if coherente else FALLO
     lineas.append(f"  [{marca_ax}] Axiomas (AX)")
     lineas.append(f"      declaraciones = {ia.get('declaraciones', '?')}")
     lineas.append(f"      choques       = {len(ia.get('choques', []))}")
     lineas.append(f"      errores       = {len(ia.get('errores', []))}")
+    if ia.get("por_tipo"):
+        lineas.append(f"      por_tipo      = {ia.get('por_tipo')}")
     lineas.append("")
 
-    # Fórmulas
     fo = datos.get("informe_formulas")
     if fo:
         marca_fo = OK if fo.get("coherente") else FALLO
         lineas.append(f"  [{marca_fo}] Fórmulas (FO)")
-        lineas.append(f"      coherente = {fo.get('coherente')}   faltas = {fo.get('faltas', [])}")
+        lineas.append(
+            f"      coherente = {fo.get('coherente')}   faltas = {fo.get('faltas', [])}"
+        )
     else:
         lineas.append(f"  [{PENDIENTE}] Fórmulas (FO) — informe no entregado")
     lineas.append("")
 
-    # Mecánica
     mc = datos.get("informe_mecanica")
     if mc:
         marca_mc = OK if mc.get("coherente") else FALLO
@@ -339,7 +378,6 @@ def presentar(datos: Dict[str, Any]) -> str:
         lineas.append(f"  [{PENDIENTE}] Mecánica (MC) — informe no entregado")
     lineas.append("")
 
-    # Evaluaciones
     evals = datos.get("resultados_evaluacion") or []
     if evals:
         lineas.append(f"  [{OK}] Camino de evaluación")
@@ -353,7 +391,6 @@ def presentar(datos: Dict[str, Any]) -> str:
         lineas.append(f"  [{PENDIENTE}] Camino de evaluación — sin resultados entregados")
     lineas.append("")
 
-    # Tests
     tests = datos.get("tests")
     if tests:
         marca_t = OK if tests.get("fallidos", 1) == 0 else FALLO
@@ -366,29 +403,9 @@ def presentar(datos: Dict[str, Any]) -> str:
         lineas.append(f"  [{PENDIENTE}] Tests — resultados no entregados")
     lineas.append("")
 
-    def _imprimir_generatividad(g: dict) -> None:
-    print("=" * 80)
-    print("GENERATIVIDAD (TR1 / U1)")
-    print("=" * 80)
-    if not g or g.get("estado") == "UNDEFINED":
-        print("  (sin datos — AX.generatividad no disponible)")
-        print(f"  U1 (proxy roles): {g.get('u1_estado', 'REVISAR')}")
-        print(f"  roles vacíos    : {g.get('roles_vacios', [])}")
-        return
+    # TR1 / U1 (presentación pura)
+    lineas.extend(_lineas_generatividad(datos.get("generatividad")))
 
-    print(f"  |Θ| (AX)           : {g.get('theta_n', '—')}")
-    print(f"  pares totales      : {g.get('pares_totales', '—')}")
-    print(f"  pares compatibles  : {g.get('pares_compatibles', '—')}")
-    print(f"  pares novedosos    : {g.get('pares_novedosos', '—')}")
-    print(f"  |Im(⊕)| ? |Θ|      : {g.get('im_vs_theta', '—')}")
-    print(f"  roles vacíos       : {g.get('roles_vacios', [])}")
-    print(f"  U1                 : {g.get('u1_estado', '—')}")
-    if g.get("nota"):
-        print(f"  nota               : {g['nota']}")
-
-    # ------------------------------------------------------------------
-    # INVENTARIO RÁPIDO
-    # ------------------------------------------------------------------
     lineas.append("=" * 80)
     lineas.append("INVENTARIO RÁPIDO")
     lineas.append("=" * 80)
@@ -402,14 +419,13 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("Rechazado:")
     if rechazados:
         for r in rechazados:
-            lineas.append(f"  ✗ {Path(r.get('ruta', '?')).parent.name} → {r.get('razon', '?')}")
+            lineas.append(
+                f"  ✗ {Path(r.get('ruta', '?')).parent.name} → {r.get('razon', '?')}"
+            )
     else:
         lineas.append("  (ninguno)")
     lineas.append("")
 
-    # ------------------------------------------------------------------
-    # CIERRE
-    # ------------------------------------------------------------------
     lineas += [
         "=" * 80,
         "CIERRE",
@@ -442,41 +458,87 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         try:
             eng = Engine(
                 raiz_modulos=str(REPO_ROOT / "modules"),
-                invocador_id="omega_report",
+                invocador_id="core",
                 strict=False,
             )
+        except TypeError:
+            # firmas antiguas
+            try:
+                eng = Engine(
+                    str(REPO_ROOT / "modules"),
+                    invocador_id="core",
+                    verificar_axiomas=False,
+                    strict=False,
+                )
+            except Exception as e:  # noqa: BLE001
+                datos["estado_engine"] = "RECHAZADO"
+                datos["errores_arranque"] = [str(e)]
+                return datos
         except ArranqueError as e:
             datos["estado_engine"] = "RECHAZADO"
             datos["errores_arranque"] = [str(e)]
             return datos
 
-        datos["estado_engine"] = eng.estado
-        datos["errores_arranque"] = list(eng.errores_arranque or [])
-        datos["informe_axiomas"] = eng.informe_axiomas or {}
-        datos["informe_mecanica"] = eng.informe_mecanica or {}
-        datos["registro_modulos"] = eng.registro.resumen()
+        datos["estado_engine"] = getattr(eng, "estado", "OPERATIVO")
+        datos["errores_arranque"] = list(getattr(eng, "errores_arranque", None) or [])
+        datos["informe_axiomas"] = getattr(eng, "informe_axiomas", None) or {}
+        datos["informe_mecanica"] = getattr(eng, "informe_mecanica", None) or {}
+
+        if hasattr(eng, "registro") and hasattr(eng.registro, "resumen"):
+            datos["registro_modulos"] = eng.registro.resumen()
+        elif hasattr(eng, "censar"):
+            datos["registro_modulos"] = eng.censar()
 
         try:
-            datos["constantes"] = {k: str(v) for k, v in eng.get_constantes().items()}
-        except Exception:
+            if hasattr(eng, "get_constantes"):
+                datos["constantes"] = {
+                    k: str(v) for k, v in eng.get_constantes().items()
+                }
+        except Exception:  # noqa: BLE001
             pass
 
-        for cont in eng.registro.por_rol.get("FO", []):
-            fn = cont.fn("verificar") or cont.fn("barrer")
-            if callable(fn):
-                try:
-                    datos["informe_formulas"] = fn()
-                except Exception:
-                    pass
-                break
+        # FO
+        try:
+            reg = datos.get("registro_modulos") or {}
+            roles = reg.get("roles") or {}
+            # fallback: intentar capacidad FO vía Engine
+            if hasattr(eng, "ejecutar_capacidad"):
+                fo_out = eng.ejecutar_capacidad("FO", "verificar")
+                if isinstance(fo_out, dict):
+                    datos["informe_formulas"] = fo_out
+                else:
+                    fo_out = eng.ejecutar_capacidad("FO", "barrer")
+                    if isinstance(fo_out, dict):
+                        datos["informe_formulas"] = fo_out
+        except Exception:  # noqa: BLE001
+            pass
 
-        # Intentar adjuntar tests si existe el xml
+        # TR1 / U1
+        try:
+            if hasattr(eng, "censar_generatividad"):
+                datos["generatividad"] = eng.censar_generatividad()
+            elif hasattr(eng, "ejecutar_capacidad"):
+                g = eng.ejecutar_capacidad("AX", "generatividad")
+                if isinstance(g, dict):
+                    datos["generatividad"] = g
+        except Exception as e:  # noqa: BLE001
+            datos["generatividad"] = {
+                "estado": "UNDEFINED",
+                "razon": f"{type(e).__name__}: {e}",
+            }
+
+        # tests xml
         xml_path = DIAGNOSTICS_DIR / "test_results.xml"
         if xml_path.exists():
             try:
                 import xml.etree.ElementTree as ET
+
                 raiz = ET.parse(xml_path).getroot()
-                suites = [raiz] if raiz.tag == "testsuite" else list(raiz.iter("testsuite"))
+                suites = (
+                    [raiz]
+                    if raiz.tag == "testsuite"
+                    else list(raiz.iter("testsuite"))
+                )
                 total = fallos = errores = omitidos = 0
                 for s in suites:
                     total += int(s.get("tests", 0))
@@ -493,10 +555,10 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
                     "omitidos": omitidos,
                     "tasa": round(tasa, 2),
                 }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         datos["estado_engine"] = "RECHAZADO"
         datos["errores_arranque"] = [f"{type(e).__name__}: {e}"]
 
@@ -510,7 +572,10 @@ def main() -> None:
 
     DIAGNOSTICS_DIR.mkdir(parents=True, exist_ok=True)
     out_json = DIAGNOSTICS_DIR / "omega_report_data.json"
-    out_json.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+    out_json.write_text(
+        json.dumps(datos, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
     print(f"\nJSON: {out_json}")
 
     faltas = validar_entrada(datos)
