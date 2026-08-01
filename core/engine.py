@@ -1,178 +1,368 @@
 from __future__ import annotations
+
 import importlib
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 from core.diagnostico import DiagnosticoGlobal
 
 # ===============================================================
-# SEGMENTO 1 --- IDENTIDAD
+# SEGMENTO 0 --- EXCEPCIONES
 # ===============================================================
-CONTENEDOR = {
-    "nombre": "engine",
-    "rol": "EN",
-    "version": "1.0",
-    "requiere": [],
-    "descripcion": "Orquestador principal del sistema VPSI-TRUTH. Descubre módulos, obtiene orden de ejecución y los ejecuta.",
-}
+class ArranqueError(RuntimeError):
+    """
+    Falla que impide arrancar o completar la ejecucion del sistema.
+
+    El Engine NO la lanza durante la operacion normal: sigue reportando a
+    DiagnosticoGlobal y devolviendo dicts. Se lanza solo desde los puntos de
+    entrada estrictos (ver `arrancar`), donde el CI necesita un fallo duro.
+    """
+
+
+# ===============================================================
+# SEGMENTO 1 --- IDENTIDAD (fuente unica; el CONTENEDOR se arma al final)
+# ===============================================================
+_NOMBRE = "engine"
+_ROL = "EN"
+_VERSION = "1.1"
+_DESCRIPCION = (
+    "Orquestador principal del sistema VPSI-TRUTH. Descubre modulos, "
+    "obtiene orden de ejecucion y los ejecuta."
+)
 
 # ===============================================================
 # SEGMENTO 2 --- CONSTANTES
 # ===============================================================
 _MODULES_DIR = Path(__file__).parent.parent / "modules"
 
+# Directorios que nunca son modulos (__pycache__, .git, .ipynb_checkpoints...)
+_PREFIJOS_IGNORADOS = ("_", ".")
+
+# Si True, el Engine solo se declara APROBADO cuando ademas todos los modulos
+# ejecutados reportan coherente=True. Ponlo en False para volver al
+# comportamiento anterior (aprobar con solo terminar la corrida).
+EXIGIR_MODULOS_COHERENTES = True
+
+
 # ===============================================================
-# SEGMENTO 3 --- ENGINE (Lógica original preservada)
+# SEGMENTO 3 --- REPORTE INTERNO
+# ===============================================================
+def _reportar(tipo: str, detalle: str) -> None:
+    """Envia un error al diagnostico global. Nunca lanza."""
+    try:
+        DiagnosticoGlobal.recibir_reporte(
+            modulo=_NOMBRE,
+            errores=[{"tipo": tipo, "detalle": detalle}],
+        )
+    except Exception:  # el diagnostico jamas debe tumbar al Engine
+        pass
+
+
+def _detalle_excepcion(e: BaseException) -> str:
+    """Texto util de una excepcion: tipo + mensaje. NO se descarta nunca."""
+    return f"{type(e).__name__}: {e}"
+
+
+# ===============================================================
+# SEGMENTO 4 --- ENGINE
 # ===============================================================
 def descubrir_modulos() -> Dict[str, Any]:
     """
-    Descubre automáticamente todos los módulos en `modules/`.
-    Retorna un diccionario con el nombre del módulo y su CONTENEDOR.
+    Descubre automaticamente todos los modulos en `modules/`.
+    Retorna {nombre_modulo: CONTENEDOR}.
+
+    Reporta -con el mensaje real de la excepcion- cualquier modulo que no se
+    pueda importar o que no exponga CONTENEDOR.
     """
-    modulos = {}
-    for modulo_dir in _MODULES_DIR.iterdir():
+    modulos: Dict[str, Any] = {}
+
+    if not _MODULES_DIR.is_dir():
+        _reportar(
+            "directorio_ausente",
+            f"No existe el directorio de modulos: {_MODULES_DIR}",
+        )
+        return modulos
+
+    for modulo_dir in sorted(_MODULES_DIR.iterdir()):
         if not modulo_dir.is_dir():
             continue
 
         modulo_name = modulo_dir.name
-        try:
-            modulo = importlib.import_module(f"modules.{modulo_name}")
-            if hasattr(modulo, "CONTENEDOR"):
-                modulos[modulo_name] = modulo.CONTENEDOR
-        except ImportError:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="engine",
-                errores=[{"tipo": "import_error", "detalle": f"No se pudo importar el módulo {modulo_name}"}]
+
+        # __pycache__, .git, etc. no son modulos del sistema.
+        if modulo_name.startswith(_PREFIJOS_IGNORADOS):
+            continue
+
+        if not (modulo_dir / "__init__.py").exists():
+            _reportar(
+                "sin_init",
+                f"'{modulo_name}' no tiene __init__.py; no es un paquete importable, se omite",
             )
             continue
+
+        try:
+            # Antes solo se atrapaba ImportError: un SyntaxError o NameError
+            # dentro de un modulo tumbaba el Engine entero.
+            modulo = importlib.import_module(f"modules.{modulo_name}")
+        except Exception as e:
+            _reportar(
+                "import_error",
+                f"No se pudo importar modules.{modulo_name} -> {_detalle_excepcion(e)}",
+            )
+            continue
+
+        contenedor = getattr(modulo, "CONTENEDOR", None)
+        if contenedor is None:
+            _reportar(
+                "sin_contenedor",
+                f"modules.{modulo_name} se importo pero no expone CONTENEDOR",
+            )
+            continue
+
+        modulos[modulo_name] = contenedor
 
     return modulos
 
 
-def obtener_orden_ejecucion() -> Optional[List[str]]:
+def _resolver_orden() -> Tuple[Optional[List[str]], str]:
     """
-    Consulta `correlacion_mecanica/` para obtener el orden válido de ejecución.
-    Retorna None si no hay un orden válido (choques en correlacion_mecanica).
+    Consulta `correlacion_mecanica/` y devuelve (orden, motivo).
+
+    Distingue las fallas que antes se confundian en un mismo None:
+      - el modulo no existe / no importa
+      - el modulo no expone la capacidad 'verificar'
+      - 'verificar' revento
+      - la respuesta no tiene la forma esperada
+      - hay choques (incoherente)
+    `motivo` es "ok" solo cuando orden es una lista valida.
     """
     try:
         from modules.correlacion_mecanica import CONTENEDOR as correlacion_contenedor
-        resultado = correlacion_contenedor["capacidades"]["verificar"]()
-        if resultado["coherente"]:
-            return resultado["mecanica"]
-        else:
-            return None
-    except ImportError:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="engine",
-            errores=[{"tipo": "import_error", "detalle": "No se encontró el módulo correlacion_mecanica"}]
+    except Exception as e:
+        motivo = f"No se pudo importar correlacion_mecanica -> {_detalle_excepcion(e)}"
+        _reportar("import_error", motivo)
+        return None, motivo
+
+    capacidades = correlacion_contenedor.get("capacidades") or {}
+    verificar = capacidades.get("verificar")
+    if not callable(verificar):
+        motivo = "correlacion_mecanica no expone una capacidad 'verificar' invocable"
+        _reportar("capacidad_no_encontrada", motivo)
+        return None, motivo
+
+    try:
+        resultado = verificar()
+    except Exception as e:
+        motivo = f"correlacion_mecanica.verificar() fallo -> {_detalle_excepcion(e)}"
+        _reportar("error_ejecucion", motivo)
+        return None, motivo
+
+    if not isinstance(resultado, dict):
+        motivo = (
+            "correlacion_mecanica.verificar() devolvio "
+            f"{type(resultado).__name__}, se esperaba dict"
+        )
+        _reportar("salida_invalida", motivo)
+        return None, motivo
+
+    if not resultado.get("coherente", False):
+        motivo = "correlacion_mecanica reporta INCOHERENCIA: hay choques sin resolver"
+        _reportar("orden_incoherente", motivo)
+        return None, motivo
+
+    orden = resultado.get("mecanica")
+    if not isinstance(orden, list):
+        motivo = (
+            "correlacion_mecanica se declara coherente pero 'mecanica' es "
+            f"{type(orden).__name__}, se esperaba list"
+        )
+        _reportar("salida_invalida", motivo)
+        return None, motivo
+
+    return orden, "ok"
+
+
+def obtener_orden_ejecucion() -> Optional[List[str]]:
+    """
+    Orden valido de ejecucion, o None si no lo hay.
+    (Firma preservada por compatibilidad; el motivo va al diagnostico.)
+    """
+    orden, _motivo = _resolver_orden()
+    return orden
+
+
+def ejecutar_modulo(modulo_name: str, capacidad: str, *args, **kwargs) -> Any:
+    """Ejecuta una capacidad especifica de un modulo. Devuelve None si falla."""
+    try:
+        modulo = importlib.import_module(f"modules.{modulo_name}")
+    except Exception as e:
+        _reportar(
+            "import_error",
+            f"No se pudo importar modules.{modulo_name} -> {_detalle_excepcion(e)}",
+        )
+        return None
+
+    contenedor = getattr(modulo, "CONTENEDOR", None)
+    if contenedor is None:
+        _reportar(
+            "sin_contenedor",
+            f"modules.{modulo_name} no tiene CONTENEDOR",
+        )
+        return None
+
+    funcion = (contenedor.get("capacidades") or {}).get(capacidad)
+    if not callable(funcion):
+        _reportar(
+            "capacidad_no_encontrada",
+            f"Capacidad '{capacidad}' no encontrada (o no invocable) en {modulo_name}",
+        )
+        return None
+
+    try:
+        return funcion(*args, **kwargs)
+    except Exception as e:
+        _reportar(
+            "error_ejecucion",
+            f"Error al ejecutar {modulo_name}/{capacidad} -> {_detalle_excepcion(e)}",
         )
         return None
 
 
-def ejecutar_modulo(modulo_name: str, capacidad: str, *args, **kwargs) -> Any:
-    """
-    Ejecuta una capacidad específica de un módulo.
-    """
-    try:
-        modulo = importlib.import_module(f"modules.{modulo_name}")
-        if hasattr(modulo, "CONTENEDOR"):
-            funcion = modulo.CONTENEDOR["capacidades"].get(capacidad)
-            if funcion:
-                return funcion(*args, **kwargs)
-            else:
-                DiagnosticoGlobal.recibir_reporte(
-                    modulo="engine",
-                    errores=[{"tipo": "capacidad_no_encontrada", "detalle": f"Capacidad '{capacidad}' no encontrada en {modulo_name}"}]
-                )
-        else:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="engine",
-                errores=[{"tipo": "sin_contenedor", "detalle": f"Módulo {modulo_name} no tiene CONTENEDOR"}]
-            )
-    except Exception as e:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="engine",
-            errores=[{"tipo": "error_ejecucion", "detalle": f"Error al ejecutar {modulo_name}/{capacidad}: {str(e)}"}]
-        )
-    return None
-
-
 def ejecutar_sistema() -> Dict[str, Any]:
     """
-    Ejecuta todos los módulos en el orden definido por `correlacion_mecanica/`.
-    Retorna un diccionario con los resultados de cada módulo.
+    Ejecuta los modulos en el orden definido por `correlacion_mecanica/`.
+
+    Retorna:
+      {"status": "ok"|"error", "mensaje": str, "resultados": {...},
+       "fallidos": [...], "no_planificados": [...], "no_descubiertos": [...]}
     """
     modulos = descubrir_modulos()
     if not modulos:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="engine",
-            errores=[{"tipo": "sin_modulos", "detalle": "No se encontraron módulos en modules/"}]
-        )
-        return {"status": "error", "mensaje": "No hay módulos para ejecutar"}
+        mensaje = f"No se encontraron modulos importables en {_MODULES_DIR}"
+        _reportar("sin_modulos", mensaje)
+        return {"status": "error", "mensaje": mensaje, "resultados": {}}
 
-    orden = obtener_orden_ejecucion()
+    orden, motivo = _resolver_orden()
+    if orden is None:
+        return {
+            "status": "error",
+            "mensaje": f"No hay orden valido de ejecucion: {motivo}",
+            "resultados": {},
+        }
+
     if not orden:
-        return {"status": "error", "mensaje": "No hay orden válido (choques en correlacion_mecanica)"}
+        mensaje = "correlacion_mecanica devolvio un orden VACIO: no hay nada que ejecutar"
+        _reportar("orden_vacio", mensaje)
+        return {"status": "error", "mensaje": mensaje, "resultados": {}}
 
-    resultados = {}
+    # Modulos descubiertos que nadie planifico: antes se ignoraban en silencio.
+    no_planificados = [m for m in sorted(modulos) if m not in orden]
+    for modulo_name in no_planificados:
+        _reportar(
+            "modulo_no_planificado",
+            f"El modulo '{modulo_name}' existe en modules/ pero no aparece en el "
+            f"orden de correlacion_mecanica: NO se ejecutara",
+        )
+
+    resultados: Dict[str, Any] = {}
+    no_descubiertos: List[str] = []
+    fallidos: List[str] = []
+
     for modulo_name in orden:
         if modulo_name not in modulos:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="engine",
-                errores=[{"tipo": "modulo_ausente", "detalle": f"Módulo {modulo_name} no encontrado en el orden definido"}]
+            # Mensaje corregido: el modulo SI esta en el orden, lo que falta es el modulo.
+            no_descubiertos.append(modulo_name)
+            _reportar(
+                "modulo_no_descubierto",
+                f"El orden exige '{modulo_name}' pero ese modulo no se pudo "
+                f"descubrir en modules/ (revisa errores de import previos)",
             )
             continue
 
         resultado = ejecutar_modulo(modulo_name, "verificar")
         resultados[modulo_name] = resultado
 
-    return {"status": "ok", "resultados": resultados}
+        coherente = bool(resultado.get("coherente", False)) if isinstance(resultado, dict) else False
+        if not coherente:
+            fallidos.append(modulo_name)
+
+    if no_descubiertos:
+        status = "error"
+        mensaje = f"Faltan modulos exigidos por el orden: {', '.join(no_descubiertos)}"
+    elif fallidos and EXIGIR_MODULOS_COHERENTES:
+        status = "error"
+        mensaje = f"Modulos incoherentes o sin resultado: {', '.join(fallidos)}"
+    else:
+        status = "ok"
+        mensaje = f"{len(resultados)} modulo(s) ejecutados en orden"
+
+    return {
+        "status": status,
+        "mensaje": mensaje,
+        "resultados": resultados,
+        "fallidos": fallidos,
+        "no_planificados": no_planificados,
+        "no_descubiertos": no_descubiertos,
+    }
 
 
 def obtener_autorizaciones() -> Dict[str, bool]:
-    """
-    Verifica qué módulos están autorizados para funcionar (sin contradicciones).
-    Retorna un diccionario con el estado de autorización de cada módulo.
-    """
+    """Qué modulos estan autorizados (verificar -> coherente=True)."""
     modulos = descubrir_modulos()
-    autorizaciones = {}
+    autorizaciones: Dict[str, bool] = {}
 
-    for modulo_name, contenedor in modulos.items():
+    for modulo_name in modulos:
         resultado = ejecutar_modulo(modulo_name, "verificar")
-        autorizaciones[modulo_name] = resultado.get("coherente", False) if resultado else False
+        autorizaciones[modulo_name] = (
+            bool(resultado.get("coherente", False)) if isinstance(resultado, dict) else False
+        )
 
     return autorizaciones
 
 
 def barrer() -> Dict[str, Any]:
-    """
-    Capacidad de verificación del Engine.
-    Ejecuta el sistema y reporta el estado global.
-    """
+    """Capacidad de verificacion del Engine: ejecuta el sistema y reporta estado global."""
     resultado = ejecutar_sistema()
     coherente = resultado.get("status") == "ok"
     return {
-        "contenedor": CONTENEDOR["nombre"],
+        "contenedor": _NOMBRE,
         "estado": "APROBADO" if coherente else "RECHAZADO",
         "coherente": coherente,
+        "mensaje": resultado.get("mensaje", ""),
         "resultado": resultado,
     }
 
-# ===============================================================
-# SEGMENTO 4 --- CENTINELA
-# ===============================================================
-def verificar_salida(salida: Dict[str, Any]) -> bool:
-    """Valida la salida del Engine (barrer)."""
-    return salida.get("coherente", False)
+
+def arrancar() -> Dict[str, Any]:
+    """
+    Punto de entrada estricto (CI). Igual que `barrer`, pero si el sistema no
+    es coherente lanza ArranqueError con el motivo dentro.
+    """
+    salida = barrer()
+    if not verificar_salida(salida):
+        raise ArranqueError(salida.get("mensaje") or "El sistema no es coherente")
+    return salida
+
 
 # ===============================================================
-# SEGMENTO 5 --- CONTENEDOR (Contrato final)
+# SEGMENTO 5 --- CENTINELA
+# ===============================================================
+def verificar_salida(salida: Any) -> bool:
+    """Valida la salida del Engine (barrer)."""
+    if not isinstance(salida, dict):
+        return False
+    return bool(salida.get("coherente", False))
+
+
+# ===============================================================
+# SEGMENTO 6 --- CONTENEDOR (contrato final, definido UNA sola vez)
 # ===============================================================
 CONTENEDOR = {
-    "nombre": "engine",
-    "rol": "EN",
-    "version": "1.0",
+    "nombre": _NOMBRE,
+    "rol": _ROL,
+    "version": _VERSION,
     "requiere": [],
-    "descripcion": "Orquestador principal del sistema VPSI-TRUTH. Descubre módulos, obtiene orden de ejecución y los ejecuta.",
+    "descripcion": _DESCRIPCION,
     "capacidades": {
         "verificar": barrer,
         "evaluar": barrer,
@@ -180,20 +370,24 @@ CONTENEDOR = {
         "ejecutar": ejecutar_sistema,
         "autorizaciones": obtener_autorizaciones,
         "orden": obtener_orden_ejecucion,
+        "arrancar": arrancar,
+        "validar_salida": verificar_salida,
     },
 }
 
 # ===============================================================
-# EXPORTACIÓN
+# EXPORTACION
 # ===============================================================
-# Alias de compatibilidad (por si alguien aún importa Engine)
+# Alias de compatibilidad (por si alguien aun importa Engine)
 Engine = CONTENEDOR
 GlobalEngine = CONTENEDOR
 
 __all__ = [
+    "ArranqueError",
     "CONTENEDOR",
     "Engine",
     "GlobalEngine",
+    "arrancar",
     "barrer",
     "descubrir_modulos",
     "obtener_orden_ejecucion",
