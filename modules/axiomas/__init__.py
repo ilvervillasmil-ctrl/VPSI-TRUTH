@@ -325,6 +325,49 @@ def inventario(peticion=None) -> Dict:
         "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
     }
 
+def generatividad() -> Dict:
+    """
+    TR1 aplicado al cuerpo de declaraciones de AX.
+    Solo lee lo ya declarado. No inventa teoremas.
+    U1: residual de novedad como proxy de no-estancamiento.
+    """
+    decls, errores = recolectar()
+    # Θ: axiomas y teoremas con dominio (gobierna)
+    theta = [
+        d for d in decls
+        if d.get("tipo") in ("teorema", "axioma") and d.get("gobierna")
+    ]
+    n = len(theta)
+    pares_tot = n * (n - 1) // 2 if n >= 2 else 0
+    compatibles = 0
+    novedosos = 0
+
+    for i in range(n):
+        Di = set(theta[i].get("gobierna") or [])
+        for j in range(i + 1, n):
+            Dj = set(theta[j].get("gobierna") or [])
+            if not (Di & Dj):
+                continue
+            compatibles += 1
+            union = Di | Dj
+            if union > Di and union > Dj:
+                novedosos += 1
+
+    return {
+        "contenedor": CONTENEDOR.get("nombre", "axiomas"),
+        "theta_n": n,
+        "pares_totales": pares_tot,
+        "pares_compatibles": compatibles,
+        "pares_novedosos": novedosos,
+        "im_vs_theta": "GENERATIVO" if novedosos > n else "ESTANCADO",
+        "u1_proxy": "NO_STAGNANT" if novedosos > 0 else "REVISAR",
+        "errores_recoleccion": len(errores),
+        "nota": (
+            "Medición estructural TR1 sobre declaraciones AX. "
+            "Sin interpretación. Tru_total lo calculan CA/FO."
+        ),
+    }
+
 # ===============================================================
 # CONTENEDOR (Contrato del módulo)
 # ===============================================================
@@ -332,14 +375,18 @@ def inventario(peticion=None) -> Dict:
 CONTENEDOR = {
     "nombre": "axiomas",
     "rol": "AX",
-    "version": "1.0",
+    "version": "9.4",
     "requiere": [],
-    "descripcion": "Contenedor de axiomas. Rol AX. Detecta contradicciones directas y de cota.",
+    "descripcion": (
+        "Contenedor de axiomas. Rol AX. "
+        "Define y vigila axiomas, lemas, teoremas y corolarios. "
+        "No calcula Tru_total. Mide generatividad TR1 sobre su propio cuerpo."
+    ),
     "capacidades": {
-        "verificar": barrer,      # Capacidad para validar el módulo
-        "axiomas": axiomas,       # Devuelve declaraciones si el módulo es coherente
-        "evaluar": barrer,        # Igual que "verificar"
-        "inventario": inventario, # Capacidad de introspección
+        "verificar": barrer,
+        "inventario": inventario,
+        "axiomas": declaraciones,
+        "generatividad": generatividad,
     },
 }
 
@@ -349,11 +396,10 @@ CONTENEDOR = {
 
 __all__ = [
     "CONTENEDOR",
-    "barrer",
-    "axiomas",
-    "inventario",
-    "normalizar",
-    "contradiccion_directa",
-    "contradiccion_de_cota",
-    "verificar_salida",  # Nueva función para el Centinela
+    "AXIOMA", "LEMA", "TEOREMA", "COROLARIO", "TIPOS",
+    "normalizar", "clave", "ref",
+    "declaraciones", "cuerpos", "recolectar",
+    "contradiccion_directa", "contradiccion_de_cota",
+    "sin_gobernar", "barrer", "inventario",
+    "generatividad",
 ]
