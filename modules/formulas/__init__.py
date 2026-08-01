@@ -1,18 +1,10 @@
-"""
-VPSI-TRUTH --- modules/formulas/__init__.py
-
-Contenedor de fórmulas. Rol FO.
-Expone tru_ri y tru_total al Engine.
-Cada fórmula vive en su propio archivo y se descubre por el directorio.
-No asume acceso a R: solo opera sobre C, L, K (Axioma TA7).
-"""
-
 from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
 from fractions import Fraction
 from typing import Any, Callable, Dict, List
+from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 
 # ===============================================================
 # SEGMENTO 1 --- IDENTIDAD
@@ -21,8 +13,8 @@ CONTENEDOR = {
     "nombre": "formulas",
     "rol": "FO",
     "version": "1.0",
-    "requiere": ["CT"],  # Depende de constante (ALPHA, BETA)
-    "descripcion": "Expone tru_ri y tru_total. Descubre fórmulas por directorio.",
+    "requiere": ["CT"],  # Depende de constantes (ALPHA, BETA)
+    "descripcion": "Contenedor de fórmulas. Rol FO. Expone tru_ri y tru_total al Engine.",
 }
 
 _DIR = Path(__file__).parent
@@ -102,16 +94,28 @@ def _descubrir_formulas() -> Dict[str, Dict[str, Any]]:
     return registro
 
 # ===============================================================
-# SEGMENTO 7 --- API DEL CONTENEDOR (Contrato con el Engine)
+# SEGMENTO 7 --- ENGINE (Orquestador)
 # ===============================================================
 def barrer() -> Dict[str, Any]:
-    """Ejecuta todas las reglas y devuelve un informe."""
+    """
+    Ejecuta todas las reglas y devuelve un informe.
+    Orquesta la lógica del módulo:
+    1. Descubre fórmulas en el directorio.
+    2. Valida las reglas internas.
+    """
     faltas: List[str] = []
     for regla_fn in _REGLAS:
         try:
             faltas.extend(regla_fn() or [])
         except Exception as e:
             faltas.append(f"{regla_fn.__name__}: {type(e).__name__}: {e}")
+
+    # Enviar reporte a DiagnosticoGlobal si hay faltas (Reporte Omega)
+    if faltas:
+        DiagnosticoGlobal.recibir_reporte(
+            modulo="formulas",
+            errores=[{"tipo": "falta", "detalle": falta} for falta in faltas]
+        )
 
     return {
         "contenedor": CONTENEDOR["nombre"],
@@ -121,6 +125,20 @@ def barrer() -> Dict[str, Any]:
         "reglas": [r.__name__ for r in _REGLAS],
     }
 
+# ===============================================================
+# SEGMENTO 8 --- CENTINELA (Eyenet)
+# ===============================================================
+def verificar_salida(salida: Dict[str, Any]) -> bool:
+    """
+    Valida la salida del Engine (barrer).
+    - Si la salida es coherente, devuelve True.
+    - Si no lo es, ya se envió un reporte a DiagnosticoGlobal en barrer().
+    """
+    return salida.get("coherente", False)
+
+# ===============================================================
+# SEGMENTO 9 --- API DEL CONTENEDOR (Contrato con el Engine)
+# ===============================================================
 def inventario() -> Dict[str, Any]:
     """Devuelve metadatos del contenedor."""
     return {
@@ -136,7 +154,7 @@ def axiomas() -> List[Dict[str, Any]]:
     return _DECLARACIONES
 
 # ===============================================================
-# SEGMENTO 8 --- REGLAS (Validaciones internas)
+# SEGMENTO 10 --- REGLAS (Validaciones internas)
 # ===============================================================
 @regla
 def _validar_piso_formulas() -> List[str]:
@@ -156,7 +174,7 @@ def _validar_formulas_canónicas() -> List[str]:
     return faltas
 
 # ===============================================================
-# SEGMENTO 9 --- DECLARACIONES (Axiomas/Teoremas del módulo)
+# SEGMENTO 11 --- DECLARACIONES (Axiomas/Teoremas del módulo)
 # ===============================================================
 declarar({
     "id": "FO-1",
@@ -227,15 +245,32 @@ def _tru_total_wrapper(C, L, K):
     """Wrapper para tru_total (compatibilidad con el decorador)."""
     return tru_total(C, L, K)
 
+# ===============================================================
+# CONTENEDOR (Contrato final)
+# ===============================================================
 CONTENEDOR = {
     "nombre": "formulas",
     "rol": "FO",
     "version": "1.0",
-    "requiere": ["CT"],  # Depende de constante (ALPHA, BETA)
+    "requiere": ["CT"],  # Depende de constantes (ALPHA, BETA)
     "descripcion": "Contenedor de fórmulas. Rol FO. Expone tru_ri y tru_total al Engine.",
     "capacidades": {
-        "evaluar": "barrer",  # Operación principal de evaluación
-        "axiomas": "axiomas",  # Función que devuelve declaraciones axiomáticas
-        "inventario": "inventario",  # Función que devuelve metadatos
+        "verificar": barrer,      # Capacidad para validar el módulo
+        "evaluar": barrer,        # Igual que "verificar"
+        "axiomas": axiomas,       # Devuelve declaraciones axiomáticas
+        "inventario": inventario, # Devuelve metadatos
     }
 }
+
+# ===============================================================
+# EXPORTACIÓN
+# ===============================================================
+__all__ = [
+    "CONTENEDOR",
+    "barrer",
+    "axiomas",
+    "inventario",
+    "verificar_salida",  # Nueva función para el Centinela
+    "FormulaError",
+    "FormulaNoEncontradaError",
+]
