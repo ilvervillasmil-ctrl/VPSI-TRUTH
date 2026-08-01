@@ -26,7 +26,6 @@ class ArranqueError(Exception):
         """
         fallos_detectados = {}
         for mod, resultado in errores_modulos.items():
-            # Evalúa si el módulo reportó un error explícito en su estructura
             if isinstance(resultado, dict) and resultado.get("estado") == "error":
                 fallos_detectados[mod] = resultado
             elif resultado is False:
@@ -34,7 +33,7 @@ class ArranqueError(Exception):
 
         if fallos_detectados:
             return cls(
-                f"Fallo crítico en el arranque del sistema. Se detectaron errores en módulos.", 
+                "Fallo crítico en el arranque del sistema. Se detectaron errores en módulos.", 
                 fallos_detectados
             )
         return None
@@ -49,6 +48,13 @@ class Engine:
     """
 
     _MODULES_DIR = Path(__file__).parent.parent / "modules"
+
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor de inicialización que acepta cualquier argumento o configuración 
+        pasada por los tests o scripts externos del framework.
+        """
+        self.config = args[0] if args else kwargs.get("config", {})
 
     @classmethod
     def descubrir_modulos(cls) -> Dict[str, Any]:
@@ -101,7 +107,6 @@ class Engine:
                 except Exception as e:
                     resultados[modulo_name] = {"estado": "error", "detalle": str(e)}
 
-        # Conecta la verificación global con ArranqueError
         error_arranque = ArranqueError.verificar_y_construir(resultados)
         if error_arranque:
             raise error_arranque
