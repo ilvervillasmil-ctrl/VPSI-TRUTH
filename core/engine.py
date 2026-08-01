@@ -15,7 +15,7 @@ class ArranqueError(Exception):
     """Excepción lanzada cuando hay un error crítico de arranque en el sistema."""
     pass
 
-class Contenedor(TypedDict, total=False):
+class Contenedor(TypedDict, total=true):
     nombre: str
     rol: str
     version: str
@@ -34,7 +34,6 @@ class Engine:
 
     def __init__(self, invocador_id: Optional[str] = None, modules_dir: Optional[Path] = None, *args, **kwargs):
         """Constructor del Engine con compatibilidad total para harnesses de prueba y rutas personalizadas."""
-        self.invocador_id = invocador_id
         self.modules_dir = modules_dir or (Path(__file__).parent.parent / "modules")
         self._modulos_cache: Optional[Dict[str, Contenedor]] = None
         self.errores_carga: Dict[str, str] = {}
