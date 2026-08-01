@@ -71,35 +71,77 @@ jobs:
           EOF
 
       # ==========================================================
-      # COMPUERTA 2 --- BARRIDO AXIOMÁTICO
+      # COMPUERTA 2 --- BARRIDO AXIOMÁTICO (detalle de choques)
       # ==========================================================
-      - name: Barrido axiomático
+      - name: Barrido axiomático (choques y errores)
         run: |
           python - <<'EOF'
-          import sys, json
+          import sys
+          import json
           from pathlib import Path
           sys.path.insert(0, ".")
 
-          from core.engine import Engine, ArranqueError
+          from modules.axiomas import barrer
 
-          try:
-              eng = Engine(Path("modules"), invocador_id="core", strict=True)
-          except ArranqueError as e:
+          r = barrer()
+          Path("diagnostics").mkdir(exist_ok=True)
+          Path("diagnostics/axioms_report.json").write_text(
+              json.dumps(r, indent=2, ensure_ascii=False, default=str),
+              encoding="utf-8",
+          )
+
+          print("=" * 60)
+          print("AUDITORÍA AX — barrer()")
+          print("=" * 60)
+          print(f"coherente     : {r.get('coherente')}")
+          print(f"declaraciones : {r.get('declaraciones')}")
+          print(f"cuerpos       : {r.get('cuerpos')}")
+          print(f"errores       : {len(r.get('errores') or [])}")
+          print(f"choques       : {len(r.get('choques') or [])}")
+          print()
+
+          errores = r.get("errores") or []
+          if errores:
+              print("-" * 60)
+              print("ERRORES DE CARGA / NORMALIZACIÓN")
+              print("-" * 60)
+              for i, e in enumerate(errores, 1):
+                  print(f"[{i}] cuerpo={e.get('cuerpo')}")
+                  print(f"    razon={e.get('razon')}")
+                  print()
+
+          choques = r.get("choques") or []
+          if choques:
+              print("-" * 60)
+              print("CHOQUES AXIOMÁTICOS (bloques que se contradicen)")
+              print("-" * 60)
+              for i, c in enumerate(choques, 1):
+                  print(f"[{i}] tipo={c.get('tipo')}")
+                  if c.get("tipo") == "contradiccion_directa":
+                      print(f"    tripleta : {c.get('tripleta')}")
+                      print(f"    AFIRMA   : {c.get('afirma')}  ({c.get('afirma_tipo')})")
+                      print(f"      enunciado: {c.get('enunciado_afirma')}")
+                      print(f"    NIEGA    : {c.get('niega')}  ({c.get('niega_tipo')})")
+                      print(f"      enunciado: {c.get('enunciado_niega')}")
+                  elif c.get("tipo") == "contradiccion_de_cota":
+                      print(f"    sujeto   : {c.get('sujeto')}")
+                      print(f"    relacion : {c.get('relacion')}")
+                      print(f"    cotas    : {c.get('cotas')}")
+                  else:
+                      print(f"    raw: {c}")
+                  print()
+
+          if not r.get("coherente", False):
               print("=" * 60)
               print("CONTRADICCIÓN AXIOMÁTICA --- EL SISTEMA NO ARRANCA")
               print("=" * 60)
-              print(e)
+              if not choques and not errores:
+                  print("(barrer reportó incoherente sin detalle; revisar loader de cuerpos)")
               sys.exit(1)
 
-          informe = eng.informe_axiomas or {}
-          Path("diagnostics").mkdir(exist_ok=True)
-          Path("diagnostics/axioms_report.json").write_text(
-              json.dumps(informe, indent=2, ensure_ascii=False)
-          )
-
-          print(f"OK  axiomatización coherente")
-          print(f"    declaraciones: {informe.get('declaraciones', '?')}")
-          print(f"    choques: {len(informe.get('choques', []))}")
+          print("OK  axiomatización coherente")
+          print(f"    declaraciones: {r.get('declaraciones', '?')}")
+          print(f"    choques: 0")
           EOF
 
       # ==========================================================
@@ -156,7 +198,6 @@ jobs:
 
           fallos = []
 
-          # 1. Deben rechazar float
           try:
               tru_ri(0.5, Fraction(1), Fraction(1))
               fallos.append("tru_ri aceptó float")
@@ -173,7 +214,6 @@ jobs:
           except Exception as e:
               fallos.append(f"tru_total con float lanzó {type(e).__name__}: {e}")
 
-          # 2. Con Fraction válidos debe funcionar
           try:
               ri = tru_ri(Fraction(1), Fraction(1), Fraction(1))
               tt = tru_total(Fraction(1), Fraction(1), Fraction(1))
@@ -184,13 +224,9 @@ jobs:
           except Exception as e:
               fallos.append(f"Cálculo con Fraction falló: {e}")
 
-          # 3. Piso estructural (Teorema 17)
           tt0 = tru_total(Fraction(0), Fraction(0), Fraction(0))
           if tt0 != BETA:
               fallos.append(f"Piso incorrecto: {tt0} != {BETA}")
-
-          # 4. Tru_Ri = 1 es válido (sincronización perfecta)
-          #    Tru_total llega a 1 correctamente
 
           if fallos:
               print("FALLO: guarda de tipo / dominio")
@@ -209,7 +245,6 @@ jobs:
           python - <<'EOF'
           import sys
           from pathlib import Path
-          from fractions import Fraction
           sys.path.insert(0, ".")
 
           from core.engine import Engine, ArranqueError
@@ -339,32 +374,6 @@ jobs:
           EOF
 
       # ==========================================================
-      # AUDITORÍA DE LIBRERÍA DE AXIOMAS
-      # ==========================================================
-      - name: Auditar librería de axiomas
-        run: |
-          python - <<'EOF'
-          import sys, json
-          from pathlib import Path
-          sys.path.insert(0, ".")
-
-          from modules.axiomas import barrer
-
-          print("=" * 60)
-          print("AUDITORÍA PROFUNDA DE LA LIBRERÍA DE AXIOMAS")
-          print("=" * 60)
-
-          informe = barrer()
-          print(json.dumps(informe, indent=2, ensure_ascii=False))
-
-          if not informe.get("coherente", False):
-              print("FALLO: librería de axiomas incoherente")
-              sys.exit(1)
-
-          print("OK  librería de axiomas coherente")
-          EOF
-
-      # ==========================================================
       # SUBIR ARTEFACTOS
       # ==========================================================
       - name: Upload artifacts
@@ -378,68 +387,6 @@ jobs:
             diagnostics/coherence_history.json
             diagnostics/axioms_report.json
             diagnostics/OMEGA_REPORT.md
-
-            # ==========================================================
-      # AUDITORÍA AX — choques y errores explícitos
-      # ==========================================================
-      - name: Auditoría axiomática (choques y errores)
-        run: |
-          python - <<'EOF'
-          import sys
-          sys.path.insert(0, ".")
-
-          from modules.axiomas import barrer
-
-          r = barrer()
-          print("=" * 60)
-          print("AUDITORÍA AX — barrer()")
-          print("=" * 60)
-          print(f"coherente     : {r['coherente']}")
-          print(f"declaraciones : {r['declaraciones']}")
-          print(f"cuerpos       : {r.get('cuerpos')}")
-          print(f"errores       : {len(r['errores'])}")
-          print(f"choques       : {len(r['choques'])}")
-          print()
-
-          if r["errores"]:
-              print("-" * 60)
-              print("ERRORES DE CARGA / NORMALIZACIÓN")
-              print("-" * 60)
-              for i, e in enumerate(r["errores"], 1):
-                  print(f"[{i}] cuerpo={e.get('cuerpo')}")
-                  print(f"    razon={e.get('razon')}")
-                  print()
-
-          if r["choques"]:
-              print("-" * 60)
-              print("CHOQUES AXIOMÁTICOS (bloques que se contradicen)")
-              print("-" * 60)
-              for i, c in enumerate(r["choques"], 1):
-                  print(f"[{i}] tipo={c.get('tipo')}")
-                  if c.get("tipo") == "contradiccion_directa":
-                      print(f"    tripleta : {c.get('tripleta')}")
-                      print(f"    AFIRMA   : {c.get('afirma')}  ({c.get('afirma_tipo')})")
-                      print(f"      enunciado: {c.get('enunciado_afirma')}")
-                      print(f"    NIEGA    : {c.get('niega')}  ({c.get('niega_tipo')})")
-                      print(f"      enunciado: {c.get('enunciado_niega')}")
-                  elif c.get("tipo") == "contradiccion_de_cota":
-                      print(f"    sujeto   : {c.get('sujeto')}")
-                      print(f"    relacion : {c.get('relacion')}")
-                      print(f"    cotas    : {c.get('cotas')}")
-                  else:
-                      print(f"    raw: {c}")
-                  print()
-
-          if not r["coherente"]:
-              print("=" * 60)
-              print("CONTRADICCIÓN AXIOMÁTICA --- EL SISTEMA NO ARRANCA")
-              print("=" * 60)
-              if not r["choques"] and not r["errores"]:
-                  print("(barrer reportó incoherente sin detalle; revisar loader de cuerpos)")
-              sys.exit(1)
-
-          print("AX coherente — OK")
-          EOF
 
       # ==========================================================
       # COMMIT DE HISTORIA
