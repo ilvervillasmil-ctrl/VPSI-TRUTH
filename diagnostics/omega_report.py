@@ -109,6 +109,7 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
         out.append("")
         return out
 
+    # capa operativa (repo)
     out.append(f"  |Θ| (AX)           : {g.get('theta_n', '—')}")
     out.append(f"  pares totales      : {g.get('pares_totales', '—')}")
     out.append(f"  pares compatibles  : {g.get('pares_compatibles', '—')}")
@@ -119,12 +120,9 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
     out.append(f"  U1                 : {g.get('u1_estado', '—')}")
     if g.get("por_tipo_theta"):
         out.append(f"  por_tipo_theta     : {g.get('por_tipo_theta')}")
-    if g.get("nota"):
-        out.append(f"  nota               : {g['nota']}")
-    out.append("")
-    return out
 
-    can = (g or {}).get("canonica") or {}
+    # capa canónica (paper TR1) — ANTES del return
+    can = g.get("canonica") or {}
     if can:
         out.append("  --- capa canónica (paper TR1) ---")
         out.append(f"  |Θ|_can           : {can.get('theta_n', '—')} / 24")
@@ -133,6 +131,14 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
         out.append(f"  ids_faltantes     : {can.get('ids_faltantes', [])}")
         out.append(f"  ids_sin_dominio   : {can.get('ids_sin_dominio', [])}")
         out.append(f"  dominios_can      : {can.get('dominios', [])}")
+    else:
+        out.append("  --- capa canónica (paper TR1) ---")
+        out.append("  (sin datos canónicos en el paquete)")
+
+    if g.get("nota"):
+        out.append(f"  nota               : {g['nota']}")
+    out.append("")
+    return out
         
 # =============================================================================
 # CONSTRUCCIÓN DEL MAPA DE TRABAJO
