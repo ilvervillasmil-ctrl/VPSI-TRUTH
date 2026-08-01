@@ -8,6 +8,38 @@ import importlib
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+
+class ArranqueError(Exception):
+    """
+    Excepción crítica de arranque que centraliza, verifica y reporta 
+    los errores provenientes de todos los módulos del repositorio.
+    """
+    def __init__(self, mensaje: str, errores_modulos: Optional[Dict[str, Any]] = None):
+        super().__init__(mensaje)
+        self.errores_modulos = errores_modulos or {}
+
+    @classmethod
+    def verificar_y_construir(cls, errores_modulos: Dict[str, Any]) -> Optional["ArranqueError"]:
+        """
+        Inspecciona los reportes de los módulos y construye la excepción 
+        si se detectan fallos o estados de error estructural.
+        """
+        fallos_detectados = {}
+        for mod, resultado in errores_modulos.items():
+            # Evalúa si el módulo reportó un error explícito en su estructura
+            if isinstance(resultado, dict) and resultado.get("estado") == "error":
+                fallos_detectados[mod] = resultado
+            elif resultado is False:
+                fallos_detectados[mod] = {"estado": "error", "detalle": "El módulo devolvió False en la verificación."}
+
+        if fallos_detectados:
+            return cls(
+                f"Fallo crítico en el arranque del sistema. Se detectaron errores en módulos.", 
+                fallos_detectados
+            )
+        return None
+
+
 class Engine:
     """
     Orquestador principal del sistema VPSI-TRUTH.
@@ -55,7 +87,8 @@ class Engine:
     @classmethod
     def ejecutar_sistema(cls) -> Dict[str, Any]:
         """
-        Ejecuta todos los módulos y recopila sus reportes internos.
+        Ejecuta la verificación de todos los módulos, recopila sus reportes 
+        y lanza ArranqueError si algún módulo presenta fallos.
         """
         modulos = cls.descubrir_modulos()
         resultados = {}
@@ -63,7 +96,15 @@ class Engine:
         for modulo_name, contenedor in modulos.items():
             if "verificar" in contenedor.get("capacidades", {}):
                 verificar_func = contenedor["capacidades"]["verificar"]
-                resultados[modulo_name] = verificar_func()
+                try:
+                    resultados[modulo_name] = verificar_func()
+                except Exception as e:
+                    resultados[modulo_name] = {"estado": "error", "detalle": str(e)}
+
+        # Conecta la verificación global con ArranqueError
+        error_arranque = ArranqueError.verificar_y_construir(resultados)
+        if error_arranque:
+            raise error_arranque
 
         return resultados
 
