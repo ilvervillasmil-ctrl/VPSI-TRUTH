@@ -22,9 +22,9 @@ CONTENEDOR = {
         "comprueba que no se contradigan entre sí."
     ),
     "capacidades": {
-        "verificar": "barrer",      # Capacidad para validar el módulo
-        "inventario": "inventario", # Capacidad de introspección
-    }
+        "verificar": barrer,
+        "inventario": inventario,
+    },
 }
 
 _DIR = Path(__file__).parent
