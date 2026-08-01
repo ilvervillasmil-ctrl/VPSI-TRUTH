@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from fractions import Fraction
 from typing import Dict, List, Optional, Any
-from core.diagnostico import DiagnosticoGlobal
 
 
 # ===============================================================
@@ -14,16 +13,23 @@ def calcular(peticion: Dict[str, Any]) -> Dict[str, Optional[Fraction]]:
     Las implementaciones concretas viven en archivos dentro de calculator/.
     No calcula Tru_total (eso es FO).
     """
-    errores = []
+    errores: List[str] = []
     C = L = K = None
     metodo = peticion.get("metodo", "operacional")
 
     # --- Calcular C ---
     try:
         if metodo == "teorico":
-            C = _calcular_c_teorico(peticion.get("mensaje")) if peticion.get("mensaje") else None
+            C = (
+                _calcular_c_teorico(peticion.get("mensaje"))
+                if peticion.get("mensaje")
+                else None
+            )
         else:
-            C = _calcular_c_operacional(peticion.get("compromisos"), peticion.get("contradicciones"))
+            C = _calcular_c_operacional(
+                peticion.get("compromisos"),
+                peticion.get("contradicciones"),
+            )
     except Exception as e:
         errores.append(f"Error en C: {str(e)}")
         C = None
@@ -31,9 +37,16 @@ def calcular(peticion: Dict[str, Any]) -> Dict[str, Optional[Fraction]]:
     # --- Calcular L ---
     try:
         if metodo == "teorico":
-            L = _calcular_l_teorico(peticion.get("mensaje")) if peticion.get("mensaje") else None
+            L = (
+                _calcular_l_teorico(peticion.get("mensaje"))
+                if peticion.get("mensaje")
+                else None
+            )
         else:
-            L = _calcular_l_operacional(peticion.get("posturas"), peticion.get("reversiones"))
+            L = _calcular_l_operacional(
+                peticion.get("posturas"),
+                peticion.get("reversiones"),
+            )
     except Exception as e:
         errores.append(f"Error en L: {str(e)}")
         L = None
@@ -45,7 +58,10 @@ def calcular(peticion: Dict[str, Any]) -> Dict[str, Optional[Fraction]]:
         else:
             if metodo == "teorico":
                 K = (
-                    _calcular_k_teorico(peticion.get("mensaje"), peticion.get("contexto"))
+                    _calcular_k_teorico(
+                        peticion.get("mensaje"),
+                        peticion.get("contexto"),
+                    )
                     if peticion.get("mensaje")
                     else None
                 )
@@ -59,12 +75,22 @@ def calcular(peticion: Dict[str, Any]) -> Dict[str, Optional[Fraction]]:
         errores.append(f"Error en K: {str(e)}")
         K = None
 
-    # Enviar reporte si hay errores
+    # Canal DG opcional: acumula alertas si el núcleo lo expone; no es obligatorio
     if errores:
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="calculator",
-            errores=[{"tipo": "error_calculo", "detalle": error} for error in errores],
-        )
+        try:
+            from core.diagnostico import DiagnosticoGlobal
+
+            recibir = getattr(DiagnosticoGlobal, "recibir_reporte", None)
+            if callable(recibir):
+                recibir(
+                    "calculator",
+                    [
+                        {"tipo": "error_calculo", "detalle": error}
+                        for error in errores
+                    ],
+                )
+        except Exception:
+            pass
 
     return {"C": C, "L": L, "K": K}
 
@@ -86,8 +112,6 @@ def verificar_salida(salida: Dict[str, Optional[Fraction]]) -> bool:
 # ===============================================================
 # CONTENEDOR (Contrato del módulo — al final)
 # ===============================================================
-# Contrato literal para el Engine:
-# conoce este mapa y solo actúa según lo que aquí se declara.
 CONTENEDOR = {
     "nombre": "calculator",
     "rol": "CA",
