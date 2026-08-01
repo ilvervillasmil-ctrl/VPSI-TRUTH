@@ -6,17 +6,17 @@ from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
 # ===============================================================
 CONTENEDOR = {
     "nombre": "verificacion",
-    "rol": "VX",  # Rol de verificación y auto-auditoría transversal
+    "rol": "VX",
     "version": "1.0.0",
-    "requiere": ["codigo_fuente", "declaraciones_axiomaticas"],
+    "requiere": [],  # o ["AX"] si quieres dependencia formal
     "descripcion": (
         "Contenedor de verificación. Rol VX. "
         "Auto-ejecutor de contraste axiomático sobre código y contenedores."
     ),
     "capacidades": {
-        "verificar": "auditar_sistema",  # Capacidad para auditar el sistema
-        "axiomas": "axiomas",           # Devuelve axiomas del módulo
-    }
+        "verificar": auditar_sistema,
+        "axiomas": axiomas,
+    },
 }
 
 # ===============================================================
