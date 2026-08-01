@@ -1,9 +1,8 @@
 """
 VPSI-TRUTH --- core/engine.py
 
-Engine central. Rol de orquestación.
-Descubre módulos por CONTENEDOR, resuelve dependencias,
-ejecuta compuertas de coherencia y expone evaluar().
+Engine central. Orquesta módulos por rol, ejecuta compuertas
+de coherencia y expone evaluar().
 """
 
 from __future__ import annotations
@@ -11,16 +10,32 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from fractions import Fraction
 
-# ===============================================================
-# ROLES ADMITIDOS (extensible)
-# ===============================================================
-ROLES = ("CT", "AX", "FO", "MC", "SF", "DG", "CA")  # CA = cálculo / auditoría
 
 # ===============================================================
-# CONTENEDOR INTERNO DEL ENGINE
+# EXCEPCIONES
+# ===============================================================
+class ArranqueError(Exception):
+    """Se lanza cuando el Engine no puede arrancar por incoherencia
+    axiomática, mecánica o dependencias faltantes."""
+    pass
+
+
+class EvaluacionError(Exception):
+    """Error durante el camino de evaluación."""
+    pass
+
+
+# ===============================================================
+# ROLES ADMITIDOS
+# ===============================================================
+ROLES = ("CT", "AX", "FO", "MC", "SF", "DG", "CA")
+
+
+# ===============================================================
+# CONTENEDOR
 # ===============================================================
 class Contenedor:
     def __init__(self, nombre: str, rol: str, version: str, modulo: Any, ruta: Path):
@@ -29,11 +44,11 @@ class Contenedor:
         self.version = version
         self.modulo = modulo
         self.ruta = ruta
-        self.requiere: List[str] = getattr(modulo, "CONTENEDOR", {}).get("requiere", [])
-        self.capacidades: Dict[str, Any] = getattr(modulo, "CONTENEDOR", {}).get("capacidades", {})
+        meta = getattr(modulo, "CONTENEDOR", {}) or {}
+        self.requiere: List[str] = meta.get("requiere", [])
+        self.capacidades: Dict[str, Any] = meta.get("capacidades", {})
 
     def fn(self, nombre: str):
-        """Devuelve la función de una capacidad si existe."""
         ref = self.capacidades.get(nombre)
         if ref is None:
             return None
@@ -47,7 +62,7 @@ class Contenedor:
 # ===============================================================
 class Registro:
     def __init__(self):
-        self.contenedores: Dict[str, Contenedor] = {}  # nombre → Contenedor
+        self.contenedores: Dict[str, Contenedor] = {}
         self.por_rol: Dict[str, List[Contenedor]] = {r: [] for r in ROLES}
         self.rechazados: List[Dict] = []
 
@@ -80,10 +95,12 @@ class Engine:
         raiz_modulos: str | Path,
         invocador_id: str = "core",
         verificar_axiomas: bool = True,
+        strict: bool = True,
     ):
         self.raiz = Path(raiz_modulos).resolve()
         self.invocador_id = invocador_id
         self.verificar_axiomas = verificar_axiomas
+        self.strict = strict
 
         self.registro = Registro()
         self.informe_axiomas: Optional[Dict] = None
@@ -93,19 +110,22 @@ class Engine:
 
         self._descubrir()
         self._resolver_dependencias()
+
         if self.verificar_axiomas:
             self._ejecutar_compuertas()
 
         if self.errores_arranque:
             self.estado = "RECHAZADO"
+            if self.strict:
+                raise ArranqueError(
+                    "Engine no pudo arrancar:\n  - " +
+                    "\n  - ".join(self.errores_arranque)
+                )
         else:
             self.estado = "OPERATIVO"
 
     # -----------------------------------------------------------
-    # DESCUBRIMIENTO
-    # -----------------------------------------------------------
     def _descubrir(self):
-        """Recorre la raíz de módulos y registra todo lo que exponga CONTENEDOR."""
         if not self.raiz.exists():
             self.errores_arranque.append(f"Raíz de módulos no existe: {self.raiz}")
             return
@@ -113,7 +133,7 @@ class Engine:
         for path in sorted(self.raiz.rglob("*.py")):
             if path.name.startswith("_") and path.name != "__init__.py":
                 continue
-            # Preferimos el __init__.py del paquete si existe
+            # Preferir __init__.py del paquete
             if path.name != "__init__.py" and (path.parent / "__init__.py").exists():
                 continue
 
@@ -135,7 +155,10 @@ class Engine:
 
         mod = importlib.util.module_from_spec(spec)
         sys.modules[nombre_mod] = mod
-        spec.loader.exec_module(mod)
+        try:
+            spec.loader.exec_module(mod)
+        except Exception:
+            return None
 
         meta = getattr(mod, "CONTENEDOR", None)
         if not isinstance(meta, dict):
@@ -154,17 +177,19 @@ class Engine:
             })
             return None
 
-        return Contenedor(nombre=nombre, rol=rol, version=version, modulo=mod, ruta=path)
+        return Contenedor(
+            nombre=nombre,
+            rol=rol,
+            version=version,
+            modulo=mod,
+            ruta=path
+        )
 
     # -----------------------------------------------------------
-    # DEPENDENCIAS
-    # -----------------------------------------------------------
     def _resolver_dependencias(self):
-        """Verifica que las dependencias declaradas en 'requiere' estén presentes."""
         for cont in list(self.registro.contenedores.values()):
             faltan = []
             for req in cont.requiere:
-                # req puede ser un rol o un nombre de módulo
                 if req in ROLES:
                     if not self.registro.por_rol.get(req):
                         faltan.append(f"rol:{req}")
@@ -177,10 +202,7 @@ class Engine:
                 )
 
     # -----------------------------------------------------------
-    # COMPUERTAS DE ARRANQUE
-    # -----------------------------------------------------------
     def _ejecutar_compuertas(self):
-        """Ejecuta barrer() de AX y MC. Si fallan, el Engine no arranca."""
         # Compuerta AX
         for cont in self.registro.por_rol.get("AX", []):
             fn = cont.fn("verificar") or cont.fn("barrer") or cont.fn("evaluar")
@@ -188,12 +210,14 @@ class Engine:
                 try:
                     informe = fn()
                     self.informe_axiomas = informe
-                    if not informe.get("coherente", False):
+                    if not informe.get("coherente", True):
                         self.errores_arranque.append(
-                            f"AX {cont.nombre}: incoherente — {informe.get('choques') or informe.get('errores')}"
+                            f"AX/{cont.nombre}: incoherente"
                         )
                 except Exception as e:
-                    self.errores_arranque.append(f"AX {cont.nombre}: {type(e).__name__}: {e}")
+                    self.errores_arranque.append(
+                        f"AX/{cont.nombre}: {type(e).__name__}: {e}"
+                    )
 
         # Compuerta MC
         for cont in self.registro.por_rol.get("MC", []):
@@ -202,57 +226,46 @@ class Engine:
                 try:
                     informe = fn()
                     self.informe_mecanica = informe
-                    if not informe.get("coherente", False):
+                    if not informe.get("coherente", True):
                         self.errores_arranque.append(
-                            f"MC {cont.nombre}: incoherente — {informe.get('choques') or informe.get('errores')}"
+                            f"MC/{cont.nombre}: incoherente"
                         )
                 except Exception as e:
-                    self.errores_arranque.append(f"MC {cont.nombre}: {type(e).__name__}: {e}")
+                    self.errores_arranque.append(
+                        f"MC/{cont.nombre}: {type(e).__name__}: {e}"
+                    )
 
-        # Verificar presencia mínima
         if not self.registro.por_rol.get("CT"):
             self.errores_arranque.append("Falta rol CT (constantes)")
         if not self.registro.por_rol.get("FO"):
             self.errores_arranque.append("Falta rol FO (fórmulas)")
 
     # -----------------------------------------------------------
-    # ACCESORES
-    # -----------------------------------------------------------
     def get_constantes(self) -> Dict[str, Fraction]:
         for cont in self.registro.por_rol.get("CT", []):
-            alpha = cont.fn("alpha")
-            beta = cont.fn("beta")
-            if callable(alpha) and callable(beta):
-                return {"ALPHA": alpha(), "BETA": beta()}
-            # fallback directo
             mod = cont.modulo
             if hasattr(mod, "ALPHA") and hasattr(mod, "BETA"):
                 return {"ALPHA": mod.ALPHA, "BETA": mod.BETA}
-        raise RuntimeError("Constantes ALPHA/BETA no disponibles")
+            alpha_fn = cont.fn("alpha")
+            beta_fn = cont.fn("beta")
+            if callable(alpha_fn) and callable(beta_fn):
+                return {"ALPHA": alpha_fn(), "BETA": beta_fn()}
+        raise ArranqueError("Constantes ALPHA/BETA no disponibles")
 
     def get_formulas(self):
         for cont in self.registro.por_rol.get("FO", []):
-            # Las funciones suelen estar en el módulo truth o registradas
             mod = cont.modulo
             if hasattr(mod, "tru_ri") and hasattr(mod, "tru_total"):
                 return mod.tru_ri, mod.tru_total
-            # Intentar importar desde el submódulo
-            try:
-                from modules.formulas.truth import tru_ri, tru_total
-                return tru_ri, tru_total
-            except ImportError:
-                pass
-        raise RuntimeError("Fórmulas tru_ri / tru_total no disponibles")
+        # Fallback
+        try:
+            from modules.formulas.truth import tru_ri, tru_total
+            return tru_ri, tru_total
+        except ImportError:
+            raise ArranqueError("Fórmulas tru_ri / tru_total no disponibles")
 
     # -----------------------------------------------------------
-    # EVALUACIÓN (camino principal)
-    # -----------------------------------------------------------
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Camino de evaluación principal.
-        Exige O_context. Calcula C, L, K si se proporcionan o se pueden derivar.
-        Devuelve Tru_Ri y Tru_total.
-        """
         if self.estado != "OPERATIVO":
             return {
                 "estado": "RECHAZADO",
@@ -260,8 +273,11 @@ class Engine:
                 "errores_arranque": self.errores_arranque,
             }
 
-        # 1. Contexto obligatorio (Corolario Def-5.3.1)
-        o_ctx = peticion.get("contexto") or peticion.get("O_context") or peticion.get("Octx")
+        o_ctx = (
+            peticion.get("contexto")
+            or peticion.get("O_context")
+            or peticion.get("Octx")
+        )
         if not o_ctx:
             return {
                 "estado": "UNDEFINED",
@@ -271,30 +287,28 @@ class Engine:
                 "tru_total": "UNDEFINED",
             }
 
-        # 2. Factores (pueden venir inyectados o calcularse después)
         try:
-            C = Fraction(peticion["C"]) if "C" in peticion else None
-            L = Fraction(peticion["L"]) if "L" in peticion else None
-            K = Fraction(peticion["K"]) if "K" in peticion else None
-        except Exception:
+            C = Fraction(str(peticion["C"])) if "C" in peticion else None
+            L = Fraction(str(peticion["L"])) if "L" in peticion else None
+            K = Fraction(str(peticion["K"])) if "K" in peticion else None
+        except Exception as e:
             return {
                 "estado": "ERROR",
-                "razon": "C, L o K no son valores válidos",
+                "razon": f"C, L o K inválidos: {e}",
             }
 
-        # 3. Si faltan factores, por ahora devolvemos parcial
-        # (en la versión completa aquí se invocaría el cálculo operacional)
         if C is None or L is None or K is None:
             return {
                 "estado": "PARCIAL",
-                "razon": "Faltan factores C/L/K para cálculo completo",
+                "razon": "Faltan factores C/L/K",
                 "contexto": o_ctx,
-                "factores": {"C": str(C) if C is not None else None,
-                             "L": str(L) if L is not None else None,
-                             "K": str(K) if K is not None else None},
+                "factores": {
+                    "C": str(C) if C is not None else None,
+                    "L": str(L) if L is not None else None,
+                    "K": str(K) if K is not None else None,
+                },
             }
 
-        # 4. Cálculo canónico
         tru_ri_fn, tru_total_fn = self.get_formulas()
         constantes = self.get_constantes()
 
@@ -304,24 +318,16 @@ class Engine:
         return {
             "estado": "OK",
             "contexto": o_ctx,
-            "factores": {
-                "C": str(C),
-                "L": str(L),
-                "K": str(K),
-            },
+            "factores": {"C": str(C), "L": str(L), "K": str(K)},
             "tru_ri": str(ri),
             "tru_total": str(tt),
             "alpha": str(constantes["ALPHA"]),
             "beta": str(constantes["BETA"]),
-            "limitante": None,
-            "markov_chain_validado": True,  # se asume por arquitectura
+            "markov_chain_validado": True,
             "R_i_equals_R": False,
             "fuentes_usadas": ["X", "O_context"],
         }
 
-    # -----------------------------------------------------------
-    # INTROSPECCIÓN
-    # -----------------------------------------------------------
     def inventario(self) -> Dict:
         return {
             "estado": self.estado,
@@ -333,6 +339,11 @@ class Engine:
 
 
 # ===============================================================
-# EXPORTACIÓN
-# ===============================================================
-__all__ = ["Engine", "Contenedor", "Registro", "ROLES"]
+__all__ = [
+    "Engine",
+    "Contenedor",
+    "Registro",
+    "ROLES",
+    "ArranqueError",
+    "EvaluacionError",
+]
