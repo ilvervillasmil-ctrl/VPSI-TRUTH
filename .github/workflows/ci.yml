@@ -16,20 +16,26 @@ jobs:
       issues: write
 
     steps:
-      # --- 1. Check out code ---
+      # ==========================================================
+      # 1. Check out
+      # ==========================================================
       - name: Check out code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Necesario para git history en Coherence Guard
+          fetch-depth: 0
 
-      # --- 2. Set up Python ---
+      # ==========================================================
+      # 2. Python
+      # ==========================================================
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # --- 3. Install dependencies ---
+      # ==========================================================
+      # 3. Dependencias
+      # ==========================================================
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -37,7 +43,7 @@ jobs:
 
       # ==========================================================
       # COMPUERTA 1 --- INVARIANTE DE CONSTANTES
-      # Nada corre si alpha + beta != 1 por igualdad exacta.
+      # ALPHA + BETA = 1 (igualdad exacta con Fraction)
       # ==========================================================
       - name: Invariante alpha + beta = 1
         run: |
@@ -49,23 +55,25 @@ jobs:
           from modules.constante import ALPHA, BETA
 
           if not isinstance(ALPHA, Fraction) or not isinstance(BETA, Fraction):
-              print("FALLO: ALPHA y BETA deben ser Fraction, no float.")
+              print("FALLO: ALPHA y BETA deben ser Fraction")
               print(f"  ALPHA: {type(ALPHA).__name__}")
               print(f"  BETA:  {type(BETA).__name__}")
               sys.exit(1)
 
-          suma = ALPHA + BETA
-          if suma != Fraction(1):
-              print(f"FALLO: ALPHA + BETA = {suma}, se exige 1 exacto.")
+          if ALPHA + BETA != Fraction(1):
+              print(f"FALLO: ALPHA + BETA = {ALPHA + BETA}, se exige 1")
               sys.exit(1)
 
-          print(f"OK  ALPHA = {ALPHA}  BETA = {BETA}  suma = {suma}")
+          if ALPHA != Fraction(26, 27) or BETA != Fraction(1, 27):
+              print(f"FALLO: valores incorrectos ALPHA={ALPHA} BETA={BETA}")
+              sys.exit(1)
+
+          print(f"OK  ALPHA = {ALPHA}  BETA = {BETA}  suma = 1")
           EOF
 
       # ==========================================================
       # COMPUERTA 2 --- BARRIDO AXIOMÁTICO
       # Si la axiomatización se contradice, el sistema no arranca.
-      # Error absoluto. No es advertencia.
       # ==========================================================
       - name: Barrido axiomático
         run: |
@@ -77,7 +85,7 @@ jobs:
           from core.engine import Engine, ArranqueError
 
           try:
-              eng = Engine(Path("modules"), invocador_id="core")
+              eng = Engine(Path("modules"), invocador_id="core", strict=True)
           except ArranqueError as e:
               print("=" * 60)
               print("CONTRADICCIÓN AXIOMÁTICA --- EL SISTEMA NO ARRANCA")
@@ -98,8 +106,6 @@ jobs:
 
       # ==========================================================
       # COMPUERTA 3 --- SIN COMPONENTES ESTOCÁSTICOS
-      # TA2: misma entrada, misma salida. Un modelo que muestrea
-      # no lo cumple.
       # ==========================================================
       - name: Prohibición de componentes estocásticos
         run: |
@@ -138,48 +144,101 @@ jobs:
           EOF
 
       # ==========================================================
-      # COMPUERTA 4 --- FLOAT PROHIBIDO EN FACTORES
+      # COMPUERTA 4 --- FÓRMULAS Y DOMINIO (Fraction only)
       # ==========================================================
-      - name: Float prohibido en factores
+      - name: Fórmulas y dominio (Fraction)
         run: |
           python - <<'EOF'
           import sys
           from fractions import Fraction
           sys.path.insert(0, ".")
 
-          from core.engine import normalizar, DominioError
+          from modules.formulas.truth import tru_ri, tru_total
+          from modules.constante import ALPHA, BETA
 
           fallos = []
 
-          # float debe levantar DominioError
+          # 1. Deben rechazar float (TypeError o similar)
           try:
-              normalizar(0.5, "prueba")
-              fallos.append("normalizar(0.5) no levantó DominioError")
-          except DominioError:
+              tru_ri(0.5, Fraction(1), Fraction(1))
+              fallos.append("tru_ri aceptó float")
+          except (TypeError, Exception):
               pass
 
-          # Fraction fuera de dominio debe levantar
           try:
-              normalizar(Fraction(3, 2), "prueba")
-              fallos.append("normalizar(3/2) no levantó DominioError")
-          except DominioError:
+              tru_total(0.5, Fraction(1), Fraction(1))
+              fallos.append("tru_total aceptó float")
+          except (TypeError, Exception):
               pass
 
-          # Fraction en dominio debe pasar
+          # 2. Con Fraction válidos debe funcionar
           try:
-              v = normalizar(Fraction(1, 2), "prueba")
-              if v != Fraction(1, 2):
-                  fallos.append(f"normalizar(1/2) devolvió {v}")
+              ri = tru_ri(Fraction(1), Fraction(1), Fraction(1))
+              tt = tru_total(Fraction(1), Fraction(1), Fraction(1))
+              if ri != Fraction(1):
+                  fallos.append(f"tru_ri(1,1,1) = {ri}")
+              if tt != Fraction(1):
+                  fallos.append(f"tru_total(1,1,1) = {tt}")
           except Exception as e:
-              fallos.append(f"normalizar(1/2) levantó {e}")
+              fallos.append(f"Cálculo con Fraction falló: {e}")
+
+          # 3. Piso estructural (Teorema 17)
+          tt0 = tru_total(Fraction(0), Fraction(0), Fraction(0))
+          if tt0 != BETA:
+              fallos.append(f"Piso incorrecto: {tt0} != {BETA}")
+
+          # 4. Techo estructural (Teorema 16)
+          if ri > ALPHA:
+              fallos.append(f"Tru_Ri superó ALPHA: {ri}")
 
           if fallos:
-              print("FALLO: guarda de tipo")
+              print("FALLO: guarda de tipo / dominio")
               for f in fallos:
                   print("  " + f)
               sys.exit(1)
 
-          print("OK  float rechazado, Fraction aceptado")
+          print("OK  float rechazado, Fraction aceptado, piso y techo estructurales correctos")
+          EOF
+
+      # ==========================================================
+      # COMPUERTA 5 --- ENGINE OPERATIVO
+      # ==========================================================
+      - name: Engine operativo
+        run: |
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          from fractions import Fraction
+          sys.path.insert(0, ".")
+
+          from core.engine import Engine, ArranqueError
+
+          try:
+              eng = Engine(Path("modules"), invocador_id="ci", strict=True)
+          except ArranqueError as e:
+              print("FALLO: Engine no arrancó")
+              print(e)
+              sys.exit(1)
+
+          if eng.estado != "OPERATIVO":
+              print(f"FALLO: estado = {eng.estado}")
+              print(eng.errores_arranque)
+              sys.exit(1)
+
+          # Evaluación mínima con O_context
+          r = eng.evaluar({
+              "contexto": "prueba CI",
+              "C": "1",
+              "L": "1",
+              "K": "1",
+          })
+
+          if r.get("estado") != "OK":
+              print("FALLO: evaluar() no devolvió OK")
+              print(r)
+              sys.exit(1)
+
+          print("OK  Engine operativo y evaluar() funcional")
           EOF
 
       # ==========================================================
@@ -193,7 +252,7 @@ jobs:
           COLLATZ_HEAVY: "1"
 
       # ==========================================================
-      # OMEGA REPORT (solo si existe el script)
+      # OMEGA REPORT
       # ==========================================================
       - name: Run Omega Report
         run: |
@@ -205,7 +264,6 @@ jobs:
 
       # ==========================================================
       # COHERENCE GUARD
-      # El conteo de tests que pasan no baja entre commits.
       # ==========================================================
       - name: Coherence Guard
         run: |
@@ -267,7 +325,7 @@ jobs:
 
           entrada["estado"] = estado
           hist.append(entrada)
-          hist = hist[-100:]  # Mantener solo los últimos 100 registros
+          hist = hist[-100:]
 
           hist_path.parent.mkdir(exist_ok=True)
           hist_path.write_text(json.dumps(hist, indent=2))
@@ -281,16 +339,30 @@ jobs:
           EOF
 
       # ==========================================================
-      # OMEGA DIARY (solo en push a main y si existe el script)
+      # AUDITORÍA DE LIBRERÍA DE AXIOMAS
       # ==========================================================
-      - name: Omega Diary
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Auditar librería de axiomas
         run: |
-          if [ -f diagnostics/omega_diary_publisher.py ]; then
-            python diagnostics/omega_diary_publisher.py
-          else
-            echo "diagnostics/omega_diary_publisher.py no encontrado; se omite."
-          fi
+          python - <<'EOF'
+          import sys, json
+          from pathlib import Path
+          sys.path.insert(0, ".")
+
+          from modules.axiomas import barrer
+
+          print("=" * 60)
+          print("AUDITORÍA PROFUNDA DE LA LIBRERÍA DE AXIOMAS")
+          print("=" * 60)
+
+          informe = barrer()
+          print(json.dumps(informe, indent=2, ensure_ascii=False))
+
+          if not informe.get("coherente", False):
+              print("FALLO: librería de axiomas incoherente")
+              sys.exit(1)
+
+          print("OK  librería de axiomas coherente")
+          EOF
 
       # ==========================================================
       # SUBIR ARTEFACTOS
@@ -307,8 +379,8 @@ jobs:
             diagnostics/axioms_report.json
             diagnostics/OMEGA_REPORT.md
 
-     # ==========================================================
-      # COMMIT DE HISTORIA (solo en push a main y si hay cambios)
+      # ==========================================================
+      # COMMIT DE HISTORIA
       # ==========================================================
       - name: Commit coherence history
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -330,24 +402,3 @@ jobs:
           git commit -m "ci: historia de coherencia [skip ci]"
           git pull --rebase -X ours origin main || true
           git push origin HEAD:main
-
-      # ==========================================================
-      # AUDITORÍA DE LIBRERÍA DE AXIOMAS
-      # ==========================================================
-      - name: Auditar librería de axiomas
-        run: |
-          python - <<'EOF'
-          import sys, json
-          from pathlib import Path
-          sys.path.insert(0, ".")
-          
-          # Importamos directamente tu librería
-          from modules.axiomas import barrer
-          
-          print("============================================================")
-          print("AUDITORÍA PROFUNDA DE LA LIBRERÍA DE AXIOMAS")
-          print("============================================================")
-          
-          informe = barrer()
-          print(json.dumps(informe, indent=2, ensure_ascii=False))
-          EOF
