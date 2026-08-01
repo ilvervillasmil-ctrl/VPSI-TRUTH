@@ -366,6 +366,26 @@ def presentar(datos: Dict[str, Any]) -> str:
         lineas.append(f"  [{PENDIENTE}] Tests — resultados no entregados")
     lineas.append("")
 
+    def _imprimir_generatividad(g: dict) -> None:
+    print("=" * 80)
+    print("GENERATIVIDAD (TR1 / U1)")
+    print("=" * 80)
+    if not g or g.get("estado") == "UNDEFINED":
+        print("  (sin datos — AX.generatividad no disponible)")
+        print(f"  U1 (proxy roles): {g.get('u1_estado', 'REVISAR')}")
+        print(f"  roles vacíos    : {g.get('roles_vacios', [])}")
+        return
+
+    print(f"  |Θ| (AX)           : {g.get('theta_n', '—')}")
+    print(f"  pares totales      : {g.get('pares_totales', '—')}")
+    print(f"  pares compatibles  : {g.get('pares_compatibles', '—')}")
+    print(f"  pares novedosos    : {g.get('pares_novedosos', '—')}")
+    print(f"  |Im(⊕)| ? |Θ|      : {g.get('im_vs_theta', '—')}")
+    print(f"  roles vacíos       : {g.get('roles_vacios', [])}")
+    print(f"  U1                 : {g.get('u1_estado', '—')}")
+    if g.get("nota"):
+        print(f"  nota               : {g['nota']}")
+
     # ------------------------------------------------------------------
     # INVENTARIO RÁPIDO
     # ------------------------------------------------------------------
