@@ -27,10 +27,6 @@ CONTENEDOR = {
     },
 }
 
-_DIR = Path(__file__).parent
-
-CLAVES_FUNCION = ("nombre", "hace")
-
 # ===============================================================
 # DESCUBRIMIENTO (Engine: Lógica interna)
 # ===============================================================
