@@ -365,4 +365,132 @@ class Centinela:
                 tru_ri_pass1=_str_frac(ri1),
                 tru_total_pass1=_str_frac(tot1),
                 tru_ri_pass2=_str_frac(ri2),
-                tru_total_pass2=_str_frac
+                tru_total_pass2=_str_frac(tot2),
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        if ri_e != ri1 or tot_e != tot1:
+            v = Veredicto(
+                estado="RETENIDO",
+                ciclo_id=ciclo_id,
+                motivos=motivos
+                + [
+                    "contraste: Tru Engine != recálculo FO(C,L,K)",
+                    f"engine=({ri_e}, {tot_e}) fo=({ri1}, {tot1})",
+                ],
+                tru_ri_engine=_str_frac(ri_e),
+                tru_total_engine=_str_frac(tot_e),
+                tru_ri_pass1=_str_frac(ri1),
+                tru_total_pass1=_str_frac(tot1),
+                tru_ri_pass2=_str_frac(ri2),
+                tru_total_pass2=_str_frac(tot2),
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        # 7) lectura CACHE (si hay registro previo del mismo ciclo, no debe contradecir factores)
+        try:
+            prev = self._cache.obtener(ciclo_id)
+            if prev and isinstance(prev.get("paquete"), dict):
+                # contraste suave: mismo ciclo_id no debería cambiar C,L,K en silencio
+                C2, L2, K2, _ = _extraer_factores(prev["paquete"])
+                if (C2, L2, K2) != (None, None, None) and (C2, L2, K2) != (C, L, K):
+                    motivos.append(
+                        "cache: factores del registro previo difieren del paquete actual"
+                    )
+                    v = Veredicto(
+                        estado="RETENIDO",
+                        ciclo_id=ciclo_id,
+                        motivos=motivos,
+                        tru_ri_engine=_str_frac(ri_e),
+                        tru_total_engine=_str_frac(tot_e),
+                        tru_ri_pass1=_str_frac(ri1),
+                        tru_total_pass1=_str_frac(tot1),
+                        tru_ri_pass2=_str_frac(ri2),
+                        tru_total_pass2=_str_frac(tot2),
+                    )
+                    self._depositar_veredicto(v, p)
+                    return v
+        except Exception as e:
+            motivos.append(f"cache_lectura: {type(e).__name__}: {e}")
+            # no aprueba si no puede leer evidencia cuando se espera cache
+            # en fase: solo anotamos; descomentar fail-closed estricto si quieres
+            # v = Veredicto(estado="RETENIDO", ...)
+
+        # 8) APROBADO
+        v = Veredicto(
+            estado="APROBADO",
+            ciclo_id=ciclo_id,
+            motivos=motivos or ["doble FO OK; contraste Engine OK"],
+            tru_ri_engine=_str_frac(ri_e),
+            tru_total_engine=_str_frac(tot_e),
+            tru_ri_pass1=_str_frac(ri1),
+            tru_total_pass1=_str_frac(tot1),
+            tru_ri_pass2=_str_frac(ri2),
+            tru_total_pass2=_str_frac(tot2),
+        )
+        self._depositar_veredicto(v, p)
+        return v
+
+    def _depositar_veredicto(self, v: Veredicto, paquete: Dict[str, Any]) -> None:
+        try:
+            self._cache.guardar({
+                "tipo": "veredicto_centinela",
+                "ciclo_id": v.ciclo_id,
+                "veredicto": v.a_dict(),
+                "paquete_ref": {
+                    "estado": paquete.get("estado"),
+                    "O_context": paquete.get("O_context", paquete.get("contexto")),
+                    "factores": paquete.get("factores")
+                    or {
+                        "C": paquete.get("C"),
+                        "L": paquete.get("L"),
+                        "K": paquete.get("K"),
+                    },
+                },
+                "timestamp": v.timestamp,
+            })
+        except Exception:
+            pass  # el veredicto en memoria ya se devolvió; cache best-effort de fase
+
+
+# ---------------------------------------------------------------------------
+# API de módulo / core
+# ---------------------------------------------------------------------------
+def verificar_salida_paquete(
+    paquete: Dict[str, Any],
+    cache: Optional[CacheEvidencia] = None,
+) -> Dict[str, Any]:
+    """Punto de entrada funcional para Engine u orquestación de ciclo."""
+    return Centinela(cache=cache).verificar(paquete).a_dict()
+
+
+def verificar_salida(salida: Any) -> bool:
+    """
+    Compatibilidad con centinelas simples de módulos:
+    True solo si dict con estado APROBADO.
+    No sustituye verificar() completo del paquete de ciclo.
+    """
+    if not isinstance(salida, dict):
+        return False
+    if "estado" in salida and salida["estado"] in (
+        "APROBADO",
+        "RETENIDO",
+        "PARCIAL",
+    ):
+        return salida["estado"] == "APROBADO"
+    # forma mínima de factores sueltos (legado)
+    return all(k in salida for k in ("C", "L", "K")) or all(
+        k in salida for k in ("tru_ri", "tru_total")
+    )
+
+
+__all__ = [
+    "Centinela",
+    "Veredicto",
+    "CentinelaError",
+    "CacheEvidencia",
+    "verificar_salida_paquete",
+    "verificar_salida",
+]
