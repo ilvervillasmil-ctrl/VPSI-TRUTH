@@ -1,5 +1,5 @@
 """
-VPSI-TRUTH / core/DiagnosticoGlobal.py
+VPSI-TRUTH / core/diagnostico.py
 
 Sistema de diagnóstico para clasificar el estado del sistema según C_Ω.
 Basado en el Teorema de Inferencia Causal Estructural y el protocolo Ω.
