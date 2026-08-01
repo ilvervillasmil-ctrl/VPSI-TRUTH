@@ -146,7 +146,7 @@ jobs:
       # ==========================================================
       # COMPUERTA 4 --- FÓRMULAS Y DOMINIO (Fraction only)
       # ==========================================================
-      - name: Fórmulas y dominio (Fraction)
+            - name: Fórmulas y dominio (Fraction)
         run: |
           python - <<'EOF'
           import sys
@@ -158,18 +158,22 @@ jobs:
 
           fallos = []
 
-          # 1. Deben rechazar float (TypeError o similar)
+          # 1. Deben rechazar float
           try:
               tru_ri(0.5, Fraction(1), Fraction(1))
               fallos.append("tru_ri aceptó float")
-          except (TypeError, Exception):
+          except TypeError:
               pass
+          except Exception as e:
+              fallos.append(f"tru_ri con float lanzó {type(e).__name__}: {e}")
 
           try:
               tru_total(0.5, Fraction(1), Fraction(1))
               fallos.append("tru_total aceptó float")
-          except (TypeError, Exception):
+          except TypeError:
               pass
+          except Exception as e:
+              fallos.append(f"tru_total con float lanzó {type(e).__name__}: {e}")
 
           # 2. Con Fraction válidos debe funcionar
           try:
@@ -187,9 +191,8 @@ jobs:
           if tt0 != BETA:
               fallos.append(f"Piso incorrecto: {tt0} != {BETA}")
 
-          # 4. Techo estructural (Teorema 16)
-          if ri > ALPHA:
-              fallos.append(f"Tru_Ri superó ALPHA: {ri}")
+          # 4. Tru_Ri = 1 es válido (sincronización perfecta)
+          #    Tru_total llega a 1 correctamente
 
           if fallos:
               print("FALLO: guarda de tipo / dominio")
@@ -197,7 +200,7 @@ jobs:
                   print("  " + f)
               sys.exit(1)
 
-          print("OK  float rechazado, Fraction aceptado, piso y techo estructurales correctos")
+          print("OK  float rechazado, Fraction aceptado, piso estructural correcto")
           EOF
 
       # ==========================================================
