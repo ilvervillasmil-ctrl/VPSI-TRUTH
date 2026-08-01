@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-OMEGA REPORT - VPSI-TRUTH (Versión 9.4)
-======================================
+OMEGA REPORT — MAPA DE TRABAJO
+VPSI-TRUTH (Versión 9.4)
+==============================
 
-Presentador objetivo y auto-actualizable.
+Presentador objetivo + mapa de intervención.
 
-- No recalcula.
-- Lee solo lo que el Engine y los módulos ya produjeron.
-- Muestra en tablas qué está presente, qué falta y qué fue rechazado.
-- Se adapta automáticamente a nuevos módulos/roles.
+No recalcula.
+Lee solo lo que el Engine y los módulos ya produjeron.
+Ordena lo que falta por prioridad de trabajo.
+Cada hueco indica: qué es · dónde · por qué importa · qué hacer.
 
 Autor: Ilver Villasmil
 ORCID: 0009-0009-3413-4270
@@ -21,7 +22,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 CURRENT_FILE = Path(__file__).resolve()
 DIAGNOSTICS_DIR = CURRENT_FILE.parent
@@ -42,6 +43,9 @@ CAMPOS_OBLIGATORIOS = (
 )
 
 
+# =============================================================================
+# VALIDACIÓN DE ENTRADA (solo forma)
+# =============================================================================
 def validar_entrada(datos: Dict[str, Any]) -> List[str]:
     faltas: List[str] = []
     if not isinstance(datos, dict):
@@ -63,12 +67,20 @@ def validar_entrada(datos: Dict[str, Any]) -> List[str]:
     return faltas
 
 
+# =============================================================================
+# HELPERS DE PRESENTACIÓN
+# =============================================================================
 def _tabla(headers: List[str], rows: List[List[str]], anchos: List[int] | None = None) -> List[str]:
     if anchos is None:
-        anchos = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
+        anchos = [
+            max(len(h), max((len(str(r[i])) for r in rows), default=0))
+            for i, h in enumerate(headers)
+        ]
     sep = "+" + "+".join("-" * (w + 2) for w in anchos) + "+"
+
     def fila(vals: List[str]) -> str:
-        return "| " + " | ".join(v.ljust(anchos[i]) for i, v in enumerate(vals)) + " |"
+        return "| " + " | ".join(str(v).ljust(anchos[i]) for i, v in enumerate(vals)) + " |"
+
     out = [sep, fila(headers), sep]
     for r in rows:
         out.append(fila(r))
@@ -76,228 +88,326 @@ def _tabla(headers: List[str], rows: List[List[str]], anchos: List[int] | None =
     return out
 
 
+def _bloque(titulo: str, lineas: List[str]) -> List[str]:
+    return [titulo, *lineas, ""]
+
+
+# =============================================================================
+# CONSTRUCCIÓN DEL MAPA DE TRABAJO
+# =============================================================================
+def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Genera la lista priorizada de acciones a partir de los datos reales.
+    Prioridad 1 = más urgente.
+    """
+    acciones: List[Dict[str, Any]] = []
+    reg = datos.get("registro_modulos") or {}
+    roles = reg.get("roles") or {}
+    vacios = reg.get("roles_vacios") or []
+    rechazados = reg.get("rechazados") or []
+
+    # 1. Engine no operativo
+    if datos.get("estado_engine") != "OPERATIVO":
+        acciones.append({
+            "prioridad": 1,
+            "tipo": "BLOQUEANTE",
+            "item": "Engine",
+            "detalle": f"estado = {datos.get('estado_engine')}",
+            "impacto": "Nada confiable puede evaluarse si el Engine no está OPERATIVO",
+            "accion": "Revisar errores_arranque y compuertas de arranque",
+            "errores": datos.get("errores_arranque") or [],
+        })
+
+    # 2. Axiomas incoherentes
+    ia = datos.get("informe_axiomas") or {}
+    if not ia.get("coherente", False):
+        acciones.append({
+            "prioridad": 1,
+            "tipo": "BLOQUEANTE",
+            "item": "Axiomas",
+            "detalle": f"choques={len(ia.get('choques', []))} errores={len(ia.get('errores', []))}",
+            "impacto": "Sin axiomatización coherente el sistema no debe avanzar",
+            "accion": "Resolver choques en modules/axiomas y VPSI.py",
+            "errores": ia.get("choques", [])[:5],
+        })
+
+    # 3. Módulos rechazados (roles desconocidos)
+    for r in rechazados:
+        ruta = r.get("ruta", "?")
+        razon = r.get("razon", "?")
+        acciones.append({
+            "prioridad": 2,
+            "tipo": "RECHAZADO",
+            "item": Path(ruta).parent.name if ruta != "?" else "?",
+            "detalle": razon,
+            "impacto": "El módulo existe en disco pero el Engine lo ignora",
+            "accion": "Registrar el rol en core.engine.ROLES o corregir CONTENEDOR['rol']",
+            "errores": [f"{ruta} → {razon}"],
+        })
+
+    # 4. Roles vacíos
+    for rol in vacios:
+        acciones.append({
+            "prioridad": 3,
+            "tipo": "VACÍO",
+            "item": rol,
+            "detalle": "rol admitido sin módulo montado",
+            "impacto": f"Capacidad del rol {rol} no disponible",
+            "accion": f"Crear o activar módulo con CONTENEDOR['rol'] = '{rol}'",
+            "errores": [],
+        })
+
+    # 5. Datos no entregados al reporte
+    if not datos.get("resultados_evaluacion"):
+        acciones.append({
+            "prioridad": 4,
+            "tipo": "DATOS",
+            "item": "resultados_evaluacion",
+            "detalle": "Engine no pasó resultados de evaluar() al reporte",
+            "impacto": "No se puede auditar el camino de evaluación desde Omega Report",
+            "accion": "Hacer que el Engine entregue la lista de evaluaciones al paquete de datos",
+            "errores": [],
+        })
+
+    if not datos.get("tests"):
+        acciones.append({
+            "prioridad": 4,
+            "tipo": "DATOS",
+            "item": "tests",
+            "detalle": "resultados de pytest no entregados al reporte",
+            "impacto": "No se ve cobertura ni regresiones desde el mapa",
+            "accion": "Parsear diagnostics/test_results.xml y pasarlo en el paquete de datos",
+            "errores": [],
+        })
+
+    # 6. Fórmulas / mecánica si faltan
+    if not datos.get("informe_formulas"):
+        acciones.append({
+            "prioridad": 4,
+            "tipo": "DATOS",
+            "item": "informe_formulas",
+            "detalle": "no entregado",
+            "impacto": "No se confirma el estado del módulo FO desde el reporte",
+            "accion": "Engine debe invocar formulas.barrer() y adjuntar el resultado",
+            "errores": [],
+        })
+
+    acciones.sort(key=lambda a: a["prioridad"])
+    return acciones
+
+
+# =============================================================================
+# PRESENTACIÓN
+# =============================================================================
 def presentar(datos: Dict[str, Any]) -> str:
     faltas = validar_entrada(datos)
     lineas: List[str] = []
-
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     sha = os.getenv("GITHUB_SHA", "local")[:12]
 
     lineas += [
         "=" * 80,
-        "OMEGA REPORT - VPSI-TRUTH (Versión 9.4)",
+        "OMEGA REPORT — MAPA DE TRABAJO",
+        "VPSI-TRUTH (Versión 9.4)",
         f"Generado: {ahora}    Commit: {sha}",
-        "Modo: SOLO PRESENTACIÓN (no recalcula · se actualiza con cada módulo)",
+        "Modo: SOLO PRESENTACIÓN · prioriza intervención · no recalcula",
         "=" * 80,
         "",
     ]
 
     if faltas:
-        lineas.append(f"[{FALLO}] Entrada incompleta")
+        lineas.append(f"[{FALLO}] Entrada incompleta — no se puede construir el mapa")
         for f in faltas:
             lineas.append(f"    - {f}")
-        lineas.append("")
-        lineas.append("Sin datos reales del Engine el reporte no puede afirmar coherencia.")
         return "\n".join(lineas)
 
     # ------------------------------------------------------------------
-    # 1. Estado del Engine
+    # ESTADO GLOBAL
     # ------------------------------------------------------------------
     estado = datos["estado_engine"]
-    marca = OK if estado == "OPERATIVO" else FALLO
-    lineas.append(f"[{marca}] Estado del Engine")
-    lineas.append(f"    estado = {estado}")
-    for e in datos.get("errores_arranque") or []:
-        lineas.append(f"    - {e}")
-    lineas.append("")
-
-    # ------------------------------------------------------------------
-    # 2. Constantes
-    # ------------------------------------------------------------------
-    const = datos["constantes"]
-    lineas.append(f"[{OK}] Constantes (módulo CT)")
-    lineas.append(f"    ALPHA = {const.get('ALPHA')}")
-    lineas.append(f"    BETA  = {const.get('BETA')}")
-    lineas.append("    Fuente: modules.constante (no recalculado)")
-    lineas.append("")
-
-    # ------------------------------------------------------------------
-    # 3. Tabla de módulos / roles (auto-actualizable)
-    # ------------------------------------------------------------------
+    ia = datos["informe_axiomas"]
+    coherente = bool(ia.get("coherente"))
     reg = datos.get("registro_modulos") or {}
-    roles = reg.get("roles") or {}
+    total = reg.get("total", 0)
     vacios = reg.get("roles_vacios") or []
     rechazados = reg.get("rechazados") or []
-    total = reg.get("total", 0)
+    acciones = construir_acciones(datos)
 
-    lineas.append(f"[{OK if total else PENDIENTE}] Módulos y roles")
-    lineas.append(f"    total contenedores registrados = {total}")
-    lineas.append("")
+    bloqueantes = [a for a in acciones if a["tipo"] == "BLOQUEANTE"]
+    n_bloqueantes = len(bloqueantes)
 
-    # Tabla principal de roles
-    headers = ["ROL", "ESTADO", "MÓDULOS", "NOTA"]
+    if estado == "OPERATIVO" and coherente and n_bloqueantes == 0:
+        salud = "OPERATIVO — listo para avanzar"
+    elif estado == "OPERATIVO" and n_bloqueantes == 0:
+        salud = "OPERATIVO con huecos no bloqueantes"
+    else:
+        salud = "DEGRADADO — hay bloqueos"
+
+    lineas += _bloque("ESTADO GLOBAL", [
+        f"  Engine          : {estado}",
+        f"  Axiomas         : {'coherente' if coherente else 'INCOHERENTE'}",
+        f"  Contenedores    : {total}",
+        f"  Roles vacíos    : {len(vacios)}",
+        f"  Rechazados      : {len(rechazados)}",
+        f"  Acciones abiertas: {len(acciones)}",
+        f"  Salud           : {salud}",
+    ])
+
+    # ------------------------------------------------------------------
+    # TABLA DE MÓDULOS
+    # ------------------------------------------------------------------
+    roles = reg.get("roles") or {}
+    todos_roles = sorted(set(list(roles.keys()) + list(vacios)))
     rows = []
-    todos_roles = sorted(set(list(roles.keys()) + vacios))
     for rol in todos_roles:
         mods = roles.get(rol) or []
         if mods:
-            estado_r = "CARGADO"
-            nota = ", ".join(mods)
+            rows.append([rol, "CARGADO", str(len(mods)), ", ".join(mods)])
         else:
-            estado_r = "VACÍO"
-            nota = "(sin módulo montado)"
-        rows.append([rol, estado_r, str(len(mods)), nota])
+            rows.append([rol, "VACÍO", "0", "(sin módulo)"])
 
-    lineas.extend("    " + l for l in _tabla(headers, rows, [4, 9, 8, 40]))
+    lineas.append("MÓDULOS Y ROLES")
+    lineas.extend("  " + l for l in _tabla(
+        ["ROL", "ESTADO", "N", "MÓDULOS"],
+        rows,
+        [4, 9, 3, 36],
+    ))
     lineas.append("")
 
-    # Rechazados
-    if rechazados:
-        lineas.append(f"[{FALLO}] Módulos rechazados ({len(rechazados)})")
-        for r in rechazados:
-            lineas.append(f"    - {r.get('ruta', '?')}: {r.get('razon', '?')}")
-        lineas.append("    (roles no admitidos o contrato inválido)")
+    # ------------------------------------------------------------------
+    # MAPA DE ACCIONES (el corazón del reporte)
+    # ------------------------------------------------------------------
+    lineas.append("=" * 80)
+    lineas.append("MAPA DE INTERVENCIÓN (ordenado por prioridad)")
+    lineas.append("=" * 80)
+    lineas.append("")
+
+    if not acciones:
+        lineas.append("  No hay acciones pendientes. Sistema limpio.")
+        lineas.append("")
     else:
-        lineas.append(f"[{OK}] Módulos rechazados: 0")
-    lineas.append("")
+        for i, a in enumerate(acciones, 1):
+            lineas.append(f"  {i}. [{a['tipo']}] {a['item']}")
+            lineas.append(f"     Detalle   : {a['detalle']}")
+            lineas.append(f"     Impacto   : {a['impacto']}")
+            lineas.append(f"     Acción    : {a['accion']}")
+            if a["errores"]:
+                lineas.append("     Evidencia :")
+                for e in a["errores"][:3]:
+                    lineas.append(f"       · {e}")
+            lineas.append("")
 
     # ------------------------------------------------------------------
-    # 4. Axiomas
+    # DETALLE DE SALUD POR CAPA
     # ------------------------------------------------------------------
-    ia = datos["informe_axiomas"]
-    coherente = bool(ia.get("coherente"))
+    lineas.append("=" * 80)
+    lineas.append("SALUD POR CAPA")
+    lineas.append("=" * 80)
+    lineas.append("")
+
+    # Constantes
+    const = datos.get("constantes") or {}
+    lineas.append(f"  [{OK}] Constantes (CT)")
+    lineas.append(f"      ALPHA = {const.get('ALPHA')}   BETA = {const.get('BETA')}")
+    lineas.append("")
+
+    # Axiomas
     marca_ax = OK if coherente else FALLO
-    lineas.append(f"[{marca_ax}] Barrido axiomático")
-    lineas.append(f"    coherente     = {coherente}")
-    lineas.append(f"    declaraciones = {ia.get('declaraciones', '?')}")
-    lineas.append(f"    choques       = {len(ia.get('choques', []))}")
-    lineas.append(f"    errores       = {len(ia.get('errores', []))}")
-    lineas.append("    Fuente: modules.axiomas.barrer() vía Engine")
+    lineas.append(f"  [{marca_ax}] Axiomas (AX)")
+    lineas.append(f"      declaraciones = {ia.get('declaraciones', '?')}")
+    lineas.append(f"      choques       = {len(ia.get('choques', []))}")
+    lineas.append(f"      errores       = {len(ia.get('errores', []))}")
     lineas.append("")
 
-    # ------------------------------------------------------------------
-    # 5. Fórmulas
-    # ------------------------------------------------------------------
+    # Fórmulas
     fo = datos.get("informe_formulas")
     if fo:
         marca_fo = OK if fo.get("coherente") else FALLO
-        lineas.append(f"[{marca_fo}] Fórmulas")
-        lineas.append(f"    coherente = {fo.get('coherente')}")
-        lineas.append(f"    faltas    = {fo.get('faltas', [])}")
-        lineas.append("    Fuente: modules.formulas.barrer() vía Engine")
+        lineas.append(f"  [{marca_fo}] Fórmulas (FO)")
+        lineas.append(f"      coherente = {fo.get('coherente')}   faltas = {fo.get('faltas', [])}")
     else:
-        lineas.append(f"[{PENDIENTE}] Fórmulas")
-        lineas.append("    informe_formulas no entregado por el Engine")
+        lineas.append(f"  [{PENDIENTE}] Fórmulas (FO) — informe no entregado")
     lineas.append("")
 
-    # ------------------------------------------------------------------
-    # 6. Mecánica
-    # ------------------------------------------------------------------
+    # Mecánica
     mc = datos.get("informe_mecanica")
     if mc:
         marca_mc = OK if mc.get("coherente") else FALLO
-        lineas.append(f"[{marca_mc}] Mecánica")
-        lineas.append(f"    coherente = {mc.get('coherente')}")
-        lineas.append(f"    choques   = {mc.get('choques', [])}")
-        lineas.append("    Fuente: modules.correlacion_mecanica.barrer() vía Engine")
+        lineas.append(f"  [{marca_mc}] Mecánica (MC)")
+        lineas.append(f"      coherente = {mc.get('coherente')}")
     else:
-        lineas.append(f"[{PENDIENTE}] Mecánica")
-        lineas.append("    informe_mecanica no entregado por el Engine")
+        lineas.append(f"  [{PENDIENTE}] Mecánica (MC) — informe no entregado")
     lineas.append("")
 
-    # ------------------------------------------------------------------
-    # 7. Evaluaciones
-    # ------------------------------------------------------------------
+    # Evaluaciones
     evals = datos.get("resultados_evaluacion") or []
     if evals:
-        lineas.append(f"[{OK}] Camino de evaluación")
-        lineas.append(f"    evaluaciones recibidas = {len(evals)}")
-        for i, r in enumerate(evals[:6], 1):
+        lineas.append(f"  [{OK}] Camino de evaluación")
+        lineas.append(f"      evaluaciones = {len(evals)}")
+        for j, r in enumerate(evals[:4], 1):
             lineas.append(
-                f"    [{i}] estado={r.get('estado')}  "
+                f"      [{j}] estado={r.get('estado')}  "
                 f"Tru_Ri={r.get('tru_ri')}  Tru_total={r.get('tru_total')}"
             )
-        lineas.append("    Fuente: engine.evaluar() (ya calculado)")
     else:
-        lineas.append(f"[{PENDIENTE}] Camino de evaluación")
-        lineas.append("    Ningún resultado de evaluar() fue entregado al reporte")
+        lineas.append(f"  [{PENDIENTE}] Camino de evaluación — sin resultados entregados")
     lineas.append("")
 
-    # ------------------------------------------------------------------
-    # 8. Tests
-    # ------------------------------------------------------------------
+    # Tests
     tests = datos.get("tests")
     if tests:
         marca_t = OK if tests.get("fallidos", 1) == 0 else FALLO
-        lineas.append(f"[{marca_t}] Tests")
+        lineas.append(f"  [{marca_t}] Tests")
         lineas.append(
-            f"    total={tests.get('total')}  pasados={tests.get('pasados')}  "
+            f"      total={tests.get('total')}  pasados={tests.get('pasados')}  "
             f"fallidos={tests.get('fallidos')}  tasa={tests.get('tasa')}%"
         )
     else:
-        lineas.append(f"[{PENDIENTE}] Tests")
-        lineas.append("    resultados de tests no entregados al reporte")
+        lineas.append(f"  [{PENDIENTE}] Tests — resultados no entregados")
     lineas.append("")
 
     # ------------------------------------------------------------------
-    # 9. Inventario de presencia / ausencia (detalle)
+    # INVENTARIO RÁPIDO
     # ------------------------------------------------------------------
     lineas.append("=" * 80)
-    lineas.append("INVENTARIO DE PRESENCIA")
+    lineas.append("INVENTARIO RÁPIDO")
     lineas.append("=" * 80)
-
-    presentes = []
-    ausentes = []
-    for rol in todos_roles:
-        mods = roles.get(rol) or []
-        if mods:
-            presentes.append(f"{rol}: {', '.join(mods)}")
-        else:
-            ausentes.append(rol)
-
     lineas.append("Presente:")
-    if presentes:
-        for p in presentes:
-            lineas.append(f"  ✓ {p}")
-    else:
-        lineas.append("  (ninguno)")
-
-    lineas.append("Ausente / vacío:")
-    if ausentes:
-        for a in ausentes:
-            lineas.append(f"  · {a}")
-    else:
-        lineas.append("  (ninguno)")
-
+    for rol, mods in sorted(roles.items()):
+        if mods:
+            lineas.append(f"  ✓ {rol}: {', '.join(mods)}")
+    lineas.append("Ausente:")
+    for rol in vacios:
+        lineas.append(f"  · {rol}")
     lineas.append("Rechazado:")
     if rechazados:
         for r in rechazados:
-            lineas.append(f"  ✗ {r.get('ruta', '?')} → {r.get('razon', '?')}")
+            lineas.append(f"  ✗ {Path(r.get('ruta', '?')).parent.name} → {r.get('razon', '?')}")
     else:
         lineas.append("  (ninguno)")
     lineas.append("")
 
     # ------------------------------------------------------------------
-    # Resumen final
+    # CIERRE
     # ------------------------------------------------------------------
     lineas += [
         "=" * 80,
-        "RESUMEN",
+        "CIERRE",
         "=" * 80,
-        f"  Engine              : {estado}",
-        f"  Axiomas             : {'coherente' if coherente else 'incoherente'}",
-        f"  Contenedores        : {total}",
-        f"  Roles vacíos        : {len(vacios)}",
-        f"  Módulos rechazados  : {len(rechazados)}",
-        f"  Datos faltantes     : {len(faltas)}",
-        "  Este reporte no recalculó ninguna fórmula ni barrido.",
-        "  Se actualiza solo con lo que el Engine entregue en cada corrida.",
+        f"  Salud              : {salud}",
+        f"  Acciones abiertas  : {len(acciones)}",
+        f"  Bloqueantes        : {n_bloqueantes}",
+        "  Este reporte no recalculó nada.",
+        "  El orden de la lista = orden recomendado de trabajo.",
         "=" * 80,
     ]
 
     return "\n".join(lineas)
 
 
+# =============================================================================
+# CARGA DESDE ENGINE
+# =============================================================================
 def cargar_datos_desde_engine() -> Dict[str, Any]:
     datos: Dict[str, Any] = {
         "estado_engine": "NO_INICIADO",
@@ -340,6 +450,32 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
                     pass
                 break
 
+        # Intentar adjuntar tests si existe el xml
+        xml_path = DIAGNOSTICS_DIR / "test_results.xml"
+        if xml_path.exists():
+            try:
+                import xml.etree.ElementTree as ET
+                raiz = ET.parse(xml_path).getroot()
+                suites = [raiz] if raiz.tag == "testsuite" else list(raiz.iter("testsuite"))
+                total = fallos = errores = omitidos = 0
+                for s in suites:
+                    total += int(s.get("tests", 0))
+                    fallos += int(s.get("failures", 0))
+                    errores += int(s.get("errors", 0))
+                    omitidos += int(s.get("skipped", 0))
+                fallidos = fallos + errores
+                pasados = total - fallidos - omitidos
+                tasa = (pasados / total * 100) if total else 0.0
+                datos["tests"] = {
+                    "total": total,
+                    "pasados": pasados,
+                    "fallidos": fallidos,
+                    "omitidos": omitidos,
+                    "tasa": round(tasa, 2),
+                }
+            except Exception:
+                pass
+
     except Exception as e:
         datos["estado_engine"] = "RECHAZADO"
         datos["errores_arranque"] = [f"{type(e).__name__}: {e}"]
@@ -353,9 +489,9 @@ def main() -> None:
     print(texto)
 
     DIAGNOSTICS_DIR.mkdir(parents=True, exist_ok=True)
-    out = DIAGNOSTICS_DIR / "omega_report_data.json"
-    out.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\nJSON: {out}")
+    out_json = DIAGNOSTICS_DIR / "omega_report_data.json"
+    out_json.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"\nJSON: {out_json}")
 
     faltas = validar_entrada(datos)
     if STRICT and (datos.get("estado_engine") != "OPERATIVO" or faltas):
