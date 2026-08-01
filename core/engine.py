@@ -508,7 +508,7 @@ class Engine:
     def censar(self) -> Dict:
         return self.registro.resumen()
 
-    def inventario(self) -> Dict:
+        def inventario(self) -> Dict:
         contenido = {}
         for cont in self.registro.contenedores.values():
             if cont.tiene("inventario"):
@@ -524,43 +524,42 @@ class Engine:
             "informe_axiomas": self.informe_axiomas,
             "informe_mecanica": self.informe_mecanica,
         }
-      def censar_generatividad(self) -> Dict:
-    """
-    TR1 / U1 vía contrato AX.
-    El Engine no calcula recombinaciones: solo invoca la capacidad
-    declarada y añade residual de arquitectura (roles vacíos).
-    """
-    out = self.ejecutar_capacidad("AX", "generatividad")
 
-    # residual arquitectónico (proxy U1)
-    try:
-        resumen = self.censar() if hasattr(self, "censar") else {}
-    except Exception:
-        resumen = {}
+    def censar_generatividad(self) -> Dict:
+        """
+        TR1 / U1 vía contrato AX.
+        El Engine no calcula recombinaciones: solo invoca la capacidad
+        declarada y añade residual de arquitectura (roles vacíos).
+        """
+        out = self.ejecutar_capacidad("AX", "generatividad")
 
-    roles_vacios = list(resumen.get("roles_vacios") or [])
-    rechazados = list(resumen.get("rechazados") or [])
+        try:
+            resumen = self.censar() if hasattr(self, "censar") else {}
+        except Exception:
+            resumen = {}
 
-    if es_undefined(out) or not isinstance(out, dict):
-        return {
-            "estado": "UNDEFINED",
-            "razon": "AX.generatividad no disponible o falló",
-            "roles_vacios": roles_vacios,
-            "rechazados": rechazados,
-            "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
-            "nota": "Sin medición TR1; residual de roles usado como proxy U1.",
-        }
+        roles_vacios = list(resumen.get("roles_vacios") or [])
+        rechazados = list(resumen.get("rechazados") or [])
 
-    resultado = dict(out)
-    resultado["roles_vacios"] = roles_vacios
-    resultado["rechazados_n"] = len(rechazados)
-    # U1: residual de roles o novedad estructural
-    if roles_vacios or resultado.get("pares_novedosos", 0) > 0:
-        resultado["u1_estado"] = "NO_STAGNANT"
-    else:
-        resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
-    resultado["estado"] = "OK"
-    return resultado
+        if es_undefined(out) or not isinstance(out, dict):
+            return {
+                "estado": "UNDEFINED",
+                "razon": "AX.generatividad no disponible o falló",
+                "roles_vacios": roles_vacios,
+                "rechazados": rechazados,
+                "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
+                "nota": "Sin medición TR1; residual de roles usado como proxy U1.",
+            }
+
+        resultado = dict(out)
+        resultado["roles_vacios"] = roles_vacios
+        resultado["rechazados_n"] = len(rechazados)
+        if roles_vacios or resultado.get("pares_novedosos", 0) > 0:
+            resultado["u1_estado"] = "NO_STAGNANT"
+        else:
+            resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
+        resultado["estado"] = "OK"
+        return resultado
 
 
 __all__ = [
