@@ -4,11 +4,16 @@ CENTINELA DEL ENGINE - VPSI-TRUTH
 
 Vigila el despacho, no el resultado. Distingue dos cosas:
 
-    PENDIENTE      el rol no esta montado todavia. Fase de construccion,
+    PENDIENTE      el rol no está montado todavía. Fase de construcción,
                    no defecto. El centinela lo nombra y detiene la pasada.
 
-    CONTRATO_ROTO  el modulo existe y no expone lo que su rol exige.
-                   Eso si es defecto.
+    CONTRATO_ROTO  el módulo existe y no expone lo que su rol exige.
+                   Eso sí es defecto.
+
+Adaptado a la nueva arquitectura donde:
+- Los módulos exponen sus capacidades a través de CONTENEDOR.
+- El Engine Global (core/engine.py) descubre módulos y ejecuta sus capacidades.
+- El Centinela Global valida el sistema usando los reportes del Engine.
 """
 
 from __future__ import annotations
@@ -27,22 +32,25 @@ class PiezaPendiente(Exception):
 class ContratoRoto(Exception):
     def __init__(self, quien: str, exigido: str, recibido: str):
         self.quien = quien
-        super().__init__(f"{quien}: se exige {exigido}, se recibio {recibido}")
+        super().__init__(f"{quien}: se exige {exigido}, se recibió {recibido}")
 
 
 class Centinela:
+    """
+    Centinela Global para validar el sistema VPSI-TRUTH.
+    - Vigila que los módulos cumplan sus contratos (capacidades exigidas).
+    - Valida el orden de arranque (barrido axiomático previo).
+    - Exige roles imprescindibles (AX, CT, FO, CA).
+    """
 
-    # rol -> (clase, nombres exigidos, para que sirve)
-    # AX, CT y FO estan leidos de la API real de tus modulos.
-    # CA, CX y TX no existen aun: esos nombres son propuesta, cambialos
-    # por los que decidas cuando los montes.
+    # rol -> (clase, nombres exigidos, para qué sirve)
     CONTRATOS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
-        "AX": ("funcion",  ("barrer",),             "juez de contraste axiomatico"),
-        "CT": ("atributo", ("ALPHA", "BETA"),       "ALPHA y BETA exactos"),
-        "FO": ("funcion",  ("tru_ri", "tru_total"), "funcional canonico"),
-        "CA": ("funcion",  ("calcular",),           "devuelve C, L, K"),
-        "CX": ("funcion",  ("resolver",),           "resuelve Octx"),
-        "TX": ("funcion",  ("anotar",),             "anota tacticas T1-T15"),
+        "AX": ("funcion", ("barrer",), "juez de contraste axiomático"),
+        "CT": ("atributo", ("ALPHA", "BETA"), "ALPHA y BETA exactos"),
+        "FO": ("funcion", ("tru_ri", "tru_total"), "funcional canónico"),
+        "CA": ("funcion", ("calcular",), "devuelve C, L, K"),
+        "CX": ("funcion", ("resolver",), "resuelve Octx"),
+        "TX": ("funcion", ("anotar",), "anota tácticas T1-T15"),
     }
 
     IMPRESCINDIBLES = ("AX", "CT", "FO", "CA")
@@ -53,10 +61,24 @@ class Centinela:
         self._ultima_pasada: Optional[Tuple[str, str]] = None
 
     def _contenedor_de(self, rol: str):
+        """Busca el contenedor asociado a un rol en el registro."""
         for c in self.registro.contenedores.values():
             if getattr(c, "rol", None) == rol:
                 return c
         return None
+
+    def _obtener_capacidad(self, contenedor, nombre: str, clase: str) -> Any:
+        """
+        Obtiene una capacidad de un contenedor y valida su tipo.
+        """
+        if nombre not in contenedor.get("capacidades", {}):
+            return None
+        valor = contenedor["capacidades"][nombre]
+        if clase == "funcion" and not callable(valor):
+            return None
+        if clase == "atributo" and not isinstance(valor, Fraction):
+            return None
+        return valor
 
     # ---------------------------------------------------------------
     # CENSO: rol declarado contra rol ejercido
@@ -73,28 +95,36 @@ class Centinela:
 
             if cont is None:
                 out[rol] = {
-                    "estado": "PENDIENTE", "modulo": None,
-                    "exige": exige, "para_que": para_que,
+                    "estado": "PENDIENTE",
+                    "modulo": None,
+                    "exige": exige,
+                    "para_que": para_que,
                 }
                 continue
 
             faltan: List[str] = []
             for n in nombres:
-                v = cont.fn(n)
-                if clase == "funcion" and not callable(v):
-                    faltan.append(f"{n}()")
-                elif clase == "atributo" and not isinstance(v, Fraction):
-                    faltan.append(f"{n} (Fraction, recibido {type(v).__name__})")
+                v = self._obtener_capacidad(cont, n, clase)
+                if v is None:
+                    if clase == "funcion":
+                        faltan.append(f"{n}()")
+                    else:
+                        faltan.append(f"{n} (Fraction, recibido {type(v).__name__ if v is not None else 'None'})")
 
             if faltan:
                 out[rol] = {
-                    "estado": "CONTRATO_ROTO", "modulo": cont.nombre,
-                    "exige": exige, "falta": faltan, "para_que": para_que,
+                    "estado": "CONTRATO_ROTO",
+                    "modulo": cont.get("nombre", "desconocido"),
+                    "exige": exige,
+                    "falta": faltan,
+                    "para_que": para_que,
                 }
             else:
                 out[rol] = {
-                    "estado": "MONTADO", "modulo": cont.nombre,
-                    "exige": exige, "para_que": para_que,
+                    "estado": "MONTADO",
+                    "modulo": cont.get("nombre", "desconocido"),
+                    "exige": exige,
+                    "para_que": para_que,
                 }
         return out
 
@@ -111,18 +141,18 @@ class Centinela:
         if informe is None:
             raise ContratoRoto(
                 "orden de arranque",
-                "barrido axiomatico antes del primer evaluar()",
+                "barrido axiomático antes del primer evaluar()",
                 "informe_axiomas ausente",
             )
         if not informe.get("coherente", False):
             n = len(informe.get("choques", []) or [])
             raise ContratoRoto(
-                "orden de arranque", "axiomatica coherente",
+                "orden de arranque", "axiomática coherente",
                 f"{n} choques sin resolver",
             )
         if informe.get("declaraciones", 0) == 0:
             raise ContratoRoto(
-                "orden de arranque", "al menos una declaracion cargada",
+                "orden de arranque", "al menos una declaración cargada",
                 "0 declaraciones: coherente por vacuidad",
             )
 
@@ -139,7 +169,8 @@ class Centinela:
             if d["estado"] == "CONTRATO_ROTO":
                 raise ContratoRoto(
                     f"contenedor '{d['modulo']}' con rol {rol}",
-                    d["exige"], f"falta {d.get('falta')}",
+                    d["exige"],
+                    f"falta {d.get('falta')}",
                 )
 
     # ---------------------------------------------------------------
@@ -148,7 +179,7 @@ class Centinela:
 
     @staticmethod
     def exigir_exacto(nombre: str, valor: Any) -> Fraction:
-        """Rechaza, no convierte. Fraction(str(0.1)) finge la precision."""
+        """Rechaza, no convierte. Fraction(str(0.1)) finge la precisión."""
         if isinstance(valor, Fraction):
             return valor
         if isinstance(valor, int):
@@ -164,7 +195,7 @@ class Centinela:
                 raise ContratoRoto("factores", f"'{nombre}' presente", "ausente")
             v = factores[nombre]
             if str(v).upper() == "UNDEFINED":
-                raise PiezaPendiente("CA", f"factor {nombre} quedo UNDEFINED")
+                raise PiezaPendiente("CA", f"factor {nombre} quedó UNDEFINED")
             v = self.exigir_exacto(f"factor {nombre}", v)
             if not (Fraction(0) <= v <= Fraction(1)):
                 raise ContratoRoto(f"factor {nombre}", "valor en [0, 1]", str(v))
@@ -186,13 +217,14 @@ class Centinela:
             prev_p, prev_r = self._ultima_pasada
             if huella_peticion == prev_p and huella_resultado != prev_r:
                 raise ContratoRoto(
-                    "invariancia L", "misma peticion, mismo resultado",
+                    "invariancia L",
+                    "misma petición, mismo resultado",
                     f"dos resultados distintos para la huella {huella_peticion}",
                 )
         self._ultima_pasada = (huella_peticion, huella_resultado)
 
     # ---------------------------------------------------------------
-    # PUERTA UNICA
+    # PUERTA ÚNICA
     # ---------------------------------------------------------------
 
     def franquear(
@@ -207,7 +239,32 @@ class Centinela:
         self.exigir_roles(roles)
         if not peticion.get("contexto"):
             raise ContratoRoto(
-                "peticion",
-                "Octx declarado (sin el, K queda indefinida y no nula)",
+                "petición",
+                "Octx declarado (sin él, K queda indefinida y no nula)",
                 "sin contexto",
             )
+
+    # ---------------------------------------------------------------
+    # INTEGRACIÓN CON EL ENGINE GLOBAL
+    # ---------------------------------------------------------------
+
+    def validar_sistema(self) -> Dict[str, Any]:
+        """
+        Valida el sistema completo usando el Engine Global.
+        """
+        from core.engine import GlobalEngine
+        resultados = GlobalEngine.ejecutar_sistema()
+        errores = []
+
+        for modulo_name, resultado in resultados.items():
+            if not resultado.get("coherente", True):
+                errores.append({
+                    "modulo": modulo_name,
+                    "errores": resultado.get("errores", []),
+                    "choques": resultado.get("choques", [])
+                })
+
+        if errores:
+            return {"status": "error", "errores": errores}
+        else:
+            return {"status": "ok"}
