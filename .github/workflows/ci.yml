@@ -379,6 +379,68 @@ jobs:
             diagnostics/axioms_report.json
             diagnostics/OMEGA_REPORT.md
 
+            # ==========================================================
+      # AUDITORÍA AX — choques y errores explícitos
+      # ==========================================================
+      - name: Auditoría axiomática (choques y errores)
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, ".")
+
+          from modules.axiomas import barrer
+
+          r = barrer()
+          print("=" * 60)
+          print("AUDITORÍA AX — barrer()")
+          print("=" * 60)
+          print(f"coherente     : {r['coherente']}")
+          print(f"declaraciones : {r['declaraciones']}")
+          print(f"cuerpos       : {r.get('cuerpos')}")
+          print(f"errores       : {len(r['errores'])}")
+          print(f"choques       : {len(r['choques'])}")
+          print()
+
+          if r["errores"]:
+              print("-" * 60)
+              print("ERRORES DE CARGA / NORMALIZACIÓN")
+              print("-" * 60)
+              for i, e in enumerate(r["errores"], 1):
+                  print(f"[{i}] cuerpo={e.get('cuerpo')}")
+                  print(f"    razon={e.get('razon')}")
+                  print()
+
+          if r["choques"]:
+              print("-" * 60)
+              print("CHOQUES AXIOMÁTICOS (bloques que se contradicen)")
+              print("-" * 60)
+              for i, c in enumerate(r["choques"], 1):
+                  print(f"[{i}] tipo={c.get('tipo')}")
+                  if c.get("tipo") == "contradiccion_directa":
+                      print(f"    tripleta : {c.get('tripleta')}")
+                      print(f"    AFIRMA   : {c.get('afirma')}  ({c.get('afirma_tipo')})")
+                      print(f"      enunciado: {c.get('enunciado_afirma')}")
+                      print(f"    NIEGA    : {c.get('niega')}  ({c.get('niega_tipo')})")
+                      print(f"      enunciado: {c.get('enunciado_niega')}")
+                  elif c.get("tipo") == "contradiccion_de_cota":
+                      print(f"    sujeto   : {c.get('sujeto')}")
+                      print(f"    relacion : {c.get('relacion')}")
+                      print(f"    cotas    : {c.get('cotas')}")
+                  else:
+                      print(f"    raw: {c}")
+                  print()
+
+          if not r["coherente"]:
+              print("=" * 60)
+              print("CONTRADICCIÓN AXIOMÁTICA --- EL SISTEMA NO ARRANCA")
+              print("=" * 60)
+              if not r["choques"] and not r["errores"]:
+                  print("(barrer reportó incoherente sin detalle; revisar loader de cuerpos)")
+              sys.exit(1)
+
+          print("AX coherente — OK")
+          EOF
+
       # ==========================================================
       # COMMIT DE HISTORIA
       # ==========================================================
