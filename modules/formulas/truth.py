@@ -25,6 +25,16 @@ FORMULA = {
     "nota": "Tru_Ri(D) = C(D) * L(D) * K(D) (sin límites artificiales).",
 }
 
+
+def _exigir_fraction(valor, nombre: str) -> Fraction:
+    """Exige que el valor sea Fraction. Rechaza float y otros tipos."""
+    if not isinstance(valor, Fraction):
+        raise TypeError(
+            f"{nombre} debe ser Fraction, se recibió {type(valor).__name__}"
+        )
+    return valor
+
+
 def tru_ri(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
     """
     Calcula la contribución del observador (Tru_Ri).
@@ -40,7 +50,11 @@ def tru_ri(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
     Retorna:
         Fraction: Valor de Tru_Ri(D) en el rango [0, 1].
     """
+    C = _exigir_fraction(C, "C")
+    L = _exigir_fraction(L, "L")
+    K = _exigir_fraction(K, "K")
     return C * L * K
+
 
 def tru_total(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
     """
@@ -58,4 +72,7 @@ def tru_total(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
     Retorna:
         Fraction: Valor de Tru_total(D) en el rango [β, 1], donde β = 1/27.
     """
+    C = _exigir_fraction(C, "C")
+    L = _exigir_fraction(L, "L")
+    K = _exigir_fraction(K, "K")
     return (C * L * K * ALPHA) + BETA
