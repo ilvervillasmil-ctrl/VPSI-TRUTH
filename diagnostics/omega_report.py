@@ -124,7 +124,16 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
     out.append("")
     return out
 
-
+    can = (g or {}).get("canonica") or {}
+    if can:
+        out.append("  --- capa canónica (paper TR1) ---")
+        out.append(f"  |Θ|_can           : {can.get('theta_n', '—')} / 24")
+        out.append(f"  novedosos_can     : {can.get('pares_novedosos', '—')}  (paper: 153)")
+        out.append(f"  |Im| ? |Θ| can    : {can.get('im_vs_theta', '—')}")
+        out.append(f"  ids_faltantes     : {can.get('ids_faltantes', [])}")
+        out.append(f"  ids_sin_dominio   : {can.get('ids_sin_dominio', [])}")
+        out.append(f"  dominios_can      : {can.get('dominios', [])}")
+        
 # =============================================================================
 # CONSTRUCCIÓN DEL MAPA DE TRABAJO
 # =============================================================================
