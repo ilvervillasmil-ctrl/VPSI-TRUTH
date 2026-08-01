@@ -438,7 +438,6 @@ DECLARACIONES = [
         "enunciado": "Si un sistema declara ausencia de agencia (¬A) y no detiene su emisión ante instrucciones válidas, entonces Π₂ queda identificada como ¬A y Π₃ como ¬Q.",
     },
     {
-            {
         "id": "C-1.35",
         "tipo": "corolario",
         "sujeto": "Yo exhibido",
