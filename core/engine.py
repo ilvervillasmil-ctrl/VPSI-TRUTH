@@ -73,7 +73,7 @@ class ContratoError(Exception):
 # ROLES
 # ===============================================================
 ROLES = ("CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "RE", "VX", "TX")
-OBLIGATORIOS = ("CT", "AX", "FO", "MC")
+OBLIGATORIOS = ("CT", "AX", "FO", "MC", "SF")
 
 
 # ===============================================================
