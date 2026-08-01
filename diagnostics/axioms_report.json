@@ -2,5 +2,17 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 147
+  "declaraciones": 236,
+  "cuerpos": [
+    "VPSI",
+    "correlacion",
+    "self"
+  ],
+  "por_tipo": {
+    "axioma": 96,
+    "lema": 16,
+    "teorema": 73,
+    "corolario": 45,
+    "definicion": 6
+  }
 }
