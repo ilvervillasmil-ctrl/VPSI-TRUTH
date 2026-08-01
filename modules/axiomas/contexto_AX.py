@@ -567,3 +567,274 @@ def declaraciones():
             ),
         },
     ]
+    # ==============================================================
+    # ANEXO CX v0.3 — Ligadura, registro, semántica operativa
+    # ==============================================================
+
+    # --- Axiomas CX-A14 … CX-A18 ---
+    {
+        "id": "CX-A14",
+        "tipo": "axioma",
+        "sujeto": "tramo_con_O_estable",
+        "relacion": "requiere",
+        "objeto": "registro_operativo_O_id_enunciado_estado",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A1", "CX-A10"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-A14 (Registro operativo): Para que un tramo declare un O estable en sentido "
+            "maquina, debe existir un registro operativo con O_id, enunciado y estado estable. "
+            "La sola prosa narrativa sin registro no constituye por si sola O estable."
+        ),
+    },
+    {
+        "id": "CX-A15",
+        "tipo": "axioma",
+        "sujeto": "forma_clave_bajo_O_id_estable",
+        "relacion": "tiene_a_lo_sumo_una",
+        "objeto": "definicion_activa",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A4", "CX-A12", "CX-A14"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-A15 (Unicidad de ligadura): Bajo un mismo O_id en estado estable, cada forma "
+            "clave tiene a lo sumo una definicion activa. Si hay conflicto de ligadura sin "
+            "declarar cambio de O, el tramo no es estable y K respecto de ese O permanece "
+            "indefinido (no cero)."
+        ),
+    },
+    {
+        "id": "CX-A16",
+        "tipo": "axioma",
+        "sujeto": "varias_formas",
+        "relacion": "pueden_compartir",
+        "objeto": "misma_definicion_D_bajo_O",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A15", "CX-A12"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-A16 (Variantes de forma): Varias formas pueden compartir la misma definicion D "
+            "bajo O (p. ej. hola / hello). Eso no multiplica el contexto ni genera conflicto "
+            "de ligadura."
+        ),
+    },
+    {
+        "id": "CX-A17",
+        "tipo": "axioma",
+        "sujeto": "acto_de_declarar_o_ligar_O",
+        "relacion": "no_constituye_por_si_solo",
+        "objeto": "asignacion_de_Tru_total",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A5", "TA5"],
+        "gobierna": ["contexto", "epistemologia", "logica"],
+        "enunciado": (
+            "CX-A17 (Separacion de actos): Declarar o ligar bajo O no constituye por si solo "
+            "asignacion de Tru_total. Declarar O, interpretar bajo ligadura, juzgar choque "
+            "con el grafo (AX) y calcular Tru (CA/FO) son actos distintos."
+        ),
+    },
+    {
+        "id": "CX-A18",
+        "tipo": "axioma",
+        "sujeto": "ligadura_forma_D",
+        "relacion": "no_identifica_D_con",
+        "objeto": "R",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A2", "TA4", "T12"],
+        "gobierna": ["contexto", "ontologia", "semantica"],
+        "enunciado": (
+            "CX-A18 (Ligadura no es R): Ninguna ligadura (forma, D) identifica D con R. "
+            "Identificar una definicion local del token con R absoluta es conflacion de "
+            "Ri o de marco con R (TA4, T12), no un resultado de CX."
+        ),
+    },
+
+    # --- Lemas CX-L5 … CX-L7 ---
+    {
+        "id": "CX-L5",
+        "tipo": "lema",
+        "sujeto": "conflicto_de_ligadura_no_resuelto",
+        "relacion": "implica",
+        "objeto": "tramo_no_estable",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A15"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-L5: Si bajo O_id hay conflicto de ligadura no resuelto por cambio de O "
+            "declarado, el tramo no esta estable."
+        ),
+    },
+    {
+        "id": "CX-L6",
+        "tipo": "lema",
+        "sujeto": "solo_variantes_de_forma",
+        "relacion": "no_implica",
+        "objeto": "nuevo_O_id",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A16", "CX-T4"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-L6: Si solo hay variantes de forma y no hay conflicto ni ruptura de "
+            "pertenencia (CX-T4/T6), el O_id puede permanecer el mismo."
+        ),
+    },
+    {
+        "id": "CX-L7",
+        "tipo": "lema",
+        "sujeto": "termino_clave_sin_ligadura_activa",
+        "relacion": "impide",
+        "objeto": "K_fino_dependiente_de_ese_termino",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A15", "CX-A10"],
+        "gobierna": ["contexto", "logica", "semantica"],
+        "enunciado": (
+            "CX-L7: Si un termino designado como clave para la evaluacion bajo O carece de "
+            "ligadura activa, no es legitimo pretender un K fino que dependa del significado "
+            "de ese termino."
+        ),
+    },
+
+    # --- Teoremas CX-T11 … CX-T13 ---
+    {
+        "id": "CX-T11",
+        "tipo": "teorema",
+        "sujeto": "definiciones_incompatibles_del_mismo_token",
+        "relacion": "no_constituyen",
+        "objeto": "dos_R",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A15", "CX-A3", "CX-A18", "TA4"],
+        "gobierna": ["contexto", "ontologia", "semantica"],
+        "enunciado": (
+            "CX-T11 (Dos definiciones del token no son dos R): Definiciones incompatibles "
+            "del mismo token bajo el mismo O_id son conflicto de ligadura; bajo O distintos "
+            "son multiplicidad de contextos. R permanece unica e independiente (TA4)."
+        ),
+    },
+    {
+        "id": "CX-T12",
+        "tipo": "teorema",
+        "sujeto": "significado_evaluable_de_forma_T",
+        "relacion": "es",
+        "objeto": "D_de_ligadura_activa_bajo_O_estable",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A15", "CX-A4"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-T12: El significado evaluable de una forma T en un tramo con O estable es "
+            "la definicion D de la ligadura activa (T, D), no la asociacion momentanea no "
+            "declarada de un Ri."
+        ),
+    },
+    {
+        "id": "CX-T13",
+        "tipo": "teorema",
+        "sujeto": "registro_O_no_estable",
+        "relacion": "impide_reclamar",
+        "objeto": "Tru_total_completo_del_material_que_fija_el_marco",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A17", "CX-C4", "CX-A14"],
+        "gobierna": ["contexto", "logica", "meta"],
+        "enunciado": (
+            "CX-T13 (Meta-estabilidad): Mientras el registro de O no esta estable, no es "
+            "legitimo reclamar Tru_total completo del material que aun esta fijando el marco."
+        ),
+    },
+
+    # --- Corolarios CX-C9 … CX-C13 ---
+    {
+        "id": "CX-C9",
+        "tipo": "corolario",
+        "sujeto": "declarar_O",
+        "relacion": "no_es",
+        "objeto": "asignar_Tru_total",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A17"],
+        "gobierna": ["contexto", "logica"],
+        "enunciado": (
+            "CX-C9 (Separacion de actos): Declarar O no es asignar Tru_total."
+        ),
+    },
+    {
+        "id": "CX-C10",
+        "tipo": "corolario",
+        "sujeto": "modo_de_entrada",
+        "relacion": "forma_parte_de",
+        "objeto": "marco_evaluable_y_debe_ser_explicito",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A14"],
+        "gobierna": ["contexto", "meta"],
+        "enunciado": (
+            "CX-C10: El tipo de material de entrada (conversacion, afirmacion, teorema, "
+            "auditoria, ...) forma parte del marco evaluable y debe ser explicito en el "
+            "registro (modo_entrada) para una clasificacion no ambigua."
+        ),
+    },
+    {
+        "id": "CX-C11",
+        "tipo": "corolario",
+        "sujeto": "desacuerdo_entre_definiciones_del_token_realidad",
+        "relacion": "es",
+        "objeto": "desacuerdo_de_ligadura_o_de_O_no_dos_R",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-T11", "CX-A18"],
+        "gobierna": ["contexto", "ontologia", "semantica"],
+        "enunciado": (
+            "CX-C11 (Rivalidad semantica no es rivalidad ontologica): El desacuerdo entre "
+            "definiciones del token realidad es desacuerdo de ligadura o de O, no prueba "
+            "de que existan dos R."
+        ),
+    },
+    {
+        "id": "CX-C12",
+        "tipo": "corolario",
+        "sujeto": "hola_y_hello_con_misma_D_de_saludo",
+        "relacion": "son",
+        "objeto": "variantes_de_forma_no_conflicto",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A16", "CX-L6"],
+        "gobierna": ["contexto", "semantica"],
+        "enunciado": (
+            "CX-C12: Dos formas distintas con la misma definicion de saludo bajo O son "
+            "variantes (CX-A16), no conflicto ni cambio de contexto por si solas."
+        ),
+    },
+    {
+        "id": "CX-C13",
+        "tipo": "corolario",
+        "sujeto": "sincronizacion_con_dominio_observable_bajo_O",
+        "relacion": "no_constituye_por_si_sola",
+        "objeto": "definicion_de_R_ni_anulacion_de_Ri_ajeno",
+        "polaridad": True,
+        "cota": None,
+        "depende_de": ["CX-A18", "TA4", "T14"],
+        "gobierna": ["contexto", "ontologia", "epistemologia"],
+        "enunciado": (
+            "CX-C13 (Sincronizacion no es invencion de R): Una descripcion sincronizada con "
+            "un dominio observable bajo O es candidata a K respecto de ese O; no constituye "
+            "por el solo hecho de ser enunciada la definicion de R ni la anulacion del Ri ajeno."
+        ),
+    },
+]
+
+# ===============================================================
+# CONSTANTES EXPUESTAS PARA EL MÓDULO
+# ===============================================================
+
+__all__ = ["DECLARACIONES", "ALPHA", "BETA"]
+
+
