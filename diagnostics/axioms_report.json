@@ -2,7 +2,7 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 287,
+  "declaraciones": 315,
   "cuerpos": [
     "VPSI",
     "contexto_AX",
@@ -10,10 +10,10 @@
     "self"
   ],
   "por_tipo": {
-    "axioma": 114,
-    "lema": 23,
-    "teorema": 86,
-    "corolario": 58,
+    "axioma": 123,
+    "lema": 27,
+    "teorema": 90,
+    "corolario": 69,
     "definicion": 6
   }
 }
