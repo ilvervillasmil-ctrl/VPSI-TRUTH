@@ -1,225 +1,368 @@
+"""
+modules/contexto/__init__.py
+============================
+
+Rol CX — Contenedor de Contexto.
+
+No calcula Tru_Ri ni Tru_total.
+Define y vela las reglas del juego contextual.
+
+Dos escalas:
+  1. Micro  — reglas para O_context de una petición / frase / dominio.
+  2. Macro  — coherencia contextual del repositorio completo
+             (módulos, contratos, reportes como Omega Report).
+
+El Engine dirige.
+Este módulo solo entrega el marco y garantiza que las reglas
+internas de contexto no se contradigan entre sí.
+
+Dependencia causal: MC (correlación mecánica) marca el momento
+en que el contexto puede definirse o ejecutarse.
+"""
+
 from __future__ import annotations
+
 import importlib.util
 import sys
-from fractions import Fraction
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
-from core.diagnostico import DiagnosticoGlobal  # Integración con Diagnostics
+from typing import Any, Dict, List, Optional
+
+try:
+    from core.diagnostico import DiagnosticoGlobal
+except Exception:
+    class DiagnosticoGlobal:  # fallback silencioso
+        @staticmethod
+        def recibir_reporte(*args, **kwargs):
+            pass
+
+
+_DIR = Path(__file__).parent
+
 
 # ===============================================================
-# CONTENEDOR: Metadatos del módulo
-# ===============================================================
-CONTENEDOR = {
-    "nombre": "contexto",
-    "rol": "CX",
-    "version": "1.0",
-    "requiere": ["AX", "CT", "MC"],
-    "descripcion": (
-        "Filtro inicial del sistema VPSI-TRUTH. "
-        "Valida el contexto base del repositorio (axiomas, orden causal, constantes) "
-        "y expone la función resolver(peticion) para el Engine."
-    ),
-    "capacidades": {
-        "verificar": resolver,
-        "inventario": inventario,
-    },
-}
-
-# ===============================================================
-# ESTADO UNDEFINIDO (UNDEFINED)
+# UNDEFINED (valor sin evidencia contextual)
 # ===============================================================
 class _Undefined:
-    """Estado para valores sin evidencia."""
     __slots__ = ()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "UNDEFINED"
 
     def __bool__(self):
         raise TypeError("UNDEFINED no admite conversión a booleano")
 
-    def __eq__(self, otro):
-        return isinstance(otro, _Undefined)
+    def __eq__(self, other):
+        return isinstance(other, _Undefined)
 
     def __hash__(self):
         return hash("VPSI_UNDEFINED")
 
+
 UNDEFINED = _Undefined()
 
-def es_undefined(v) -> bool:
-    """Verifica si un valor es UNDEFINED."""
+
+def es_undefined(v: Any) -> bool:
     return v is UNDEFINED or isinstance(v, _Undefined)
 
-# ===============================================================
-# EXCEPCIONES
-# ===============================================================
+
 class ContextoError(Exception):
-    """Error al resolver el contexto (ej: axiomas contradichos, constantes inválidas)."""
+    """Error de coherencia o de regla contextual."""
     pass
 
-# ===============================================================
-# CARGA DINÁMICA DE ARCHIVOS DE CONTEXTO
-# ===============================================================
-_DIR = Path(__file__).parent  # Directorio del módulo contexto
 
-def _cargar_archivos_contexto() -> Dict[str, Any]:
+# ===============================================================
+# CARGA DE REGLAS INTERNAS (archivos dentro de contexto/)
+# ===============================================================
+def _cargar_reglas() -> Dict[str, Any]:
     """
-    Carga todos los archivos de contexto dentro de la carpeta `contexto/`.
-    Cada archivo debe definir una función `validar()` que devuelva:
-    - Un diccionario con el contexto validado.
-    - O lanzar una excepción si el contexto es inválido.
+    Cada archivo .py (excepto __init__ y _*) puede declarar:
+      - REGLA: dict con metadatos de la regla
+      - validar(): callable que devuelve dict o lanza
+    El init solo comprueba que no se contradigan entre sí.
     """
-    contextos = {}
-    for archivo in _DIR.glob("*.py"):
-        if archivo.name == "__init__.py":
-            continue  # Saltar este archivo
-
-        # Cargar el módulo dinámicamente
-        modulo_nombre = f"contexto_{archivo.stem}"
-        spec = importlib.util.spec_from_file_location(modulo_nombre, archivo)
+    registro: Dict[str, Any] = {}
+    for archivo in sorted(_DIR.glob("*.py")):
+        if archivo.name == "__init__.py" or archivo.name.startswith("_"):
+            continue
+        nombre = f"contexto_regla_{archivo.stem}"
+        spec = importlib.util.spec_from_file_location(nombre, archivo)
         if spec is None or spec.loader is None:
             continue
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[nombre] = mod
+        try:
+            spec.loader.exec_module(mod)
+        except Exception as e:
+            registro[archivo.stem] = {"error": f"{type(e).__name__}: {e}"}
+            continue
 
-        modulo = importlib.util.module_from_spec(spec)
-        sys.modules[modulo_nombre] = modulo
-        spec.loader.exec_module(modulo)
+        meta = getattr(mod, "REGLA", None)
+        validador = getattr(mod, "validar", None)
 
-        # Verificar que el módulo tenga una función `validar()`
-        if hasattr(modulo, "validar") and callable(modulo.validar):
+        entrada: Dict[str, Any] = {"archivo": archivo.name}
+        if isinstance(meta, dict):
+            entrada["regla"] = meta
+        if callable(validador):
             try:
-                contexto = modulo.validar()
-                contextos[archivo.stem] = contexto
+                entrada["resultado"] = validador()
             except Exception as e:
-                contextos[archivo.stem] = {"error": str(e)}
-        else:
-            contextos[archivo.stem] = {"error": "No tiene función validar()"}
+                entrada["error"] = str(e)
+        if "regla" not in entrada and "resultado" not in entrada and "error" not in entrada:
+            entrada["error"] = "sin REGLA ni validar()"
 
-    return contextos
+        registro[archivo.stem] = entrada
+    return registro
+
+
+def _detectar_choques_reglas(reglas: Dict[str, Any]) -> List[str]:
+    """
+    Choque simple: dos reglas con el mismo id o el mismo nombre
+    y polaridades / enunciados incompatibles.
+    Extensible cuando existan más archivos de regla.
+    """
+    choques: List[str] = []
+    por_id: Dict[str, List[str]] = {}
+    por_nombre: Dict[str, List[str]] = {}
+
+    for clave, datos in reglas.items():
+        if "error" in datos:
+            continue
+        regla = datos.get("regla") or {}
+        rid = str(regla.get("id", "")).strip()
+        nom = str(regla.get("nombre", "")).strip()
+        if rid:
+            por_id.setdefault(rid, []).append(clave)
+        if nom:
+            por_nombre.setdefault(nom, []).append(clave)
+
+    for rid, archivos in por_id.items():
+        if len(archivos) > 1:
+            choques.append(f"id de regla '{rid}' repetido en {archivos}")
+    for nom, archivos in por_nombre.items():
+        if len(archivos) > 1:
+            choques.append(f"nombre de regla '{nom}' repetido en {archivos}")
+
+    return choques
+
 
 # ===============================================================
-# ENGINE (Orquestador)
+# CONTEXTO DE REPOSITORIO (macro)
 # ===============================================================
-def resolver(peticion: Dict[str, Any] = None) -> Dict[str, Any]:
+def _contexto_repositorio() -> Dict[str, Any]:
     """
-    Función principal para resolver el contexto base del repositorio.
-    Orquesta la lógica del módulo:
-    1. Carga archivos de contexto.
-    2. Valida axiomas (AX).
-    3. Valida orden causal (MC).
-    4. Valida constantes (CT).
-    5. Retorna el contexto resuelto.
+    El propio repositorio es un contexto.
+    Coherencia de contratos, roles y ausencia de contradicción
+    entre módulos es parte del marco contextual global.
+    Omega Report es un artefacto de ese contexto.
     """
-    # Cargar todos los archivos de contexto en la carpeta
-    archivos_contexto = _cargar_archivos_contexto()
+    info: Dict[str, Any] = {
+        "O_context": "VPSI-TRUTH / repositorio",
+        "descripcion": (
+            "Contexto macro: coherencia del sistema de módulos, "
+            "contratos CONTENEDOR y reportes de diagnóstico."
+        ),
+    }
 
-    # Validar axiomas (AX)
-    from modules.axiomas import barrer as barrer_axiomas
-    informe_axiomas = barrer_axiomas()
-    axiomas_coherentes = informe_axiomas.get("coherente", False)
-    choques_axiomas = informe_axiomas.get("choques", [])
-
-    # Validar orden causal (MC)
-    from modules.correlacion_mecanica import barrer as barrer_mecanica
-    informe_mecanica = barrer_mecanica()
-    orden_causal_valido = informe_mecanica.get("coherente", False)
-    choques_mecanica = informe_mecanica.get("choques", [])
-
-    # Validar constantes (CT)
-    from modules.constante import ALPHA, BETA
-    constantes_validas = (ALPHA + BETA == Fraction(1))
-
-    # Determinar coherencia global del repositorio
-    coherencia = axiomas_coherentes and orden_causal_valido and constantes_validas
-
-    # Construir el contexto resuelto
-    contexto_resuelto = {
-        "O_context": "VPSI-TRUTH v9.4 (repositorio)",
-        "coherente": coherencia,
-        "axiomas": {
-            "coherente": axiomas_coherentes,
-            "choques": choques_axiomas,
-            "declaraciones": informe_axiomas.get("declaraciones", 0),
-        },
-        "mecanica": {
-            "coherente": orden_causal_valido,
-            "choques": choques_mecanica,
-        },
-        "constantes": {
+    # Constantes (CT)
+    try:
+        from fractions import Fraction
+        from modules.constante import ALPHA, BETA
+        info["constantes"] = {
             "ALPHA": str(ALPHA),
             "BETA": str(BETA),
-            "suma": str(ALPHA + BETA),
-            "valido": constantes_validas,
+            "valido": ALPHA + BETA == Fraction(1),
+        }
+    except Exception as e:
+        info["constantes"] = {"error": str(e), "valido": False}
+
+    # Axiomas (AX)
+    try:
+        from modules.axiomas import barrer as barrer_ax
+        ia = barrer_ax()
+        info["axiomas"] = {
+            "coherente": ia.get("coherente", False),
+            "declaraciones": ia.get("declaraciones", 0),
+            "choques": len(ia.get("choques", [])),
+        }
+    except Exception as e:
+        info["axiomas"] = {"coherente": False, "error": str(e)}
+
+    # Mecánica (MC) — dependencia causal
+    try:
+        from modules.correlacion_mecanica import barrer as barrer_mc
+        im = barrer_mc()
+        info["mecanica"] = {
+            "coherente": im.get("coherente", False),
+            "choques": im.get("choques", []),
+        }
+    except Exception as e:
+        info["mecanica"] = {"coherente": False, "error": str(e)}
+
+    coherente = (
+        info.get("constantes", {}).get("valido", False)
+        and info.get("axiomas", {}).get("coherente", False)
+        and info.get("mecanica", {}).get("coherente", False)
+    )
+    info["coherente"] = coherente
+    return info
+
+
+# ===============================================================
+# API PRINCIPAL
+# ===============================================================
+def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Resuelve el contexto aplicable.
+
+    - Sin petición → contexto de repositorio (macro).
+    - Con petición → adjunta O_context declarado y valida reglas internas.
+
+    No calcula Tru. Solo entrega el marco y su coherencia.
+    """
+    peticion = peticion or {}
+    reglas = _cargar_reglas()
+    choques_reglas = _detectar_choques_reglas(reglas)
+    repo = _contexto_repositorio()
+
+    o_ctx = peticion.get("contexto") or peticion.get("O_context") or repo.get("O_context")
+
+    errores: List[str] = []
+    if choques_reglas:
+        errores.extend(choques_reglas)
+    for nombre, datos in reglas.items():
+        if "error" in datos:
+            errores.append(f"regla '{nombre}': {datos['error']}")
+
+    if not repo.get("coherente", False):
+        errores.append("contexto de repositorio incoherente")
+
+    coherente = (not errores) and repo.get("coherente", False)
+
+    salida = {
+        "O_context": o_ctx,
+        "coherente": coherente,
+        "escala": "macro" if not peticion else "micro+macro",
+        "reglas_internas": {
+            "total": len(reglas),
+            "choques": choques_reglas,
+            "detalle": reglas,
         },
-        "archivos_contexto": archivos_contexto,
-        "errores": [],
+        "repositorio": repo,
+        "errores": errores,
+        "notas": [],
     }
 
-    # Agregar errores si los hay
-    if not axiomas_coherentes:
-        contexto_resuelto["errores"].append(
-            f"Choques axiomáticos: {choques_axiomas}"
-        )
-    if not orden_causal_valido:
-        contexto_resuelto["errores"].append(
-            f"Choques mecánicos: {choques_mecanica}"
-        )
-    if not constantes_validas:
-        contexto_resuelto["errores"].append(
-            f"Constantes inválidas: ALPHA + BETA = {ALPHA + BETA} (se exige 1)"
+    if not reglas:
+        salida["notas"].append(
+            "sin archivos de regla internos (vacío legítimo; "
+            "el init solo vela coherencia cuando existan)"
         )
 
-    # Validar que todos los archivos de contexto sean coherentes
-    for nombre_archivo, contexto in archivos_contexto.items():
-        if "error" in contexto:
-            contexto_resuelto["errores"].append(
-                f"Archivo de contexto {nombre_archivo} inválido: {contexto['error']}"
-            )
-            contexto_resuelto["coherente"] = False
-
-    # Enviar reporte a DiagnosticoGlobal si hay errores (Reporte Omega)
-    if not contexto_resuelto["coherente"]:
+    if not coherente:
         DiagnosticoGlobal.recibir_reporte(
             modulo="contexto",
-            errores=[{"tipo": "error_contexto", "detalle": error} for error in contexto_resuelto["errores"]]
+            errores=[{"tipo": "error_contexto", "detalle": e} for e in errores],
         )
 
-    return contexto_resuelto
+    return salida
 
-# ===============================================================
-# CENTINELA (Eyenet)
-# ===============================================================
+
 def verificar_salida(salida: Dict[str, Any]) -> bool:
-    """
-    Valida la salida del Engine (resolver).
-    - Si la salida es coherente, devuelve True.
-    - Si no lo es, ya se envió un reporte a DiagnosticoGlobal en resolver().
-    """
-    return salida.get("coherente", False)
+    return bool(salida.get("coherente", False))
 
-# ===============================================================
-# INVENTARIO (Opcional)
-# ===============================================================
-def inventario() -> Dict[str, Any]:
-    """
-    Devuelve un resumen del módulo contexto.
-    """
-    archivos_contexto = _cargar_archivos_contexto()
+
+def inventario(peticion: Any = None) -> Dict[str, Any]:
+    reglas = _cargar_reglas()
     return {
-        "contenedor": CONTENEDOR["nombre"],
-        "version": CONTENEDOR["version"],
-        "archivos_contexto": list(archivos_contexto.keys()),
-        "coherente": resolver().get("coherente", False),
+        "contenedor": "contexto",
+        "version": "1.0",
+        "rol": "CX",
+        "reglas_internas": list(reglas.keys()),
+        "total_reglas": len(reglas),
+        "funcion": (
+            "Define y vela las reglas del juego contextual. "
+            "No calcula Tru. Entrega el marco para CA, AX, FO, UI y el resto."
+        ),
     }
 
+
+def axiomas() -> List[Dict[str, Any]]:
+    """Declaraciones mínimas del propio módulo CX."""
+    return [
+        {
+            "id": "CX-1",
+            "tipo": "axioma",
+            "sujeto": "contexto",
+            "relacion": "precede",
+            "objeto": "reglas_del_juego",
+            "polaridad": True,
+            "enunciado": (
+                "Contexto no calcula Tru_Ri ni Tru_total; "
+                "define las reglas bajo las cuales todo cálculo y juicio son posibles."
+            ),
+            "depende_de": [],
+            "gobierna": ["contexto"],
+        },
+        {
+            "id": "CX-2",
+            "tipo": "axioma",
+            "sujeto": "O_context",
+            "relacion": "es_requerido_por",
+            "objeto": "K",
+            "polaridad": True,
+            "enunciado": (
+                "K es indefinido sin O_context explícito (Corolario Def-5.3.1). "
+                "Contexto es la fuente de ese marco."
+            ),
+            "depende_de": ["Def-5.3.1"],
+            "gobierna": ["K", "evaluacion"],
+        },
+        {
+            "id": "CX-3",
+            "tipo": "axioma",
+            "sujeto": "reglas_internas_de_contexto",
+            "relacion": "no_deben",
+            "objeto": "contradecirse",
+            "polaridad": True,
+            "enunciado": (
+                "Los archivos de regla dentro de contexto/ no pueden "
+                "contradecirse entre sí; el init vela esa coherencia."
+            ),
+            "depende_de": [],
+            "gobierna": ["contexto"],
+        },
+    ]
+
+
 # ===============================================================
-# EXPORTACIÓN
+# CONTENEDOR (al final — funciones ya definidas)
 # ===============================================================
+CONTENEDOR = {
+    "nombre": "contexto",
+    "rol": "CX",
+    "version": "1.0",
+    "requiere": ["MC", "CT", "AX"],
+    "descripcion": (
+        "Contenedor de contexto. Rol CX. "
+        "No calcula. Define y vela las reglas del juego contextual "
+        "(micro: O_context de una petición; macro: coherencia del repositorio). "
+        "Depende de MC para el momento causal de ejecución."
+    ),
+    "capacidades": {
+        "verificar": resolver,
+        "evaluar": resolver,
+        "inventario": inventario,
+        "axiomas": axiomas,
+    },
+}
+
 __all__ = [
     "CONTENEDOR",
     "UNDEFINED",
     "es_undefined",
     "ContextoError",
     "resolver",
-    "verificar_salida",  # Nueva función para el Centinela
-    "inventario",  # Nueva función para introspección
+    "verificar_salida",
+    "inventario",
+    "axiomas",
 ]
