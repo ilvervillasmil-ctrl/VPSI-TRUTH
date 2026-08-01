@@ -806,7 +806,7 @@ def declaraciones():
                 "variantes (CX-A16), no conflicto ni cambio de contexto por si solas."
             ),
         },
-        {
+                {
             "id": "CX-C13",
             "tipo": "corolario",
             "sujeto": "sincronizacion_con_dominio_observable_bajo_O",
@@ -820,6 +820,451 @@ def declaraciones():
                 "CX-C13 (Sincronizacion no es invencion de R): Una descripcion sincronizada con "
                 "un dominio observable bajo O es candidata a K respecto de ese O; no constituye "
                 "por el solo hecho de ser enunciada la definicion de R ni la anulacion del Ri ajeno."
+            ),
+        },
+        # ===========================================================
+        # ANEXO CX v0.4 — Fractalidad, entrada natural, multi-O, generacion
+        # ===========================================================
+        {
+            "id": "CX-D16",
+            "tipo": "corolario",
+            "sujeto": "grano_contextual",
+            "relacion": "es",
+            "objeto": "nivel_de_resolucion_del_material_bajo_O",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-D16 (Grano contextual): Nivel de resolucion del material bajo el cual se "
+                "declara O: grafema/forma, palabra, frase, turno, conversacion, sesion, meta."
+            ),
+        },
+        {
+            "id": "CX-D17",
+            "tipo": "corolario",
+            "sujeto": "O_micro_y_O_global",
+            "relacion": "distinguen",
+            "objeto": "marco_de_tramo_versus_mapa_de_secuencia",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A14", "CX-C8"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-D17 (O micro / O global): O micro es el marco de un tramo, frase o criterio; "
+                "O global es el marco que describe el mapa de varios O micro. O global no sustituye "
+                "los micro ni agrega K sin regla de agregacion explicita."
+            ),
+        },
+        {
+            "id": "CX-D18",
+            "tipo": "corolario",
+            "sujeto": "entrada_natural",
+            "relacion": "es",
+            "objeto": "material_de_casilla_sin_campos_tecnicos_obligatorios",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-D18 (Entrada natural): Material de casilla en prosa, lista, etiqueta o "
+                "conversacion sin exigir al emisor campos tecnicos (O_id, escala, ...). "
+                "El sistema eleva ese material a registro operativo."
+            ),
+        },
+        {
+            "id": "CX-D19",
+            "tipo": "corolario",
+            "sujeto": "generacion_de_contexto",
+            "relacion": "es",
+            "objeto": "proponer_y_fijar_enunciado_O_explicito",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A14", "Def-5.3.1"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-D19 (Generacion de contexto): Acto de proponer y fijar un enunciado_O "
+                "(y registro) cuando la peticion lo ordena. Generar = declarar O explicito, "
+                "no ocultar un marco implicito."
+            ),
+        },
+        {
+            "id": "CX-D20",
+            "tipo": "corolario",
+            "sujeto": "modalidad_de_emision",
+            "relacion": "es",
+            "objeto": "canal_o_lengua_del_material",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A15", "CX-A16"],
+            "gobierna": ["contexto", "semantica"],
+            "enunciado": (
+                "CX-D20 (Modalidad de emision): Canal o lengua del material (ES, EN, mezcla, "
+                "codigo, prosa). La modalidad es atributo del tramo; no es por si sola un cambio "
+                "de O, salvo que cambie el marco tematico evaluable."
+            ),
+        },
+        {
+            "id": "CX-D21",
+            "tipo": "corolario",
+            "sujeto": "criterios_bajo_un_O",
+            "relacion": "son",
+            "objeto": "lista_de_condiciones_de_un_mismo_O_de_sesion",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-D21 (Criterios bajo un O): Lista de condiciones (1, 2, 3, ...) que precisan "
+                "un mismo O de sesion, no una familia de O distintos, salvo declaracion de cambio."
+            ),
+        },
+        {
+            "id": "CX-A19",
+            "tipo": "axioma",
+            "sujeto": "forma_de_registro_operativo",
+            "relacion": "es_invariante_en",
+            "objeto": "todo_grano_contextual",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D16", "CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-A19 (Fractalidad de la forma de marco): La estructura de registro operativo "
+                "(O_id, enunciado, estado, evento, ligaduras) es la misma en todo grano. "
+                "Cambia el grano, no la forma de la regla."
+            ),
+        },
+        {
+            "id": "CX-A20",
+            "tipo": "axioma",
+            "sujeto": "casilla_con_texto_usable",
+            "relacion": "constituye",
+            "objeto": "declaracion_de_marco_via_entrada_natural",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D18", "CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-A20 (Entrada natural admisible): Una casilla con texto usable constituye "
+                "declaracion de marco via entrada natural. La ausencia de vocabulario tecnico "
+                "del emisor no anula la declaracion si el enunciado es recuperable."
+            ),
+        },
+        {
+            "id": "CX-A21",
+            "tipo": "axioma",
+            "sujeto": "casilla_vacia_o_enunciado_no_recuperable",
+            "relacion": "implica",
+            "objeto": "estado_indefinido_y_K_no_reclamable",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A10", "Def-5.3.1"],
+            "gobierna": ["contexto", "evaluacion"],
+            "enunciado": (
+                "CX-A21 (Vacio implica indefinido): Casilla vacia o enunciado no recuperable "
+                "implica estado indefinido; K no es reclamable en ese tramo."
+            ),
+        },
+        {
+            "id": "CX-A22",
+            "tipo": "axioma",
+            "sujeto": "lista_numerada_de_criterios_sin_cambio_declarado",
+            "relacion": "arma",
+            "objeto": "un_solo_O_con_criterios",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D21", "CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-A22 (Un O por lista de criterios): Una lista numerada de criterios bajo una "
+                "misma casilla, sin declaracion de cambio, arma un O con criterios, no N O "
+                "independientes por defecto."
+            ),
+        },
+        {
+            "id": "CX-A23",
+            "tipo": "axioma",
+            "sujeto": "cambio_de_O_en_conversacion",
+            "relacion": "requiere",
+            "objeto": "declaracion_o_frontera_explicita_o_cierre_de_sesion",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A8", "CX-T6"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-A23 (Cambio solo por declaracion o frontera explicita): El cambio de O en "
+                "una conversacion se reconoce por declaracion de cambio, por frontera de tramo "
+                "con nuevo marco, o por cierre de sesion — no por inferencia silenciosa del auditor."
+            ),
+        },
+        {
+            "id": "CX-A24",
+            "tipo": "axioma",
+            "sujeto": "contexto_generado_por_peticion",
+            "relacion": "debe_fijarse_por_escrito_antes_de",
+            "objeto": "reclamo_de_K_o_Tru",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D19", "Def-5.3.1"],
+            "gobierna": ["contexto", "evaluacion"],
+            "enunciado": (
+                "CX-A24 (Generacion es declaracion): Si la peticion ordena crear un contexto, "
+                "el O propuesto debe quedar fijado por escrito en el registro antes de cualquier "
+                "reclamo de K o Tru sobre ese marco."
+            ),
+        },
+        {
+            "id": "CX-A25",
+            "tipo": "axioma",
+            "sujeto": "O_global_de_mapa",
+            "relacion": "no_borra_ni_promedia_en_silencio",
+            "objeto": "O_micro_de_la_secuencia",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D17"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-A25 (O global no colapsa micro): Un O global de mapa conversacional no borra "
+                "ni promedia en silencio los O micro; cada micro conserva su estado y su derecho "
+                "a K local."
+            ),
+        },
+        {
+            "id": "CX-A26",
+            "tipo": "axioma",
+            "sujeto": "cambio_de_lengua_o_canal",
+            "relacion": "no_implica_por_si_solo",
+            "objeto": "evento_cambio_de_O",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D20", "CX-A15"],
+            "gobierna": ["contexto", "semantica"],
+            "enunciado": (
+                "CX-A26 (Modalidad no es O): Cambio de lengua o de canal no implica por si solo "
+                "evento=cambio de O; implica reevaluacion de ligaduras o escala si el significado "
+                "evaluable depende de la modalidad."
+            ),
+        },
+        {
+            "id": "CX-A27",
+            "tipo": "axioma",
+            "sujeto": "mismo_material_bajo_N_O_distintos",
+            "relacion": "admite",
+            "objeto": "N_evaluaciones_locales_sin_identificar_O_con_R",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["TA4", "CX-A18"],
+            "gobierna": ["contexto", "epistemologia"],
+            "enunciado": (
+                "CX-A27 (Multi-marco de evaluacion): Es admisible evaluar el mismo material bajo "
+                "N O distintos. Cada uno produce evaluacion local; la comparacion es entre "
+                "descripciones, no la identificacion de un O con R."
+            ),
+        },
+        {
+            "id": "CX-L8",
+            "tipo": "lema",
+            "sujeto": "texto_usable_sin_estado_indefinido_ni_cambio",
+            "relacion": "permite_construir",
+            "objeto": "registro_con_estado_estable",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A20", "CX-A14"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-L8 (Elevacion): Si existe texto usable en casilla y no hay estado declarado "
+                "indefinido ni cambio, puede construirse registro con estado=estable y "
+                "enunciado_O derivado del texto (entrada natural)."
+            ),
+        },
+        {
+            "id": "CX-L9",
+            "tipo": "lema",
+            "sujeto": "una_casilla_con_varios_items_numerados",
+            "relacion": "no_implica_por_defecto",
+            "objeto": "varios_O_id",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A22", "CX-D21"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-L9 (No multi-O por defecto): De una sola casilla con varios items numerados "
+                "no se sigue la existencia de varios O_id salvo regla o declaracion explicita "
+                "de particion."
+            ),
+        },
+        {
+            "id": "CX-L10",
+            "tipo": "lema",
+            "sujeto": "secuencia_de_tramos_con_O_micro",
+            "relacion": "admite",
+            "objeto": "O_global_adicional_de_mapa",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-D17", "CX-A25"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-L10 (Mapa conversacional): Dada una secuencia de tramos con O micro "
+                "clasificados, existe la posibilidad de un O global cuyo enunciado describe "
+                "esa secuencia; ese O global es un marco adicional, no el sustituto de los micro."
+            ),
+        },
+        {
+            "id": "CX-L11",
+            "tipo": "lema",
+            "sujeto": "material_multiinterpretable_sin_O_declarado",
+            "relacion": "deja",
+            "objeto": "K_indefinida_o_fuerza_O_no_dicho",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A10", "CX-A21", "Def-5.3.1"],
+            "gobierna": ["contexto", "semantica"],
+            "enunciado": (
+                "CX-L11 (Ambiguedad sin O fijo): Material poetico, metaforico o multiinterpretable "
+                "sin O declarado deja K indefinida o fuerza al auditor a instalar un O no dicho; "
+                "lo segundo viola la exigencia de marco explicito."
+            ),
+        },
+        {
+            "id": "CX-T14",
+            "tipo": "teorema",
+            "sujeto": "reclamo_de_K_en_cualquier_grano",
+            "relacion": "exige",
+            "objeto": "registro_estable_en_ese_grano",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A19", "CX-A14", "CX-A1"],
+            "gobierna": ["contexto", "evaluacion"],
+            "enunciado": (
+                "CX-T14 (Invariancia de forma bajo fractalidad): Para todo grano contextual, "
+                "las condiciones de estabilidad de registro (O_id + enunciado recuperable) son "
+                "necesarias para reclamar K en ese grano."
+            ),
+        },
+        {
+            "id": "CX-T15",
+            "tipo": "teorema",
+            "sujeto": "conversacion_con_cambios_de_marco",
+            "relacion": "se_evalua_como",
+            "objeto": "familia_de_resultados_por_tramo_no_un_solo_Tru_sin_agregacion",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A23", "CX-A25", "CX-L1", "CX-C5"],
+            "gobierna": ["contexto", "evaluacion"],
+            "enunciado": (
+                "CX-T15 (Conversacion multi-O): En una conversacion con cambios de marco, "
+                "la evaluacion correcta es la familia de resultados por tramo (y opcionalmente "
+                "el O global de mapa), no un unico Tru_total del discurso entero sin regla de "
+                "agregacion declarada."
+            ),
+        },
+        {
+            "id": "CX-T16",
+            "tipo": "teorema",
+            "sujeto": "reclamo_de_K_sobre_marco_generado",
+            "relacion": "exige_previa",
+            "objeto": "fijacion_de_enunciado_O_en_registro",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A24", "Def-5.3.1"],
+            "gobierna": ["contexto", "evaluacion", "inferencia_causal"],
+            "enunciado": (
+                "CX-T16 (Generacion antes de correlacion): Ningun reclamo de K sobre un marco "
+                "generado es valido si el enunciado_O generado no fue fijado en registro antes "
+                "del computo."
+            ),
+        },
+        {
+            "id": "CX-T17",
+            "tipo": "teorema",
+            "sujeto": "mismo_material_bajo_O_1_a_O_n",
+            "relacion": "admite",
+            "objeto": "hasta_n_valores_locales_de_K_y_Tru",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A27", "TA4"],
+            "gobierna": ["contexto", "epistemologia"],
+            "enunciado": (
+                "CX-T17 (N marcos, N correlaciones): Si el mismo material se evalua bajo "
+                "O_1 ... O_n declarados, existen hasta n valores de K (y Tru) locales; la "
+                "divergencia entre ellos no es contradiccion del material sino diferencia de marcos."
+            ),
+        },
+        {
+            "id": "CX-C14",
+            "tipo": "corolario",
+            "sujeto": "interfaz_en_prosa_o_lista",
+            "relacion": "no_implica_indefinido_por_ausencia_de",
+            "objeto": "O_id_tipado_por_el_usuario",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A20", "CX-L8"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-C14: La interfaz puede limitarse a prosa o lista; la ausencia de O_id "
+                "tipado por el usuario no implica indefinido si el texto es usable."
+            ),
+        },
+        {
+            "id": "CX-C15",
+            "tipo": "corolario",
+            "sujeto": "casilla_con_contenido_contexto_indefinido",
+            "relacion": "es",
+            "objeto": "declaracion_meta_no_autorizacion_de_K_arbitraria",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A21", "CX-A10"],
+            "gobierna": ["contexto", "evaluacion"],
+            "enunciado": (
+                "CX-C15: 'Contexto indefinido' como contenido de la casilla es declaracion meta: "
+                "clasifica el tramo objeto como indefinido o abre O meta de auditoria; no autoriza "
+                "asignar K en {0,1} al agujero."
+            ),
+        },
+        {
+            "id": "CX-C16",
+            "tipo": "corolario",
+            "sujeto": "mezcla_de_lenguas_en_un_turno",
+            "relacion": "no_genera_por_si_sola",
+            "objeto": "choque_axiomatico",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-A26"],
+            "gobierna": ["contexto", "semantica"],
+            "enunciado": (
+                "CX-C16: Mezcla ES/EN/otro en un turno no genera por si sola un choque "
+                "axiomatico; genera, si acaso, trabajo de ligadura y de escala bajo el O vigente."
+            ),
+        },
+        {
+            "id": "CX-C17",
+            "tipo": "corolario",
+            "sujeto": "reporte_con_Tru_distintos_bajo_O_distintos",
+            "relacion": "es_coherente_con",
+            "objeto": "CX-T17_sin_exigir_veredicto_unico",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-T17"],
+            "gobierna": ["contexto", "epistemologia"],
+            "enunciado": (
+                "CX-C17: Un reporte que muestre 'bajo O_logica alto; bajo O_metaforico al piso beta' "
+                "es coherente con CX-T17 y no exige un unico veredicto."
+            ),
+        },
+        {
+            "id": "CX-C18",
+            "tipo": "corolario",
+            "sujeto": "O_global_de_mapa_conversacional",
+            "relacion": "mide",
+            "objeto": "el_mapa_no_cada_micro",
+            "polaridad": True,
+            "cota": None,
+            "depende_de": ["CX-L10", "CX-A25"],
+            "gobierna": ["contexto"],
+            "enunciado": (
+                "CX-C18: El O global de 'que se dedico la conversacion' es admisible como producto "
+                "de clasificacion de secuencia; su K mide el mapa, no cada micro."
             ),
         },
     ]
