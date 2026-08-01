@@ -1,270 +1,368 @@
-#!/usr/bin/env python3
 """
-CENTINELA DEL ENGINE - VPSI-TRUTH
+core/centinela.py
+=================
+Filtro autónomo pre-salida. Sin potestad de orquestar ni de entrar en módulos.
 
-Vigila el despacho, no el resultado. Distingue dos cosas:
+HACE
+----
+- Recibe el paquete de ciclo que el Engine propone como salida.
+- Lee evidencia de CACHE (si está disponible).
+- Recalcula Tru con FO + ancla CT (Fraction).
+- Doble verificación: dos pasadas independientes + contraste con el original.
+- Emite APROBADO | RETENIDO | PARCIAL.
+- Deposita veredicto en CACHE (evidencia append-only cuando el backend lo permita).
 
-    PENDIENTE      el rol no está montado todavía. Fase de construcción,
-                   no defecto. El centinela lo nombra y detiene la pasada.
+NO HACE / NO PUEDE
+------------------
+- Entrar en carpetas de modules/* ni importar init de dominio para “arreglar”.
+- Re-orquestar CX, AX, RE, TX, SF, MC…
+- Modificar C, L, K, contexto u O_context.
+- Inventar Tru si faltan factores.
+- Tener prioridad de negocio ni borrar evidencia.
+- Forzar SALIDA si el recálculo no cuadra.
 
-    CONTRATO_ROTO  el módulo existe y no expone lo que su rol exige.
-                   Eso sí es defecto.
-
-Adaptado a la nueva arquitectura donde:
-- Los módulos exponen sus capacidades a través de CONTENEDOR.
-- El Engine Global (core/engine.py) descubre módulos y ejecuta sus capacidades.
-- El Centinela Global valida el sistema usando los reportes del Engine.
+Dependencias legítimas de verificación: FO (formulas), CT (constantes).
+CA se usa solo para reglas de legibilidad de factores (None legítimo), no para re-scrape.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
 from fractions import Fraction
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Tuple
+import copy
 
 
-class PiezaPendiente(Exception):
-    def __init__(self, rol: str, para_que: str):
-        self.rol = rol
-        self.para_que = para_que
-        super().__init__(f"rol '{rol}' no montado ({para_que})")
+# ---------------------------------------------------------------------------
+# API mínima de CACHE (inyectable; no es potestad del centinela crear el mundo)
+# ---------------------------------------------------------------------------
+class CacheEvidencia(Protocol):
+    def guardar(self, registro: Dict[str, Any]) -> None: ...
+    def obtener(self, ciclo_id: str) -> Optional[Dict[str, Any]]: ...
 
 
-class ContratoRoto(Exception):
-    def __init__(self, quien: str, exigido: str, recibido: str):
-        self.quien = quien
-        super().__init__(f"{quien}: se exige {exigido}, se recibió {recibido}")
+class _CacheMemoriaLocal:
+    """Backend de fase: memoria de proceso. Sustituible por modules/cache."""
 
+    def __init__(self) -> None:
+        self._regs: List[Dict[str, Any]] = []
 
-class Centinela:
-    """
-    Centinela Global para validar el sistema VPSI-TRUTH.
-    - Vigila que los módulos cumplan sus contratos (capacidades exigidas).
-    - Valida el orden de arranque (barrido axiomático previo).
-    - Exige roles imprescindibles (AX, CT, FO, CA).
-    """
+    def guardar(self, registro: Dict[str, Any]) -> None:
+        self._regs.append(dict(registro))
 
-    # rol -> (clase, nombres exigidos, para qué sirve)
-    CONTRATOS: Dict[str, Tuple[str, Tuple[str, ...], str]] = {
-        "AX": ("funcion", ("barrer",), "juez de contraste axiomático"),
-        "CT": ("atributo", ("ALPHA", "BETA"), "ALPHA y BETA exactos"),
-        "FO": ("funcion", ("tru_ri", "tru_total"), "funcional canónico"),
-        "CA": ("funcion", ("calcular",), "devuelve C, L, K"),
-        "CX": ("funcion", ("resolver",), "resuelve Octx"),
-        "TX": ("funcion", ("anotar",), "anota tácticas T1-T15"),
-    }
-
-    IMPRESCINDIBLES = ("AX", "CT", "FO", "CA")
-
-    def __init__(self, registro, informe_axiomas: Optional[Dict] = None):
-        self.registro = registro
-        self.informe_axiomas = informe_axiomas
-        self._ultima_pasada: Optional[Tuple[str, str]] = None
-
-    def _contenedor_de(self, rol: str):
-        """Busca el contenedor asociado a un rol en el registro."""
-        for c in self.registro.contenedores.values():
-            if getattr(c, "rol", None) == rol:
-                return c
+    def obtener(self, ciclo_id: str) -> Optional[Dict[str, Any]]:
+        for r in reversed(self._regs):
+            if r.get("ciclo_id") == ciclo_id:
+                return dict(r)
         return None
 
-    def _obtener_capacidad(self, contenedor, nombre: str, clase: str) -> Any:
-        """
-        Obtiene una capacidad de un contenedor y valida su tipo.
-        """
-        if nombre not in contenedor.get("capacidades", {}):
+    def todos(self) -> List[Dict[str, Any]]:
+        return list(self._regs)
+
+
+# singleton de fase (Engine/bootstrap pueden inyectar otro)
+_cache_default = _CacheMemoriaLocal()
+
+
+# ---------------------------------------------------------------------------
+# Errores
+# ---------------------------------------------------------------------------
+class CentinelaError(Exception):
+    """Error de forma del centinela, no de negocio Tru."""
+
+
+# ---------------------------------------------------------------------------
+# Resultado
+# ---------------------------------------------------------------------------
+@dataclass
+class Veredicto:
+    estado: str  # APROBADO | RETENIDO | PARCIAL
+    ciclo_id: str
+    motivos: List[str] = field(default_factory=list)
+    tru_ri_engine: Optional[str] = None
+    tru_total_engine: Optional[str] = None
+    tru_ri_pass1: Optional[str] = None
+    tru_total_pass1: Optional[str] = None
+    tru_ri_pass2: Optional[str] = None
+    tru_total_pass2: Optional[str] = None
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+
+    def a_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _frac(x: Any) -> Optional[Fraction]:
+    if x is None:
+        return None
+    if isinstance(x, Fraction):
+        return x
+    if isinstance(x, bool):
+        raise CentinelaError("bool no es Fraction")
+    if isinstance(x, float):
+        raise CentinelaError("float rechazado en centinela")
+    if isinstance(x, int):
+        return Fraction(x)
+    if isinstance(x, str):
+        s = x.strip()
+        if s.upper() in ("NONE", "UNDEFINED", ""):
             return None
-        valor = contenedor["capacidades"][nombre]
-        if clase == "funcion" and not callable(valor):
-            return None
-        if clase == "atributo" and not isinstance(valor, Fraction):
-            return None
-        return valor
+        return Fraction(s)
+    raise CentinelaError(f"tipo no convertible a Fraction: {type(x)}")
 
-    # ---------------------------------------------------------------
-    # CENSO: rol declarado contra rol ejercido
-    # ---------------------------------------------------------------
 
-    def censo(self) -> Dict[str, Dict[str, Any]]:
-        """No lanza. Devuelve el estado de cada rol para el inventario."""
-        out: Dict[str, Dict[str, Any]] = {}
-        for rol, (clase, nombres, para_que) in self.CONTRATOS.items():
-            exige = ", ".join(
-                n + "()" if clase == "funcion" else n for n in nombres
-            )
-            cont = self._contenedor_de(rol)
+def _str_frac(x: Optional[Fraction]) -> Optional[str]:
+    return str(x) if x is not None else None
 
-            if cont is None:
-                out[rol] = {
-                    "estado": "PENDIENTE",
-                    "modulo": None,
-                    "exige": exige,
-                    "para_que": para_que,
-                }
-                continue
 
-            faltan: List[str] = []
-            for n in nombres:
-                v = self._obtener_capacidad(cont, n, clase)
-                if v is None:
-                    if clase == "funcion":
-                        faltan.append(f"{n}()")
-                    else:
-                        faltan.append(f"{n} (Fraction, recibido {type(v).__name__ if v is not None else 'None'})")
+def _ancla() -> Tuple[Fraction, Fraction]:
+    from modules.constante import ALPHA, BETA
 
-            if faltan:
-                out[rol] = {
-                    "estado": "CONTRATO_ROTO",
-                    "modulo": cont.get("nombre", "desconocido"),
-                    "exige": exige,
-                    "falta": faltan,
-                    "para_que": para_que,
-                }
-            else:
-                out[rol] = {
-                    "estado": "MONTADO",
-                    "modulo": cont.get("nombre", "desconocido"),
-                    "exige": exige,
-                    "para_que": para_que,
-                }
-        return out
+    if not isinstance(ALPHA, Fraction) or not isinstance(BETA, Fraction):
+        raise CentinelaError("ancla CT no es Fraction")
+    if ALPHA + BETA != Fraction(1):
+        raise CentinelaError("ancla CT: ALPHA+BETA != 1")
+    return ALPHA, BETA
 
-    def puede_evaluar(self) -> Tuple[bool, List[str]]:
-        c = self.censo()
-        faltan = [r for r in self.IMPRESCINDIBLES if c[r]["estado"] != "MONTADO"]
-        return (not faltan), faltan
 
-    # ---------------------------------------------------------------
-    # ORDEN DE ARRANQUE
-    # ---------------------------------------------------------------
+def _fo_tru(
+    C: Optional[Fraction], L: Optional[Fraction], K: Optional[Fraction]
+) -> Tuple[Optional[Fraction], Optional[Fraction]]:
+    """Recálculo literal vía FO. Si falta factor → (None, None) sin inventar."""
+    if C is None or L is None or K is None:
+        return None, None
+    from modules.formulas.truth import tru_ri, tru_total
 
-    def exigir_barrido_previo(self, informe: Optional[Dict]) -> None:
-        if informe is None:
-            raise ContratoRoto(
-                "orden de arranque",
-                "barrido axiomático antes del primer evaluar()",
-                "informe_axiomas ausente",
-            )
-        if not informe.get("coherente", False):
-            n = len(informe.get("choques", []) or [])
-            raise ContratoRoto(
-                "orden de arranque", "axiomática coherente",
-                f"{n} choques sin resolver",
-            )
-        if informe.get("declaraciones", 0) == 0:
-            raise ContratoRoto(
-                "orden de arranque", "al menos una declaración cargada",
-                "0 declaraciones: coherente por vacuidad",
-            )
+    ri = tru_ri(C, L, K)
+    tot = tru_total(C, L, K)
+    return ri, tot
 
-    # ---------------------------------------------------------------
-    # ROLES
-    # ---------------------------------------------------------------
 
-    def exigir_roles(self, roles: Optional[List[str]] = None) -> None:
-        censo = self.censo()
-        for rol in (roles or self.IMPRESCINDIBLES):
-            d = censo[rol]
-            if d["estado"] == "PENDIENTE":
-                raise PiezaPendiente(rol, d["para_que"])
-            if d["estado"] == "CONTRATO_ROTO":
-                raise ContratoRoto(
-                    f"contenedor '{d['modulo']}' con rol {rol}",
-                    d["exige"],
-                    f"falta {d.get('falta')}",
-                )
+def _extraer_factores(paquete: Dict[str, Any]) -> Tuple[
+    Optional[Fraction], Optional[Fraction], Optional[Fraction], List[str]
+]:
+    motivos: List[str] = []
+    factores = paquete.get("factores") or {}
+    # tolerar plano en raíz
+    c_raw = factores.get("C", paquete.get("C"))
+    l_raw = factores.get("L", paquete.get("L"))
+    k_raw = factores.get("K", paquete.get("K"))
+    try:
+        C = _frac(c_raw) if c_raw is not None else None
+    except CentinelaError as e:
+        motivos.append(f"C: {e}")
+        C = None
+    try:
+        L = _frac(l_raw) if l_raw is not None else None
+    except CentinelaError as e:
+        motivos.append(f"L: {e}")
+        L = None
+    try:
+        K = _frac(k_raw) if k_raw is not None else None
+    except CentinelaError as e:
+        motivos.append(f"K: {e}")
+        K = None
+    return C, L, K, motivos
 
-    # ---------------------------------------------------------------
-    # FRONTERA DE TIPOS
-    # ---------------------------------------------------------------
 
-    @staticmethod
-    def exigir_exacto(nombre: str, valor: Any) -> Fraction:
-        """Rechaza, no convierte. Fraction(str(0.1)) finge la precisión."""
-        if isinstance(valor, Fraction):
-            return valor
-        if isinstance(valor, int):
-            return Fraction(valor)
-        raise ContratoRoto(
-            nombre, "Fraction o int", f"{type(valor).__name__} ({valor!r})"
+def _extraer_tru_engine(
+    paquete: Dict[str, Any],
+) -> Tuple[Optional[Fraction], Optional[Fraction], List[str]]:
+    motivos: List[str] = []
+    try:
+        ri = _frac(paquete.get("tru_ri"))
+    except CentinelaError as e:
+        motivos.append(f"tru_ri engine: {e}")
+        ri = None
+    try:
+        tot = _frac(paquete.get("tru_total"))
+    except CentinelaError as e:
+        motivos.append(f"tru_total engine: {e}")
+        tot = None
+    return ri, tot, motivos
+
+
+def _paquete_minimo_ok(paquete: Dict[str, Any]) -> List[str]:
+    faltas: List[str] = []
+    if not isinstance(paquete, dict):
+        return ["paquete no es dict"]
+    if not paquete.get("ciclo_id"):
+        faltas.append("falta ciclo_id")
+    # contexto: debe existir la clave (puede ser None solo si estado lo declara)
+    if "O_context" not in paquete and "contexto" not in paquete:
+        faltas.append("falta O_context/contexto en paquete")
+    estado = str(paquete.get("estado") or "").upper()
+    if estado not in ("OK", "PARCIAL", "UNDEFINED", "ERROR", ""):
+        faltas.append(f"estado desconocido: {estado}")
+    return faltas
+
+
+# ---------------------------------------------------------------------------
+# Núcleo
+# ---------------------------------------------------------------------------
+class Centinela:
+    """
+    Filtro pre-salida. Autónomo en el veredicto; sin agencia sobre módulos.
+    """
+
+    def __init__(self, cache: Optional[CacheEvidencia] = None) -> None:
+        self._cache: CacheEvidencia = cache or _cache_default
+
+    # --- lo que NO puede hacer (documentado y reforzado) ---
+    def entrar_modulo(self, *args: Any, **kwargs: Any) -> None:
+        raise CentinelaError(
+            "Centinela no tiene agencia para entrar en módulos/carpetas"
         )
 
-    def exigir_factores(self, factores: Dict[str, Any]) -> Dict[str, Fraction]:
-        limpios: Dict[str, Fraction] = {}
-        for nombre in ("C", "L", "K"):
-            if nombre not in factores:
-                raise ContratoRoto("factores", f"'{nombre}' presente", "ausente")
-            v = factores[nombre]
-            if str(v).upper() == "UNDEFINED":
-                raise PiezaPendiente("CA", f"factor {nombre} quedó UNDEFINED")
-            v = self.exigir_exacto(f"factor {nombre}", v)
-            if not (Fraction(0) <= v <= Fraction(1)):
-                raise ContratoRoto(f"factor {nombre}", "valor en [0, 1]", str(v))
-            limpios[nombre] = v
-        return limpios
+    def modificar_factores(self, *args: Any, **kwargs: Any) -> None:
+        raise CentinelaError("Centinela no modifica C/L/K ni contexto")
 
-    # ---------------------------------------------------------------
-    # AUTORIDAD E INVARIANCIA L
-    # ---------------------------------------------------------------
+    def orquestar(self, *args: Any, **kwargs: Any) -> None:
+        raise CentinelaError("Centinela no orquesta; solo verifica salida")
 
-    def exigir_invocador(self, invocador_id: str) -> None:
-        if invocador_id != "core":
-            raise ContratoRoto(
-                "autoridad de despacho", "invocador 'core'", f"'{invocador_id}'"
-            )
-
-    def registrar_pasada(self, huella_peticion: str, huella_resultado: str) -> None:
-        if self._ultima_pasada is not None:
-            prev_p, prev_r = self._ultima_pasada
-            if huella_peticion == prev_p and huella_resultado != prev_r:
-                raise ContratoRoto(
-                    "invariancia L",
-                    "misma petición, mismo resultado",
-                    f"dos resultados distintos para la huella {huella_peticion}",
-                )
-        self._ultima_pasada = (huella_peticion, huella_resultado)
-
-    # ---------------------------------------------------------------
-    # PUERTA ÚNICA
-    # ---------------------------------------------------------------
-
-    def franquear(
+    # --- verificación principal ---
+    def verificar(
         self,
-        peticion: Dict[str, Any],
-        informe_axiomas: Optional[Dict],
-        invocador_id: str,
-        roles: Optional[List[str]] = None,
-    ) -> None:
-        self.exigir_invocador(invocador_id)
-        self.exigir_barrido_previo(informe_axiomas)
-        self.exigir_roles(roles)
-        if not peticion.get("contexto"):
-            raise ContratoRoto(
-                "petición",
-                "Octx declarado (sin él, K queda indefinida y no nula)",
-                "sin contexto",
-            )
-
-    # ---------------------------------------------------------------
-    # INTEGRACIÓN CON EL ENGINE GLOBAL
-    # ---------------------------------------------------------------
-
-    def validar_sistema(self) -> Dict[str, Any]:
+        paquete: Dict[str, Any],
+        *,
+        depositar_propuesta: bool = True,
+    ) -> Veredicto:
         """
-        Valida el sistema completo usando el Engine Global.
-        """
-        from core.engine import GlobalEngine
-        resultados = GlobalEngine.ejecutar_sistema()
-        errores = []
+        Doble verificación + contraste con original.
 
-        for modulo_name, resultado in resultados.items():
-            if not resultado.get("coherente", True):
-                errores.append({
-                    "modulo": modulo_name,
-                    "errores": resultado.get("errores", []),
-                    "choques": resultado.get("choques", [])
+        paquete (schema de fase) debe incluir idealmente:
+          ciclo_id, estado, O_context|contexto,
+          factores|{C,L,K}, tru_ri, tru_total,
+          metadatos opcionales.
+        """
+        if not isinstance(paquete, dict):
+            raise CentinelaError("paquete debe ser dict")
+
+        # trabajo sobre copia: no mutar lo que mandó Engine
+        p = copy.deepcopy(paquete)
+        ciclo_id = str(p.get("ciclo_id") or "")
+        motivos: List[str] = []
+
+        # 0) evidencia: depositar propuesta tal cual
+        if depositar_propuesta and ciclo_id:
+            try:
+                self._cache.guardar({
+                    "tipo": "propuesta_engine",
+                    "ciclo_id": ciclo_id,
+                    "paquete": p,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
+            except Exception as e:
+                motivos.append(f"cache_propuesta: {type(e).__name__}: {e}")
 
-        if errores:
-            return {"status": "error", "errores": errores}
-        else:
-            return {"status": "ok"}
+        # 1) forma mínima
+        faltas = _paquete_minimo_ok(p)
+        if faltas:
+            v = Veredicto(
+                estado="RETENIDO",
+                ciclo_id=ciclo_id or "sin_ciclo",
+                motivos=[f"paquete_incompleto: {f}" for f in faltas] + motivos,
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        estado_eng = str(p.get("estado") or "").upper()
+
+        # 2) factores + tru engine
+        C, L, K, m_fac = _extraer_factores(p)
+        motivos.extend(m_fac)
+        ri_e, tot_e, m_tru = _extraer_tru_engine(p)
+        motivos.extend(m_tru)
+
+        # 3) ancla (punto ciego si CT roto → RETENIDO)
+        try:
+            _ancla()
+        except Exception as e:
+            v = Veredicto(
+                estado="RETENIDO",
+                ciclo_id=ciclo_id,
+                motivos=motivos + [f"ancla: {e}"],
+                tru_ri_engine=_str_frac(ri_e),
+                tru_total_engine=_str_frac(tot_e),
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        # 4) reglas de estado parcial / undefined (K None legítimo)
+        o_ctx = p.get("O_context", p.get("contexto"))
+        if estado_eng in ("UNDEFINED", "PARCIAL") or K is None or C is None or L is None:
+            # no inventar Tru; salida numérica completa no aplica
+            if estado_eng in ("OK",) and (C is None or L is None or K is None):
+                motivos.append(
+                    "estado OK pero factores incompletos (fail-closed)"
+                )
+                v = Veredicto(
+                    estado="RETENIDO",
+                    ciclo_id=ciclo_id,
+                    motivos=motivos,
+                    tru_ri_engine=_str_frac(ri_e),
+                    tru_total_engine=_str_frac(tot_e),
+                )
+                self._depositar_veredicto(v, p)
+                return v
+            v = Veredicto(
+                estado="PARCIAL",
+                ciclo_id=ciclo_id,
+                motivos=motivos
+                + [
+                    "factores incompletos o estado no-OK: "
+                    "sin Tru completo; no se aprueba salida numérica llena"
+                ],
+                tru_ri_engine=_str_frac(ri_e),
+                tru_total_engine=_str_frac(tot_e),
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        # 5) doble recálculo FO (pasada 1 y 2 independientes)
+        try:
+            ri1, tot1 = _fo_tru(C, L, K)
+            ri2, tot2 = _fo_tru(C, L, K)
+        except Exception as e:
+            v = Veredicto(
+                estado="RETENIDO",
+                ciclo_id=ciclo_id,
+                motivos=motivos + [f"recalculo_FO: {type(e).__name__}: {e}"],
+                tru_ri_engine=_str_frac(ri_e),
+                tru_total_engine=_str_frac(tot_e),
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        if ri1 != ri2 or tot1 != tot2:
+            v = Veredicto(
+                estado="RETENIDO",
+                ciclo_id=ciclo_id,
+                motivos=motivos
+                + ["doble_verificacion: pasada1 != pasada2 (no determinista)"],
+                tru_ri_engine=_str_frac(ri_e),
+                tru_total_engine=_str_frac(tot_e),
+                tru_ri_pass1=_str_frac(ri1),
+                tru_total_pass1=_str_frac(tot1),
+                tru_ri_pass2=_str_frac(ri2),
+                tru_total_pass2=_str_frac(tot2),
+            )
+            self._depositar_veredicto(v, p)
+            return v
+
+        # 6) contraste con original Engine
+        if ri_e is None or tot_e is None:
+            v = Veredicto(
+                estado="RETENIDO",
+                ciclo_id=ciclo_id,
+                motivos=motivos
+                + ["engine no declaró tru_ri/tru_total numéricos en estado OK"],
+                tru_ri_pass1=_str_frac(ri1),
+                tru_total_pass1=_str_frac(tot1),
+                tru_ri_pass2=_str_frac(ri2),
+                tru_total_pass2=_str_frac
