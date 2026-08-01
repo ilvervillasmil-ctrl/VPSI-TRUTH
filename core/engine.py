@@ -22,9 +22,13 @@ class Engine:
     - Recopila los reportes internos de cada módulo.
     """
 
-    def __init__(self):
-        """Constructor para permitir instanciación."""
+    def __init__(self, invocador_id: str = "core"):
+        """
+        Constructor para permitir instanciación.
+        - `invocador_id`: Identificador del invocador (por defecto: "core").
+        """
         self._MODULES_DIR = Path(__file__).parent.parent / "modules"
+        self.invocador_id = invocador_id
 
     @classmethod
     def descubrir_modulos(cls) -> Dict[str, Any]:
