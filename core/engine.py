@@ -28,6 +28,11 @@ class EvaluacionError(Exception):
     pass
 
 
+class DominioError(Exception):
+    """Error de dominio / contexto (O_context, etc.)."""
+    pass
+
+
 # ===============================================================
 # ROLES ADMITIDOS
 # ===============================================================
@@ -133,7 +138,6 @@ class Engine:
         for path in sorted(self.raiz.rglob("*.py")):
             if path.name.startswith("_") and path.name != "__init__.py":
                 continue
-            # Preferir __init__.py del paquete
             if path.name != "__init__.py" and (path.parent / "__init__.py").exists():
                 continue
 
@@ -203,7 +207,6 @@ class Engine:
 
     # -----------------------------------------------------------
     def _ejecutar_compuertas(self):
-        # Compuerta AX
         for cont in self.registro.por_rol.get("AX", []):
             fn = cont.fn("verificar") or cont.fn("barrer") or cont.fn("evaluar")
             if callable(fn):
@@ -211,15 +214,12 @@ class Engine:
                     informe = fn()
                     self.informe_axiomas = informe
                     if not informe.get("coherente", True):
-                        self.errores_arranque.append(
-                            f"AX/{cont.nombre}: incoherente"
-                        )
+                        self.errores_arranque.append(f"AX/{cont.nombre}: incoherente")
                 except Exception as e:
                     self.errores_arranque.append(
                         f"AX/{cont.nombre}: {type(e).__name__}: {e}"
                     )
 
-        # Compuerta MC
         for cont in self.registro.por_rol.get("MC", []):
             fn = cont.fn("verificar") or cont.fn("barrer") or cont.fn("evaluar")
             if callable(fn):
@@ -227,9 +227,7 @@ class Engine:
                     informe = fn()
                     self.informe_mecanica = informe
                     if not informe.get("coherente", True):
-                        self.errores_arranque.append(
-                            f"MC/{cont.nombre}: incoherente"
-                        )
+                        self.errores_arranque.append(f"MC/{cont.nombre}: incoherente")
                 except Exception as e:
                     self.errores_arranque.append(
                         f"MC/{cont.nombre}: {type(e).__name__}: {e}"
@@ -257,7 +255,6 @@ class Engine:
             mod = cont.modulo
             if hasattr(mod, "tru_ri") and hasattr(mod, "tru_total"):
                 return mod.tru_ri, mod.tru_total
-        # Fallback
         try:
             from modules.formulas.truth import tru_ri, tru_total
             return tru_ri, tru_total
@@ -337,8 +334,9 @@ class Engine:
             "informe_mecanica": self.informe_mecanica,
         }
 
+
 # ===============================================================
-# RE-EXPORTS PÚBLICOS (compatibilidad con tests y otros módulos)
+# RE-EXPORTS (compatibilidad con tests)
 # ===============================================================
 try:
     from modules.axiomas import normalizar
@@ -362,6 +360,7 @@ __all__ = [
     "ROLES",
     "ArranqueError",
     "EvaluacionError",
+    "DominioError",
     "normalizar",
     "contradiccion_directa",
     "contradiccion_de_cota",
