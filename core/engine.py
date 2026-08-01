@@ -1,7 +1,7 @@
 """
 VPSI-TRUTH --- core/engine.py
 
-El Engine es el ejecutor universal de contratos del framework VPSI-TRUTH.
+#El Engine es el ejecutor universal de contratos del framework VPSI-TRUTH.
 
 Principio fundamental:
 - Posee conocimiento completo de la arquitectura (módulos, contratos, dependencias,
