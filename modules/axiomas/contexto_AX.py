@@ -536,7 +536,7 @@ def declaraciones():
                 "Tru=0 respecto de R."
             ),
         },
-        {
+                {
             "id": "CX-C7",
             "tipo": "corolario",
             "sujeto": "trabajo_formal",
@@ -552,7 +552,6 @@ def declaraciones():
             ),
         },
         {
-                    {
             "id": "CX-C8",
             "tipo": "corolario",
             "sujeto": "secuencia_de_contextos_del_ciclo",
