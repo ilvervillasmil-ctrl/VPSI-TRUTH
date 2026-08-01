@@ -22,10 +22,11 @@ class Engine:
     - Recopila los reportes internos de cada módulo.
     """
 
-    def __init__(self, invocador_id: str = "core"):
+    def __init__(self, invocador_id: str = "core", **kwargs):
         """
         Constructor para permitir instanciación.
         - `invocador_id`: Identificador del invocador (por defecto: "core").
+        - `**kwargs`: Captura cualquier otro argumento para evitar conflictos.
         """
         self._MODULES_DIR = Path(__file__).parent.parent / "modules"
         self.invocador_id = invocador_id
