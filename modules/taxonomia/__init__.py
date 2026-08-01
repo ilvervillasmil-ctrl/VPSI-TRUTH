@@ -10,8 +10,12 @@ Define reglas deterministas de estructura para medir cada táctica (T1–T15).
 
 El Engine aplica la taxonomía sobre un O_context cuando el contrato
 y la correlación mecánica lo autorizan.
-Los archivos dentro de taxonomia/ declaran cada táctica (TACTICA).
-El init filtra coherencia interna y expone la capacidad de aplicar.
+
+Los archivos dentro de taxonomia/ declaran:
+  - TACTICA  (dict)  → una táctica
+  - TACTICAS (list)  → varias tácticas (p. ej. manipulation_TX.py)
+
+El init audita cada declaración. Si no pasa el filtro, no sale.
 """
 
 from __future__ import annotations
@@ -34,41 +38,128 @@ CLAVES_TACTICA = ("id", "nombre", "degrada", "enunciado")
 
 
 # ===============================================================
-# DESCUBRIMIENTO DE TÁCTICAS
+# VALIDACIÓN DE UNA TÁCTICA (filtro interno)
+# ===============================================================
+def _validar_tactica(meta: Dict[str, Any], origen: str) -> List[str]:
+    """
+    Audita una declaración de táctica.
+    Si hay errores, esa táctica no sale.
+    """
+    errores: List[str] = []
+    if not isinstance(meta, dict):
+        return [f"{origen}: TACTICA no es dict"]
+
+    for clave in CLAVES_TACTICA:
+        val = meta.get(clave)
+        if val is None or val == "" or val == []:
+            errores.append(f"{origen}: falta o vacío '{clave}'")
+
+    tid = meta.get("id")
+    if tid is not None and not isinstance(tid, str):
+        errores.append(f"{origen}: 'id' debe ser str")
+
+    nombre = meta.get("nombre")
+    if nombre is not None and not isinstance(nombre, str):
+        errores.append(f"{origen}: 'nombre' debe ser str")
+
+    degrada = meta.get("degrada")
+    if degrada is not None:
+        if not isinstance(degrada, (list, tuple)):
+            errores.append(f"{origen}: 'degrada' debe ser lista")
+        else:
+            permitidos = {"C", "L", "K", "A"}
+            for d in degrada:
+                if d not in permitidos:
+                    errores.append(f"{origen}: factor '{d}' no permitido en degrada")
+
+    estructura = meta.get("estructura")
+    if estructura is not None and not isinstance(estructura, dict):
+        errores.append(f"{origen}: 'estructura' debe ser dict")
+
+    return errores
+
+
+# ===============================================================
+# DESCUBRIMIENTO + AUDITORÍA
 # ===============================================================
 def _descubrir() -> Dict[str, Dict[str, Any]]:
     """
-    Cada archivo .py (excepto __init__ y _*) puede declarar TACTICA: dict.
-    Sin TACTICA → no participa.
+    Recorre la carpeta.
+    Acepta TACTICAS (lista) o TACTICA (dict).
+    Cada táctica se audita; si no pasa, se registra con error y no participa
+    en aplicar() ni en el inventario limpio.
     """
     registro: Dict[str, Dict[str, Any]] = {}
+
     for f in sorted(_DIR.glob("*.py")):
         if f.name.startswith("_") or f.name == "__init__.py":
             continue
+
         clave = f"taxonomia_{f.stem}"
         spec = importlib.util.spec_from_file_location(clave, f)
         if spec is None or spec.loader is None:
             continue
+
         mod = importlib.util.module_from_spec(spec)
         sys.modules[clave] = mod
         try:
             spec.loader.exec_module(mod)
         except Exception as e:
-            registro[f.name] = {"archivo": f.name, "error": f"{type(e).__name__}: {e}"}
+            registro[f.name] = {
+                "archivo": f.name,
+                "error": f"{type(e).__name__}: {e}",
+            }
             continue
 
+        # --- Lista de tácticas ---
+        lista = getattr(mod, "TACTICAS", None)
+        if isinstance(lista, list):
+            for i, item in enumerate(lista):
+                origen = f"{f.name}[{i}]"
+                errs = _validar_tactica(item if isinstance(item, dict) else {}, origen)
+                if errs:
+                    registro[f"{f.name}#{i}"] = {
+                        "archivo": f.name,
+                        "error": "; ".join(errs),
+                    }
+                    continue
+                tid = str(item.get("id"))
+                registro[f"{f.name}#{tid}"] = {
+                    "archivo": f.name,
+                    "id": tid,
+                    "nombre": item.get("nombre"),
+                    "degrada": list(item.get("degrada", [])),
+                    "enunciado": item.get("enunciado"),
+                    "estructura": item.get("estructura") or {},
+                }
+            continue
+
+        # --- Una sola táctica ---
         meta = getattr(mod, "TACTICA", None)
-        if not isinstance(meta, dict):
+        if meta is None:
+            registro[f.name] = {
+                "archivo": f.name,
+                "error": "sin TACTICA ni TACTICAS",
+            }
+            continue
+
+        errs = _validar_tactica(meta if isinstance(meta, dict) else {}, f.name)
+        if errs:
+            registro[f.name] = {
+                "archivo": f.name,
+                "error": "; ".join(errs),
+            }
             continue
 
         registro[f.name] = {
             "archivo": f.name,
-            "id": meta.get("id"),
+            "id": str(meta.get("id")),
             "nombre": meta.get("nombre"),
-            "degrada": list(meta.get("degrada", [])),  # C, L, K, A, ...
+            "degrada": list(meta.get("degrada", [])),
             "enunciado": meta.get("enunciado"),
-            "estructura": meta.get("estructura"),  # criterios estructurales, no interpretativos
+            "estructura": meta.get("estructura") or {},
         }
+
     return registro
 
 
@@ -77,15 +168,15 @@ def _detectar_choques(hallado: Dict[str, Dict[str, Any]]) -> List[str]:
     por_id: Dict[str, List[str]] = {}
     por_nombre: Dict[str, List[str]] = {}
 
-    for archivo, meta in hallado.items():
+    for clave, meta in hallado.items():
         if "error" in meta:
             continue
         tid = str(meta.get("id") or "").strip()
         nom = str(meta.get("nombre") or "").strip()
         if tid:
-            por_id.setdefault(tid, []).append(archivo)
+            por_id.setdefault(tid, []).append(clave)
         if nom:
-            por_nombre.setdefault(nom, []).append(archivo)
+            por_nombre.setdefault(nom, []).append(clave)
 
     for tid, archivos in por_id.items():
         if len(archivos) > 1:
@@ -96,29 +187,40 @@ def _detectar_choques(hallado: Dict[str, Dict[str, Any]]) -> List[str]:
     return choques
 
 
+def _solo_validas(hallado: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Solo tácticas que pasaron el filtro (sin error, con id)."""
+    return {
+        k: v
+        for k, v in hallado.items()
+        if "error" not in v and v.get("id")
+    }
+
+
 # ===============================================================
-# FILTRO / CENTINELA
+# FILTRO / CENTINELA DEL MÓDULO
 # ===============================================================
 def barrer() -> Dict[str, Any]:
     """
     Coherencia interna de la taxonomía.
-    Carpeta vacía = vacío legítimo (aún no hay tácticas montadas).
+    - Audita cada táctica de cada archivo.
+    - Si no pasa, no sale.
+    - Carpeta vacía = vacío legítimo.
     """
     hallado = _descubrir()
     errores: List[str] = []
     notas: List[str] = []
 
-    for archivo, meta in sorted(hallado.items()):
+    for clave, meta in sorted(hallado.items()):
         if "error" in meta:
-            errores.append(f"{archivo}: {meta['error']}")
-            continue
-        for clave in CLAVES_TACTICA:
-            if not meta.get(clave):
-                errores.append(f"{archivo}: TACTICA sin '{clave}'")
+            errores.append(f"{clave}: {meta['error']}")
 
     choques = _detectar_choques(hallado)
+    validas = _solo_validas(hallado)
+
     if not hallado:
-        notas.append("sin tácticas internas (vacío legítimo)")
+        notas.append("sin archivos de táctica (vacío legítimo)")
+    elif not validas and hallado:
+        notas.append("hay archivos pero ninguna táctica pasó el filtro")
 
     if choques or errores:
         DiagnosticoGlobal.recibir_reporte(
@@ -134,11 +236,9 @@ def barrer() -> Dict[str, Any]:
         "coherente": not (choques or errores),
         "choques": choques,
         "errores": errores,
-        "tacticas": sorted(
-            str(m.get("id"))
-            for m in hallado.values()
-            if m.get("id") and "error" not in m
-        ),
+        "tacticas": sorted(str(m.get("id")) for m in validas.values()),
+        "total_declaradas": len(hallado),
+        "total_validas": len(validas),
         "notas": notas,
     }
 
@@ -148,7 +248,7 @@ def verificar_salida(salida: Dict[str, Any]) -> bool:
 
 
 # ===============================================================
-# APLICACIÓN ESTRUCTURAL (sin interpretación)
+# APLICACIÓN ESTRUCTURAL (solo tácticas que pasaron el filtro)
 # ===============================================================
 def aplicar(
     descripcion: Dict[str, Any],
@@ -156,42 +256,29 @@ def aplicar(
 ) -> Dict[str, Any]:
     """
     Aplica la taxonomía por estructura, no por opinión.
-
-    Entrada esperada (mínima):
-      descripcion: hechos estructurales ya medidos o declarados
-        (p. ej. polaridades, cambios de marco, rol declarado vs ejecutado)
-      contexto: O_context bajo el cual se evalúa (si no hay, K no aplica)
-
-    Salida:
-      lista de tácticas cuya estructura coincide con la descripción,
-      factores que degradan (C, L, K, A) y evidencia estructural citada.
+    Solo usa tácticas que pasaron la auditoría del init.
     No emite Tru_total.
     """
     hallado = _descubrir()
+    validas = _solo_validas(hallado)
     contexto = contexto or {}
     o_ctx = contexto.get("O_context") or contexto.get("contexto")
 
     coincidencias: List[Dict[str, Any]] = []
-    for archivo, meta in sorted(hallado.items()):
-        if "error" in meta or not meta.get("id"):
-            continue
+    for clave, meta in sorted(validas.items()):
         estructura = meta.get("estructura") or {}
-        # Criterio determinista: todas las claves de estructura presentes
-        # en descripcion con el valor exigido (si se declara).
         ok = True
         evidencia: List[str] = []
+
         if isinstance(estructura, dict) and estructura:
             for k, esperado in estructura.items():
                 actual = descripcion.get(k)
-                if actual is None:
-                    ok = False
-                    break
-                if actual != esperado:
+                if actual is None or actual != esperado:
                     ok = False
                     break
                 evidencia.append(f"{k}={actual}")
         else:
-            # Sin estructura formal en el archivo → no se aplica por defecto
+            # Sin criterios estructurales → no se aplica
             ok = False
 
         if ok:
@@ -201,7 +288,7 @@ def aplicar(
                 "degrada": meta.get("degrada", []),
                 "enunciado": meta.get("enunciado"),
                 "evidencia": evidencia,
-                "archivo": archivo,
+                "archivo": meta.get("archivo"),
             })
 
     return {
@@ -209,8 +296,10 @@ def aplicar(
         "O_context": o_ctx,
         "aplicadas": coincidencias,
         "total": len(coincidencias),
+        "tacticas_disponibles": len(validas),
         "nota": (
             "Medición estructural. Sin interpretación. "
+            "Solo tácticas que pasaron el filtro del init. "
             "Tru_total lo calculan CA/FO bajo el mismo O_context."
         ),
     }
@@ -218,6 +307,7 @@ def aplicar(
 
 def inventario() -> Dict[str, Any]:
     hallado = _descubrir()
+    validas = _solo_validas(hallado)
     return {
         "contenedor": "taxonomia",
         "version": "1.0",
@@ -227,13 +317,14 @@ def inventario() -> Dict[str, Any]:
                 "nombre": m.get("nombre"),
                 "degrada": m.get("degrada"),
             }
-            for m in hallado.values()
-            if m.get("id") and "error" not in m
+            for m in validas.values()
         },
+        "total_validas": len(validas),
         "funcion": (
             "Taxonomía metodológica determinista. "
             "Mide tácticas por estructura, no por interpretación. "
-            "El Engine la aplica cuando el contrato y MC lo autorizan."
+            "El Engine la aplica cuando el contrato y MC lo autorizan. "
+            "Si una táctica no pasa el filtro del init, no sale."
         ),
     }
 
@@ -269,6 +360,20 @@ def axiomas() -> List[Dict[str, Any]]:
             "depende_de": [],
             "gobierna": ["taxonomia"],
         },
+        {
+            "id": "TX-3",
+            "tipo": "axioma",
+            "sujeto": "init_taxonomia",
+            "relacion": "filtra",
+            "objeto": "tacticas_internas",
+            "polaridad": True,
+            "enunciado": (
+                "Toda táctica declarada en archivos internos se audita. "
+                "Si no pasa el filtro, no sale ni se aplica."
+            ),
+            "depende_de": [],
+            "gobierna": ["taxonomia"],
+        },
     ]
 
 
@@ -284,6 +389,7 @@ CONTENEDOR = {
         "Taxonomía metodológica. Rol TX. "
         "Reglas deterministas de estructura para medir tácticas (T1–T15). "
         "Sin interpretación. No calcula Tru_total. "
+        "El init audita cada táctica interna; si no pasa, no sale. "
         "El Engine aplica esta taxonomía sobre un O_context "
         "cuando el contrato y la correlación mecánica lo autorizan."
     ),
