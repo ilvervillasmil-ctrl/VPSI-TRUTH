@@ -1,90 +1,98 @@
 """
-Centinela Global para VPSI-TRUTH.
-Valida que el sistema completo sea coherente usando los reportes
-generados por el Engine Global.
+Engine Global para VPSI-TRUTH.
+Orquestador principal del sistema. Descubre módulos, ejecuta sus capacidades,
+y recopila sus reportes internos para validar el sistema.
 """
 
-from typing import Dict, Any, List
-from core.engine import GlobalEngine
+import importlib
+from pathlib import Path
+from typing import Dict, Any, List, Optional
 
-
-class CentinelaGlobal:
+class GlobalEngine:
     """
-    Valida que el sistema completo sea coherente.
-    - Usa los reportes internos de cada módulo (recopilados por el Engine Global).
-    - Determina si el sistema está en un estado válido o no.
+    Orquestador principal del sistema VPSI-TRUTH.
+    - Descubre automáticamente todos los módulos en `modules/`.
+    - Ejecuta la capacidad "verificar" de cada módulo.
+    - Recopila los reportes internos de cada módulo.
     """
 
-    @staticmethod
-    def validar_sistema() -> Dict[str, Any]:
-        """
-        Valida que todos los módulos estén coherentes.
-        """
-        resultados = GlobalEngine.ejecutar_sistema()
-        errores = []
+    _MODULES_DIR = Path(__file__).parent.parent / "modules"
 
-        for modulo_name, resultado in resultados.items():
-            if not resultado.get("coherente", True):
-                errores.append({
-                    "modulo": modulo_name,
-                    "errores": resultado.get("errores", []),
-                    "choques": resultado.get("choques", [])
-                })
-
-        if errores:
-            return {
-                "status": "error",
-                "errores": errores
-            }
-        else:
-            return {"status": "ok"}
-
-    @staticmethod
-    def validar_modulo(modulo_name: str) -> Dict[str, Any]:
+    @classmethod
+    def descubrir_modulos(cls) -> Dict[str, Any]:
         """
-        Valida un módulo específico.
+        Descubre todos los módulos en `modules/` y carga sus CONTENEDOR.
         """
-        try:
-            resultado = GlobalEngine.ejecutar_modulo(modulo_name, "verificar")
-            if resultado.get("coherente", True):
-                return {"status": "ok", "modulo": modulo_name}
-            else:
-                return {
-                    "status": "error",
-                    "modulo": modulo_name,
-                    "errores": resultado.get("errores", []),
-                    "choques": resultado.get("choques", [])
-                }
-        except Exception as e:
-            return {
-                "status": "error",
-                "modulo": modulo_name,
-                "error": str(e)
-            }
+        modulos = {}
+        for modulo_dir in cls._MODULES_DIR.iterdir():
+            if not modulo_dir.is_dir():
+                continue
+            modulo_name = modulo_dir.name
+            try:
+                modulo = importlib.import_module(f"modules.{modulo_name}")
+                if hasattr(modulo, "CONTENEDOR"):
+                    modulos[modulo_name] = modulo.CONTENEDOR
+            except ImportError:
+                continue
+        return modulos
 
-    @staticmethod
-    def obtener_estado_global() -> Dict[str, Any]:
+    @classmethod
+    def ejecutar_modulo(cls, modulo_name: str, capacidad: str, *args, **kwargs) -> Any:
         """
-        Obtiene el estado global del sistema, incluyendo:
-        - Estado de cada módulo.
-        - Inventario de declaraciones.
-        - Axiomas cargados.
+        Ejecuta una capacidad específica de un módulo.
         """
-        resultados = GlobalEngine.ejecutar_sistema()
-        inventario = GlobalEngine.obtener_inventario()
-        axiomas = GlobalEngine.obtener_axiomas()
+        modulos = cls.descubrir_modulos()
+        if modulo_name not in modulos:
+            raise ValueError(f"Módulo '{modulo_name}' no encontrado.")
 
-        estado_modulos = {}
-        for modulo_name, resultado in resultados.items():
-            estado_modulos[modulo_name] = {
-                "coherente": resultado.get("coherente", False),
-                "declaraciones": resultado.get("declaraciones", 0),
-                "errores": len(resultado.get("errores", [])),
-                "choques": len(resultado.get("choques", []))
-            }
+        contenedor = modulos[modulo_name]
+        if capacidad not in contenedor.get("capacidades", {}):
+            raise ValueError(f"Capacidad '{capacidad}' no encontrada en el módulo '{modulo_name}'.")
 
-        return {
-            "estado_modulos": estado_modulos,
-            "inventario": inventario,
-            "axiomas": axiomas
-        }
+        func = contenedor["capacidades"][capacidad]
+        return func(*args, **kwargs)
+
+    @classmethod
+    def ejecutar_sistema(cls) -> Dict[str, Any]:
+        """
+        Ejecuta todos los módulos y recopila sus reportes internos.
+        """
+        modulos = cls.descubrir_modulos()
+        resultados = {}
+
+        for modulo_name, contenedor in modulos.items():
+            if "verificar" in contenedor.get("capacidades", {}):
+                verificar_func = contenedor["capacidades"]["verificar"]
+                resultados[modulo_name] = verificar_func()
+
+        return resultados
+
+    @classmethod
+    def obtener_inventario(cls) -> Dict[str, Any]:
+        """
+        Obtiene el inventario de todos los módulos.
+        """
+        modulos = cls.descubrir_modulos()
+        inventario = {}
+
+        for modulo_name, contenedor in modulos.items():
+            if "inventario" in contenedor.get("capacidades", {}):
+                inventario_func = contenedor["capacidades"]["inventario"]
+                inventario[modulo_name] = inventario_func()
+
+        return inventario
+
+    @classmethod
+    def obtener_axiomas(cls) -> List[Dict]:
+        """
+        Obtiene todos los axiomas de los módulos que los exponen.
+        """
+        modulos = cls.descubrir_modulos()
+        axiomas = []
+
+        for modulo_name, contenedor in modulos.items():
+            if "axiomas" in contenedor.get("capacidades", {}):
+                axiomas_func = contenedor["capacidades"]["axiomas"]
+                axiomas.extend(axiomas_func())
+
+        return axiomas
