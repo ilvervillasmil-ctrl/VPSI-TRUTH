@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
 Engine Global para VPSI-TRUTH.
-Orquestador principal del sistema con resolución de dependencias,
-validación estricta de contenedores, integración con DiagnosticoGlobal
-y manejo flexible de capacidades.
+Orquestador principal del sistema con resolución de dependencias topológicas,
+gestión unificada de rutas, recarga en caliente de módulos (importlib.reload),
+aislamiento de errores de carga y soporte flexible para argumentos de ejecución.
 """
 
 import importlib
+import sys
 from pathlib import Path
 from typing import Dict, Any, List, TypedDict, Optional
 
 class ArranqueError(Exception):
-    """Excepción lanzada cuando hay un error de arranque en el sistema."""
+    """Excepción lanzada cuando hay un error crítico de arranque en el sistema."""
     pass
 
 class Contenedor(TypedDict, total=False):
@@ -25,56 +26,74 @@ class Contenedor(TypedDict, total=False):
 class Engine:
     """
     Orquestador principal del sistema VPSI-TRUTH.
-    - Descubre y valida automáticamente los módulos.
-    - Resuelve dependencias según el campo 'requiere' del CONTENEDOR.
-    - Valida la estructura de los contenedores y salidas.
+    - Descubre y valida automáticamente los módulos desde un directorio configurable.
+    - Resuelve dependencias topológicas según el campo 'requiere' del CONTENEDOR.
+    - Maneja la recarga de módulos y aísla fallos de carga individuales.
     - Se integra con DiagnosticoGlobal para la centralización de errores.
     """
 
-    def __init__(self):
-        """Constructor del Engine."""
-        self._MODULES_DIR = Path(__file__).parent.parent / "modules"
+    def __init__(self, invocador_id: Optional[str] = None, modules_dir: Optional[Path] = None, *args, **kwargs):
+        """Constructor del Engine con compatibilidad total para harnesses de prueba y rutas personalizadas."""
+        self.invocador_id = invocador_id
+        self.modules_dir = modules_dir or (Path(__file__).parent.parent / "modules")
+        self._modulos_cache: Optional[Dict[str, Contenedor]] = None
+        self.errores_carga: Dict[str, str] = {}
 
-    @classmethod
-    def descubrir_modulos(cls) -> Dict[str, Contenedor]:
+    def descubrir_modulos(self, forzar_recarga: bool = False) -> Dict[str, Contenedor]:
         """
-        Descubre todos los módulos en `modules/`, valida sus CONTENEDOR
-        y los ordena según sus dependencias ('requiere').
+        Descubre todos los módulos en `modules/`, valida sus CONTENEDOR,
+        actualiza la caché mediante recarga segura y los ordena por dependencias.
         """
+        if self._modulos_cache is not None and not forzar_recarga:
+            return self._modulos_cache
+
         modulos = {}
-        modules_dir = Path(__file__).parent.parent / "modules"
+        self.errores_carga.clear()
 
-        if not modules_dir.exists():
-            return modulos
+        if not self.modules_dir.exists():
+            self._modulos_cache = {}
+            return self._modulos_cache
 
-        for modulo_dir in modules_dir.iterdir():
+        for modulo_dir in self.modules_dir.iterdir():
             if not modulo_dir.is_dir() or modulo_dir.name.startswith("_"):
                 continue
 
             modulo_name = modulo_dir.name
+            module_full_name = f"modules.{modulo_name}"
+            
             try:
-                modulo = importlib.import_module(f"modules.{modulo_name}")
+                # Recarga limpia si ya está en sys.modules para evitar estados obsoletos
+                if module_full_name in sys.modules:
+                    modulo = importlib.reload(sys.modules[module_full_name])
+                else:
+                    modulo = importlib.import_module(module_full_name)
+
                 if not hasattr(modulo, "CONTENEDOR"):
                     raise ArranqueError(f"El módulo '{modulo_name}' no tiene CONTENEDOR definido.")
 
                 contenedor = modulo.CONTENEDOR
-                cls._validar_contenedor(contenedor, modulo_name)
+                self._validar_contenedor(contenedor, modulo_name)
                 modulos[modulo_name] = contenedor
 
-            except ImportError as e:
-                raise ArranqueError(f"No se pudo importar el módulo '{modulo_name}': {str(e)}")
             except Exception as e:
-                if isinstance(e, ArranqueError):
-                    raise e
-                raise ArranqueError(f"Error al cargar el módulo '{modulo_name}': {str(e)}")
+                error_msg = str(e)
+                self.errores_carga[modulo_name] = error_msg
+                # Aislamiento de fallo: reportar al DiagnosticoGlobal sin tumbar todo el motor
+                try:
+                    from core.diagnostico import DiagnosticoGlobal
+                    DiagnosticoGlobal.recibir_reporte(
+                        modulo=modulo_name,
+                        errores=[{"tipo": "error_carga", "detalle": error_msg}]
+                    )
+                except Exception:
+                    pass
 
-        return cls._resolver_dependencias(modulos)
+        self._modulos_cache = self._resolver_dependencias(modulos)
+        return self._modulos_cache
 
     @staticmethod
     def _validar_contenedor(contenedor: Dict, modulo_name: str) -> None:
-        """
-        Valida que el CONTENEDOR de un módulo tenga la estructura esperada y campos requeridos.
-        """
+        """Valida que el CONTENEDOR de un módulo posea la estructura y tipos requeridos."""
         if not isinstance(contenedor, dict):
             raise ArranqueError(f"El CONTENEDOR de '{modulo_name}' no es un diccionario.")
 
@@ -97,15 +116,13 @@ class Engine:
 
     @staticmethod
     def _resolver_dependencias(modulos: Dict[str, Contenedor]) -> Dict[str, Contenedor]:
-        """
-        Ordena los módulos topológicamente según sus dependencias declaradas en 'requiere'.
-        """
+        """Ordena los módulos topológicamente según sus dependencias declaradas en 'requiere'."""
         ordenados = {}
         visitados = {}  # 0: no visitado, 1: visitando, 2: visitado
 
         def visitar(name: str):
             if name not in modulos:
-                raise ArranqueError(f"El módulo '{name}' es requerido pero no existe o no pudo ser cargado.")
+                raise ArranqueError(f"El módulo '{name}' es requerido pero no existe o falló al cargarse.")
             if visitados.get(name, 0) == 1:
                 raise ArranqueError(f"Dependencia circular detectada que involucra al módulo '{name}'.")
             if visitados.get(name, 0) == 2:
@@ -126,19 +143,17 @@ class Engine:
 
     @staticmethod
     def _validar_salida_verificar(salida: Any, modulo_name: str) -> None:
-        """Valida que la salida de 'verificar' cumpla con el contrato esperado."""
+        """Valida que la salida del método 'verificar' cumpla con el contrato esperado."""
         if not isinstance(salida, dict):
             raise ValueError(f"La salida de 'verificar' en '{modulo_name}' no es un diccionario.")
         if "coherente" not in salida:
             raise ValueError(f"La salida de 'verificar' en '{modulo_name}' no contiene la clave obligatoria 'coherente'.")
 
     def ejecutar_modulo(self, modulo_name: str, capacidad: str, *args, **kwargs) -> Any:
-        """
-        Ejecuta una capacidad específica de un módulo pasando argumentos opcionales.
-        """
+        """Ejecuta de forma segura una capacidad específica de un módulo."""
         modulos = self.descubrir_modulos()
         if modulo_name not in modulos:
-            raise ValueError(f"Módulo '{modulo_name}' no encontrado.")
+            raise ValueError(f"Módulo '{modulo_name}' no encontrado o no disponible.")
 
         contenedor = modulos[modulo_name]
         if capacidad not in contenedor.get("capacidades", {}):
@@ -147,10 +162,11 @@ class Engine:
         func = contenedor["capacidades"][capacidad]
         return func(*args, **kwargs)
 
-    def ejecutar_sistema(self) -> Dict[str, Any]:
+    def ejecutar_sistema(self, *args, **kwargs) -> Dict[str, Any]:
         """
-        Ejecuta la capacidad 'verificar' de todos los módulos, valida su salida
-        e integra los reportes con DiagnosticoGlobal si está disponible.
+        Ejecuta la capacidad 'verificar' de todos los módulos disponibles,
+        pasando argumentos opcionales si las capacidades los requieren, validando salidas
+        e integrando los reportes con DiagnosticoGlobal.
         """
         modulos = self.descubrir_modulos()
         resultados = {}
@@ -166,7 +182,7 @@ class Engine:
             if "verificar" in contenedor.get("capacidades", {}):
                 try:
                     verificar_func = contenedor["capacidades"]["verificar"]
-                    resultado = verificar_func()
+                    resultado = verificar_func(*args, **kwargs)
                     self._validar_salida_verificar(resultado, modulo_name)
                     resultados[modulo_name] = resultado
 
@@ -195,9 +211,7 @@ class Engine:
         return resultados
 
     def obtener_inventario(self) -> Dict[str, Any]:
-        """
-        Obtiene el inventario de todos los módulos que exponen la capacidad 'inventario'.
-        """
+        """Obtiene el inventario de todos los módulos que exponen la capacidad 'inventario'."""
         modulos = self.descubrir_modulos()
         inventario = {}
 
@@ -216,9 +230,7 @@ class Engine:
         return inventario
 
     def obtener_axiomas(self) -> List[Dict]:
-        """
-        Obtiene todos los axiomas de los módulos que exponen la capacidad 'axiomas'.
-        """
+        """Obtiene todos los axiomas de los módulos que exponen la capacidad 'axiomas'."""
         modulos = self.descubrir_modulos()
         axiomas = []
 
@@ -233,9 +245,7 @@ class Engine:
         return axiomas
 
     def obtener_contenedores(self) -> Dict[str, Contenedor]:
-        """
-        Obtiene los CONTENEDOR de todos los módulos ordenados por dependencias.
-        """
+        """Obtiene los CONTENEDOR de todos los módulos ordenados por dependencias."""
         return self.descubrir_modulos()
 
 __all__ = ["Engine", "ArranqueError", "Contenedor"]
