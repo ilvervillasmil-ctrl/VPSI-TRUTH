@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Optional
 
 
 class ArranqueError(Exception):
-    """Excepción de arranque del sistema."""
+    """Excepción de arranque para la validación del sistema."""
     pass
 
 
