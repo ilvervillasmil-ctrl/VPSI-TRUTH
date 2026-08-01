@@ -43,7 +43,6 @@ jobs:
 
       # ==========================================================
       # COMPUERTA 1 --- INVARIANTE DE CONSTANTES
-      # ALPHA + BETA = 1 (igualdad exacta con Fraction)
       # ==========================================================
       - name: Invariante alpha + beta = 1
         run: |
@@ -73,7 +72,6 @@ jobs:
 
       # ==========================================================
       # COMPUERTA 2 --- BARRIDO AXIOMÁTICO
-      # Si la axiomatización se contradice, el sistema no arranca.
       # ==========================================================
       - name: Barrido axiomático
         run: |
@@ -144,9 +142,9 @@ jobs:
           EOF
 
       # ==========================================================
-      # COMPUERTA 4 --- FÓRMULAS Y DOMINIO (Fraction only)
+      # COMPUERTA 4 --- FÓRMULAS Y DOMINIO (Fraction)
       # ==========================================================
-            - name: Fórmulas y dominio (Fraction)
+      - name: Fórmulas y dominio (Fraction)
         run: |
           python - <<'EOF'
           import sys
@@ -228,7 +226,6 @@ jobs:
               print(eng.errores_arranque)
               sys.exit(1)
 
-          # Evaluación mínima con O_context
           r = eng.evaluar({
               "contexto": "prueba CI",
               "C": "1",
