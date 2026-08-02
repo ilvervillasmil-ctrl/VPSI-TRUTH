@@ -1811,6 +1811,12 @@
       "n": 3
     }
   },
+  "evidencia_evaluacion": {
+    "origen": "ci_auditoria_contratos",
+    "n": 3,
+    "path": "evaluaciones.json",
+    "invocador_id": "ci_auditoria"
+  },
   "informe_mecanica": {
     "contenedor": "correlacion_mecanica",
     "estado": "APROBADO",
@@ -2156,12 +2162,6 @@
       }
     ],
     "total": 13
-  },
-  "evidencia_evaluacion": {
-    "origen": "ci_auditoria_contratos",
-    "n": 3,
-    "path": "evaluaciones.json",
-    "invocador_id": "ci_auditoria"
   },
   "informe_formulas": {
     "contenedor": "formulas",

@@ -1,20 +1,20 @@
 ================================================================================
-OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.5)
-Generado: 2026-08-02 06:01:47 UTC    Commit: e52be1058bf8
+ℹ️  OMEGA REPORT — MAPA DE TRABAJO
+VPSI-TRUTH (Versión 9.6)
+Generado: 2026-08-02 06:20:07 UTC    Commit: fdfde203a186
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
 ESTADO GLOBAL
-  Engine          : OPERATIVO
-  Axiomas         : coherente
-  Contenedores    : 13
-  Roles vacíos    : 0
-  Rechazados      : 0
-  Acciones abiertas: 0
-  Salud           : OPERATIVO — listo para avanzar
+  ✅ Engine          : OPERATIVO
+  ✅ Axiomas         : coherente
+  📦 Contenedores    : 13
+  ✅ Roles vacíos    : 0
+  ✅ Rechazados      : 0
+  ✅ Acciones abiertas: 0
+  ✅ Salud           : OPERATIVO — listo para avanzar
 
-MÓDULOS Y ROLES
+📦  MÓDULOS Y ROLES
   +------+-----------+-----+--------------------------------------+
   | ROL  | ESTADO    | N   | MÓDULOS                              |
   +------+-----------+-----+--------------------------------------+
@@ -34,50 +34,50 @@ MÓDULOS Y ROLES
   +------+-----------+-----+--------------------------------------+
 
 ================================================================================
-MAPA DE INTERVENCIÓN (ordenado por prioridad)
+⚠️  MAPA DE INTERVENCIÓN (ordenado por prioridad)
 ================================================================================
 
-  No hay acciones pendientes. Sistema limpio.
+  ✅ No hay acciones pendientes. Sistema limpio.
 
 ================================================================================
-SALUD POR CAPA
+ℹ️  SALUD POR CAPA
 ================================================================================
 
-  [OK] Constantes (CT)
+  ✅ Constantes (CT)
       ALPHA = 26/27   BETA = 1/27
 
-  [OK] Axiomas (AX)
+  ✅ Axiomas (AX)
       declaraciones = 315
       choques       = 0
       errores       = 0
       por_tipo      = {'axioma': 123, 'lema': 27, 'teorema': 90, 'corolario': 69, 'definicion': 6}
 
-  [OK] Fórmulas (FO)
+  ✅ Fórmulas (FO)
       coherente = True   faltas = []
 
-  [OK] Mecánica (MC)
+  ✅ Mecánica (MC)
       coherente = True
 
-  [OK] Contratos (CI)
+  ✅ Contratos (CI)
       coherente=True  validos=13  caps_ok=53  caps_fallo=0
 
-  [OK] Camino de evaluación
-      evaluaciones = 3
-      [1] estado=None  Tru_Ri=None  Tru_total=None
-      [2] estado=None  Tru_Ri=None  Tru_total=None
-      [3] estado=None  Tru_Ri=None  Tru_total=None
+  ✅ Camino de evaluación
+      n = 3   origen = ci_auditoria_contratos
+    · seq 1/3  estado=UNDEFINED  Tru_Ri=UNDEFINED  Tru_total=UNDEFINED
+    ✅ seq 2/3  estado=OK  Tru_Ri=1  Tru_total=1
+    ✅ seq 3/3  estado=OK  Tru_Ri=1  Tru_total=1
 
-  [OK] Tests
+  ✅ Tests
       total=120  pasados=119  fallidos=0  tasa=99.17%
 
 ================================================================================
-GENERATIVIDAD (TR1 / U1)
+ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
   |Θ| (AX)           : 213
   pares totales      : 22578
   pares compatibles  : 6106
   pares novedosos    : 1978
-  |Im(⊕)| ? |Θ|      : GENERATIVO
+  |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
   dominios           : ['constantes', 'contexto', 'epistemologia', 'evaluacion', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'self', 'semantica', 'temporal']
   roles vacíos       : []
   U1                 : NO_STAGNANT
@@ -92,36 +92,37 @@ GENERATIVIDAD (TR1 / U1)
   nota               : Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Saber ≠ creer: comparar canonica con 24/153.
 
 ================================================================================
-INVENTARIO RÁPIDO
+📦  INVENTARIO RÁPIDO
 ================================================================================
 Presente:
-  ✓ AX: axiomas
-  ✓ CA: calculator
-  ✓ CH: cache
-  ✓ CT: constante
-  ✓ CX: contexto
-  ✓ DG: diagnostico
-  ✓ FO: formulas
-  ✓ MC: correlacion_mecanica
-  ✓ RE: realidad
-  ✓ SF: self
-  ✓ TX: taxonomia
-  ✓ UI: interfaz
-  ✓ VX: verificacion
+  ✅ AX: axiomas
+  ✅ CA: calculator
+  ✅ CH: cache
+  ✅ CT: constante
+  ✅ CX: contexto
+  ✅ DG: diagnostico
+  ✅ FO: formulas
+  ✅ MC: correlacion_mecanica
+  ✅ RE: realidad
+  ✅ SF: self
+  ✅ TX: taxonomia
+  ✅ UI: interfaz
+  ✅ VX: verificacion
 Ausente:
+  ✅ (ninguno)
 Rechazado:
-  (ninguno)
+  ✅ (ninguno)
 
 ================================================================================
-INVENTARIO ENGINE (solo lectura)
+ℹ️  INVENTARIO ENGINE (solo lectura)
 ================================================================================
-  estado=OPERATIVO  n_eval=0
+  estado=OPERATIVO  n_eval_en_este_proceso=0  (el n del camino viene del artefacto CI)
 
 ================================================================================
-CIERRE
+✅  CIERRE
 ================================================================================
-  Versión Omega      : 9.5
-  Salud              : OPERATIVO — listo para avanzar
+  Versión Omega      : 9.6
+  Salud              : ✅ OPERATIVO — listo para avanzar
   Acciones abiertas  : 0
   Bloqueantes        : 0
   Este reporte no recalculó nada.
