@@ -182,6 +182,7 @@ class Engine:
         self.estado = "NO_INICIADO"
         self.errores_arranque: List[str] = []
         self.fallos: List[Dict] = []
+        self.resultados_evaluacion: List[Dict] = []
 
         self._descubrir()
         self._resolver_dependencias()
