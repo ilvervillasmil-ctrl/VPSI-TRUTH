@@ -1,14 +1,14 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 22:00:35 UTC    Commit: a491d6938dc3
+Generado: 2026-08-02 22:37:54 UTC    Commit: d22dcd103bd5
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
 ESTADO GLOBAL
   ✅ Engine          : OPERATIVO
   ✅ Axiomas         : coherente
-  📦 Contenedores    : 13
+  📦 Contenedores    : 14
   ✅ Roles vacíos    : 0
   ✅ Rechazados      : 0
   ✅ Acciones abiertas: 0
@@ -21,6 +21,7 @@ ESTADO GLOBAL
   | AX   | CARGADO   | 1   | axiomas                              |
   | CA   | CARGADO   | 1   | calculator                           |
   | CH   | CARGADO   | 1   | cache                                |
+  | CIT  | CARGADO   | 1   | citacion                             |
   | CT   | CARGADO   | 1   | constante                            |
   | CX   | CARGADO   | 1   | contexto                             |
   | DG   | CARGADO   | 1   | diagnostico                          |
@@ -59,7 +60,7 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=13  caps_ok=54  caps_fallo=0
+      coherente=True  validos=14  caps_ok=63  caps_fallo=0
 
   ✅ Camino de evaluación
       n = 3   origen = ci_auditoria_contratos
@@ -98,6 +99,7 @@ Presente:
   ✅ AX: axiomas
   ✅ CA: calculator
   ✅ CH: cache
+  ✅ CIT: citacion
   ✅ CT: constante
   ✅ CX: contexto
   ✅ DG: diagnostico

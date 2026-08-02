@@ -875,6 +875,128 @@
       "nombre": "cache",
       "version": "0.1-fase"
     },
+    "CIT": {
+      "modulos": [
+        "citacion"
+      ],
+      "obligatorio": false,
+      "presente": true,
+      "n_modulos": 1,
+      "claves_contrato": [
+        "citar",
+        "registrar",
+        "anunciar",
+        "anunciar_todo",
+        "resolver_enunciado",
+        "inventario",
+        "barrer",
+        "verificar",
+        "limpiar_ciclo"
+      ],
+      "esperado": [],
+      "resolucion": [
+        {
+          "clave": "citar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "citar"
+        },
+        {
+          "clave": "registrar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "registrar"
+        },
+        {
+          "clave": "anunciar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "anunciar"
+        },
+        {
+          "clave": "anunciar_todo",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "anunciar_todo"
+        },
+        {
+          "clave": "resolver_enunciado",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "resolver_enunciado"
+        },
+        {
+          "clave": "inventario",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "inventario"
+        },
+        {
+          "clave": "barrer",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "verificar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "verificar"
+        },
+        {
+          "clave": "limpiar_ciclo",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.0.0",
+          "ok": true,
+          "fn_name": "limpiar_ciclo"
+        }
+      ],
+      "ejecucion": [
+        {
+          "clave": "inventario",
+          "ok": true,
+          "modulo": "citacion"
+        },
+        {
+          "clave": "barrer",
+          "ok": true,
+          "modulo": "citacion"
+        },
+        {
+          "clave": "verificar",
+          "ok": true,
+          "modulo": "citacion"
+        }
+      ],
+      "nombre": "citacion",
+      "version": "1.0.0"
+    },
     "UI": {
       "modulos": [
         "interfaz"
@@ -994,12 +1116,12 @@
     }
   },
   "resumen": {
-    "roles_totales": 13,
-    "roles_presentes": 13,
+    "roles_totales": 14,
+    "roles_presentes": 14,
     "roles_obligatorios": 5,
-    "contratos_validos": 13,
+    "contratos_validos": 14,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 54,
+    "capacidades_verificadas": 63,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 3,
