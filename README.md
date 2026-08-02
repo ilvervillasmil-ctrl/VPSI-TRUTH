@@ -23,18 +23,20 @@ Autor: Ilver Villasmil · ORCID: [0009-0009-3413-4270](https://orcid.org/0009-00
 3. Calcular factores **C** (coherencia), **L** (lógica), **K** (correlación con el dominio).
 4. Aplicar la **Fórmula de la Verdad**:
 
-\[
-\begin{aligned}
-\mathrm{Tru}_{Ri}(D) &= C(D)\cdot L(D)\cdot K(D) \\
-\mathrm{Tru}_{total}(D) &= \bigl(\mathrm{Tru}_{Ri}(D)\cdot\alpha\bigr)+\beta
-\end{aligned}
-\]
+**Truᵣᵢ(D) = C(D) · L(D) · K(D)**
 
-con \(\alpha = 26/27\), \(\beta = 1/27\) (dominio estricto `fractions.Fraction`; sin floats en la ruta de decisión).
+**Truₜₒₜₐₗ(D) = (Truᵣᵢ(D) · α) + β**
 
+con **α = ²⁶⁄₂₇ y β = ¹⁄₂₇**
+
+(dominio estricto: fractions.Fraction; sin floats en la ruta de decisión).
+
+——-
 5. Dejar **evidencia** inspectable (JSON, reportes, CI) para que cualquiera contraste el informe con los datos.
 
 Principio operativo: **saber ≠ creer**. El sistema no “opina”; ejecuta contratos. Si el grafo axiomático se contradice o un módulo declara una capacidad que no puede resolver, el sistema **se detiene o se delata** (arranque rechazado, contrato incoherente, choque axiomático).
+
+——-
 
 ### Qué no es
 
