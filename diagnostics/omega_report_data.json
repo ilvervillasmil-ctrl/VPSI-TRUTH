@@ -2510,8 +2510,8 @@
     "nota": "archivos_extra son candidatos a nuevos factores; añadir convención o API antes de usarlos en calcular()"
   },
   "tests": {
-    "total": 133,
-    "pasados": 132,
+    "total": 134,
+    "pasados": 133,
     "fallidos": 0,
     "omitidos": 1,
     "tasa": 99.25

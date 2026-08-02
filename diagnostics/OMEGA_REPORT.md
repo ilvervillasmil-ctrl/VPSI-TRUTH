@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 21:51:46 UTC    Commit: 6447dede238f
+Generado: 2026-08-02 22:00:35 UTC    Commit: a491d6938dc3
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -68,7 +68,7 @@ ESTADO GLOBAL
     ✅ seq 3/3  estado=OK  Tru_Ri=1  Tru_total=1
 
   ✅ Tests
-      total=133  pasados=132  fallidos=0  tasa=99.25%
+      total=134  pasados=133  fallidos=0  tasa=99.25%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
