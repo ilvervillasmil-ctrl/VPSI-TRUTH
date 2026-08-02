@@ -1,7 +1,7 @@
 ================================================================================
 OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.5)
-Generado: 2026-08-02 05:31:44 UTC    Commit: 28ebae5915e2
+Generado: 2026-08-02 06:01:47 UTC    Commit: e52be1058bf8
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -11,7 +11,7 @@ ESTADO GLOBAL
   Contenedores    : 13
   Roles vacíos    : 0
   Rechazados      : 0
-  Acciones abiertas: 1
+  Acciones abiertas: 0
   Salud           : OPERATIVO — listo para avanzar
 
 MÓDULOS Y ROLES
@@ -37,10 +37,7 @@ MÓDULOS Y ROLES
 MAPA DE INTERVENCIÓN (ordenado por prioridad)
 ================================================================================
 
-  1. [DATOS] resultados_evaluacion
-     Detalle   : Lista vacía en el paquete (Engine no entregó evaluaciones acumuladas en esta sesión de carga)
-     Impacto   : No se puede auditar el camino de evaluación desde Omega
-     Acción    : Quien invoque evaluar() debe dejar la lista en Engine; Omega solo la lee (get_resultados_evaluacion / inventario)
+  No hay acciones pendientes. Sistema limpio.
 
 ================================================================================
 SALUD POR CAPA
@@ -64,7 +61,11 @@ SALUD POR CAPA
   [OK] Contratos (CI)
       coherente=True  validos=13  caps_ok=53  caps_fallo=0
 
-  [PENDIENTE] Camino de evaluación — sin resultados en el paquete
+  [OK] Camino de evaluación
+      evaluaciones = 3
+      [1] estado=None  Tru_Ri=None  Tru_total=None
+      [2] estado=None  Tru_Ri=None  Tru_total=None
+      [3] estado=None  Tru_Ri=None  Tru_total=None
 
   [OK] Tests
       total=120  pasados=119  fallidos=0  tasa=99.17%
@@ -121,7 +122,7 @@ CIERRE
 ================================================================================
   Versión Omega      : 9.5
   Salud              : OPERATIVO — listo para avanzar
-  Acciones abiertas  : 1
+  Acciones abiertas  : 0
   Bloqueantes        : 0
   Este reporte no recalculó nada.
   Este reporte no ejecutó humo ni evaluar().
