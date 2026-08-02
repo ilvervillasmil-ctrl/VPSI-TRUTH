@@ -374,6 +374,393 @@ jobs:
           EOF
 
       # ==========================================================
+      # AUDITORÍA ESTRUCTURAL DE CONTRATOS (juez externo CI)
+      # Sin alias. Determinismo. Idempotencia. Evidencia.
+      # ==========================================================
+      - name: Auditoría estructural de contratos
+        run: |
+          python - <<'EOF'
+          import json
+          import sys
+          import traceback
+          from pathlib import Path
+
+          sys.path.insert(0, ".")
+          from core.engine import Engine, ROLES, OBLIGATORIOS, ArranqueError
+
+          Path("diagnostics").mkdir(exist_ok=True)
+
+          # Claves REALES de CONTENEDOR (sin oficios abstractos ni alias).
+          # Si el init cambia nombres, falla cobertura con evidencia.
+          ESPERADO = {
+              "CT": [],
+              "AX": ["verificar", "inventario", "axiomas", "generatividad"],
+              "FO": [],
+              "MC": ["verificar", "evaluar", "inventario", "axiomas"],
+              "CX": ["verificar", "evaluar", "inventario", "axiomas"],
+              "CA": [],
+              "DG": [],
+              "SF": [],
+              "RE": [],
+              "VX": [],
+              "TX": [],
+              "CH": [],
+              "UI": ["componer", "barrer", "inventario", "verificar"],
+          }
+
+          HUMO_SEGURO = {
+              "inventario": lambda fn: fn(),
+              "axiomas": lambda fn: fn(),
+              "generatividad": lambda fn: fn(),
+              "verificar": lambda fn: fn(),
+              "evaluar": lambda fn: (
+                  fn()
+                  if getattr(fn, "__code__", None) and fn.__code__.co_argcount <= 1
+                  else fn(None)
+              ),
+              "barrer": lambda fn: fn(),
+              "componer": lambda fn: fn({}),
+              "resolver": lambda fn: fn(None),
+          }
+
+          informe = {
+              "tipo": "auditoria_estructural_contratos",
+              "version": "1.1",
+              "coherente": True,
+              "errores": [],
+              "avisos": [],
+              "por_categoria": {
+                  "arranque": [],
+                  "invariantes": [],
+                  "registro": [],
+                  "resolucion": [],
+                  "ejecucion": [],
+                  "cobertura": [],
+                  "determinismo": [],
+                  "idempotencia": [],
+                  "integridad": [],
+              },
+              "roles": {},
+              "resumen": {},
+              "resultados_evaluacion_n": 0,
+              "evidencia_arranque": {},
+          }
+
+          def fallar(cat, msg, **extra):
+              informe["coherente"] = False
+              entrada = {"categoria": cat, "mensaje": msg}
+              entrada.update(extra)
+              informe["errores"].append(entrada)
+              informe["por_categoria"].setdefault(cat, []).append(entrada)
+
+          def avisar(cat, msg, **extra):
+              entrada = {"categoria": cat, "mensaje": msg}
+              entrada.update(extra)
+              informe["avisos"].append(entrada)
+              informe["por_categoria"].setdefault(cat, []).append(entrada)
+
+          def resumen_canonico(eng):
+              """Vista estable para comparar determinismo (sin timestamps)."""
+              r = eng.censar()
+              return {
+                  "estado": eng.estado,
+                  "total": r.get("total"),
+                  "roles": {
+                      k: list(v) for k, v in sorted((r.get("roles") or {}).items())
+                  },
+                  "roles_vacios": sorted(r.get("roles_vacios") or []),
+                  "rechazados_n": len(r.get("rechazados") or []),
+                  "cargados_nombres": sorted(
+                      c.get("nombre")
+                      for c in (r.get("cargados") or [])
+                      if isinstance(c, dict)
+                  ),
+              }
+
+          # ----- 1. Arranque -----
+          try:
+              eng = Engine(Path("modules"), invocador_id="ci_auditoria", strict=True)
+          except ArranqueError as e:
+              fallar("arranque", "Engine no arrancó: {0}".format(e))
+              Path("diagnostics/contratos_report.json").write_text(
+                  json.dumps(informe, indent=2, ensure_ascii=False, default=str),
+                  encoding="utf-8",
+              )
+              print(json.dumps(informe, indent=2, ensure_ascii=False, default=str))
+              sys.exit(1)
+
+          informe["evidencia_arranque"] = {
+              "estado": eng.estado,
+              "invocador_id": eng.invocador_id,
+              "errores_arranque": list(eng.errores_arranque),
+          }
+
+          # ----- 2. Invariantes -----
+          if eng.estado != "OPERATIVO":
+              fallar(
+                  "invariantes",
+                  "estado != OPERATIVO: {0}".format(eng.estado),
+                  errores_arranque=list(eng.errores_arranque),
+              )
+
+          for attr in (
+              "registro",
+              "resultados_evaluacion",
+              "errores_arranque",
+              "fallos",
+              "invocador_id",
+          ):
+              if not hasattr(eng, attr):
+                  fallar("invariantes", "falta atributo Engine.{0}".format(attr))
+
+          # ----- 3. Determinismo: dos arranques, mismo resumen canónico -----
+          try:
+              eng_b = Engine(Path("modules"), invocador_id="ci_auditoria_b", strict=True)
+              a = resumen_canonico(eng)
+              b = resumen_canonico(eng_b)
+              if a != b:
+                  fallar(
+                      "determinismo",
+                      "dos Engine() produjeron censar() distinto",
+                      resumen_a=a,
+                      resumen_b=b,
+                  )
+              else:
+                  informe["evidencia_arranque"]["determinismo_censar"] = "OK"
+          except ArranqueError as e:
+              fallar("determinismo", "segundo Engine no arrancó: {0}".format(e))
+
+          # ----- 4. Idempotencia / acumulación de evaluar -----
+          if hasattr(eng, "resultados_evaluacion"):
+              n0 = len(eng.resultados_evaluacion)
+              payload = {
+                  "contexto": "ci_auditoria_humo",
+                  "C": "1",
+                  "L": "1",
+                  "K": "1",
+              }
+              r1 = eng.evaluar({})
+              r2 = eng.evaluar(payload)
+              r3 = eng.evaluar(payload)
+              n1 = len(eng.resultados_evaluacion)
+              informe["resultados_evaluacion_n"] = n1
+
+              if n1 < n0 + 3:
+                  fallar(
+                      "idempotencia",
+                      "evaluar no acumuló 3 entradas esperadas",
+                      antes=n0,
+                      despues=n1,
+                  )
+
+              # Misma petición dos veces: mismo estado de resultado (no inventa)
+              if r2.get("estado") != r3.get("estado"):
+                  fallar(
+                      "idempotencia",
+                      "misma petición produjo estados distintos",
+                      estado_1=r2.get("estado"),
+                      estado_2=r3.get("estado"),
+                  )
+
+              # Registro de módulos no debe vaciarse por evaluar
+              if eng.registro.total() if hasattr(eng.registro, "total") else len(
+                  eng.registro.contenedores
+              ) < 1:
+                  fallar(
+                      "idempotencia",
+                      "registro vacío tras evaluar()",
+                  )
+
+          resumen = eng.censar()
+          roles_map = resumen.get("roles") or {}
+          rechazados = list(resumen.get("rechazados") or [])
+
+          if rechazados:
+              fallar("registro", "hay contenedores rechazados", detalle=rechazados)
+
+          # Rol fuera del esquema ROLES (si el resumen los expone en cargados)
+          for c in (resumen.get("cargados") or []):
+              if not isinstance(c, dict):
+                  continue
+              rol_c = c.get("rol")
+              if rol_c and rol_c not in ROLES:
+                  fallar(
+                      "integridad",
+                      "contenedor con rol fuera de ROLES",
+                      modulo=c.get("nombre"),
+                      rol=rol_c,
+                  )
+
+          # ----- 5. Contratos: resolución estricta cont.fn(clave) -----
+          caps_verificadas = 0
+          caps_fallidas = 0
+          contratos_validos = 0
+          contratos_invalidos = 0
+
+          for rol in ROLES:
+              mods = list(roles_map.get(rol) or [])
+              cont = eng.registro.primero(rol)
+              entry = {
+                  "modulos": mods,
+                  "obligatorio": rol in OBLIGATORIOS,
+                  "presente": len(mods) > 0,
+                  "n_modulos": len(mods),
+                  "claves_contrato": [],
+                  "esperado": list(ESPERADO.get(rol, [])),
+                  "resolucion": [],
+                  "ejecucion": [],
+              }
+              fallo_local = False
+
+              if rol in OBLIGATORIOS and not mods:
+                  fallar("registro", "falta rol obligatorio", rol=rol)
+                  contratos_invalidos += 1
+                  informe["roles"][rol] = entry
+                  continue
+
+              if len(mods) > 1:
+                  avisar(
+                      "registro",
+                      "rol con múltiples módulos (primero gana)",
+                      rol=rol,
+                      modulos=mods,
+                  )
+
+              if cont is None:
+                  if ESPERADO.get(rol):
+                      fallar("registro", "rol esperado sin contenedor", rol=rol)
+                      contratos_invalidos += 1
+                  informe["roles"][rol] = entry
+                  continue
+
+              entry["claves_contrato"] = list(cont.capacidades.keys())
+              entry["nombre"] = cont.nombre
+              entry["version"] = cont.version
+
+              for clave in list(cont.capacidades.keys()):
+                  fn = cont.fn(clave)
+                  item = {
+                      "clave": clave,
+                      "callable": callable(fn),
+                      "modulo": cont.nombre,
+                      "rol": rol,
+                      "version": cont.version,
+                  }
+                  if not callable(fn):
+                      item["ok"] = False
+                      fallar(
+                          "resolucion",
+                          "capacidad declarada no callable",
+                          rol=rol,
+                          modulo=cont.nombre,
+                          version=cont.version,
+                          clave=clave,
+                      )
+                      caps_fallidas += 1
+                      fallo_local = True
+                      entry["resolucion"].append(item)
+                      continue
+
+                  item["ok"] = True
+                  item["fn_name"] = getattr(fn, "__name__", str(fn))
+                  caps_verificadas += 1
+                  entry["resolucion"].append(item)
+
+                  if clave in HUMO_SEGURO:
+                      try:
+                          HUMO_SEGURO[clave](fn)
+                          entry["ejecucion"].append({
+                              "clave": clave,
+                              "ok": True,
+                              "modulo": cont.nombre,
+                          })
+                      except Exception as e:
+                          entry["ejecucion"].append({
+                              "clave": clave,
+                              "ok": False,
+                              "modulo": cont.nombre,
+                              "error": "{0}: {1}".format(type(e).__name__, e),
+                              "traceback": traceback.format_exc()[-800:],
+                          })
+                          fallar(
+                              "ejecucion",
+                              "capacidad declarada lanzó al invocar",
+                              rol=rol,
+                              modulo=cont.nombre,
+                              version=cont.version,
+                              clave=clave,
+                              error="{0}: {1}".format(type(e).__name__, e),
+                              traceback=traceback.format_exc()[-800:],
+                          )
+                          caps_fallidas += 1
+                          fallo_local = True
+
+              for clave in ESPERADO.get(rol, []):
+                  if clave not in cont.capacidades:
+                      fallar(
+                          "cobertura",
+                          "clave esperada ausente en CONTENEDOR",
+                          rol=rol,
+                          modulo=cont.nombre,
+                          version=cont.version,
+                          clave=clave,
+                          declaradas=list(cont.capacidades.keys()),
+                      )
+                      caps_fallidas += 1
+                      fallo_local = True
+
+              if fallo_local:
+                  contratos_invalidos += 1
+              else:
+                  contratos_validos += 1
+
+              informe["roles"][rol] = entry
+
+          total_caps = caps_verificadas + caps_fallidas
+          pct = (
+              round(100.0 * caps_verificadas / total_caps, 2)
+              if total_caps
+              else 0.0
+          )
+          informe["resumen"] = {
+              "roles_totales": len(ROLES),
+              "roles_presentes": sum(1 for r in ROLES if (roles_map.get(r) or [])),
+              "roles_obligatorios": len(OBLIGATORIOS),
+              "contratos_validos": contratos_validos,
+              "contratos_invalidos": contratos_invalidos,
+              "capacidades_verificadas": caps_verificadas,
+              "capacidades_fallidas": caps_fallidas,
+              "pct_integridad_capacidades": pct,
+              "resultados_evaluacion_n": informe["resultados_evaluacion_n"],
+              "rechazados_n": len(rechazados),
+              "errores_n": len(informe["errores"]),
+              "avisos_n": len(informe["avisos"]),
+          }
+
+          Path("diagnostics/contratos_report.json").write_text(
+              json.dumps(informe, indent=2, ensure_ascii=False, default=str),
+              encoding="utf-8",
+          )
+
+          print("=" * 60)
+          print("AUDITORÍA ESTRUCTURAL DE CONTRATOS v1.1")
+          print("=" * 60)
+          print("coherente:", informe["coherente"])
+          for k, v in informe["resumen"].items():
+              print("  {0}: {1}".format(k, v))
+          for e in informe["errores"]:
+              print("  ERROR [{0}]: {1}".format(
+                  e.get("categoria"), e.get("mensaje")
+              ))
+              for k in ("rol", "modulo", "version", "clave", "error"):
+                  if k in e:
+                      print("         {0}={1}".format(k, e[k]))
+          if not informe["coherente"]:
+              sys.exit(1)
+          print("OK  auditoría estructural de contratos")
+          EOF
+
+      # ==========================================================
       # SUBIR ARTEFACTOS
       # ==========================================================
       - name: Upload artifacts
@@ -387,175 +774,7 @@ jobs:
             diagnostics/coherence_history.json
             diagnostics/axioms_report.json
             diagnostics/OMEGA_REPORT.md
-
-      # ==========================================================
-      # CONTRATOS ENLAZADOS AL ENGINE
-      # ==========================================================
-            - name: Verificar contratos enlazados
-        run: |
-          python - <<'EOF'
-          import json
-          import sys
-          from pathlib import Path
-
-          sys.path.insert(0, ".")
-          from core.engine import Engine, ROLES, OBLIGATORIOS, ArranqueError
-
-          Path("diagnostics").mkdir(exist_ok=True)
-
-          # Oficio canónico por rol (no el literal del dict del INIT)
-          ESPERADO = {
-              "CT": [],
-              "AX": ["barrer"],
-              "FO": [],
-              "MC": ["barrer"],
-              "CX": ["resolver"],
-              "CA": [],
-              "DG": [],
-              "SF": [],
-              "RE": [],
-              "VX": [],
-              "TX": [],
-              "CH": [],
-              "UI": ["componer", "barrer"],
-          }
-
-          informe = {
-              "coherente": True,
-              "errores": [],
-              "avisos": [],
-              "roles": {},
-              "resultados_evaluacion_n": 0,
-          }
-
-          try:
-              eng = Engine(Path("modules"), invocador_id="ci_contratos", strict=True)
-          except ArranqueError as e:
-              informe["coherente"] = False
-              informe["errores"].append("arranque: {0}".format(e))
-              Path("diagnostics/contratos_report.json").write_text(
-                  json.dumps(informe, indent=2, ensure_ascii=False),
-                  encoding="utf-8",
-              )
-              print(json.dumps(informe, indent=2, ensure_ascii=False))
-              sys.exit(1)
-
-          if not hasattr(eng, "resultados_evaluacion"):
-              informe["coherente"] = False
-              informe["errores"].append(
-                  "Engine sin atributo resultados_evaluacion"
-              )
-
-          if eng.estado == "OPERATIVO":
-              eng.evaluar({})
-              eng.evaluar({
-                  "contexto": "ci_humo_contratos",
-                  "C": "1",
-                  "L": "1",
-                  "K": "1",
-              })
-              n = len(getattr(eng, "resultados_evaluacion", []) or [])
-              informe["resultados_evaluacion_n"] = n
-              if n < 1:
-                  informe["coherente"] = False
-                  informe["errores"].append(
-                      "resultados_evaluacion vacío tras evaluar()"
-                  )
-
-          resumen = eng.censar()
-          roles = resumen.get("roles") or {}
-
-          for rol in ROLES:
-              mods = list(roles.get(rol) or [])
-              entry = {
-                  "modulos": mods,
-                  "obligatorio": rol in OBLIGATORIOS,
-                  "presente": len(mods) > 0,
-                  "claves_contrato": [],
-                  "capacidades_ok": [],
-                  "capacidades_fallo": [],
-              }
-              if rol in OBLIGATORIOS and not mods:
-                  informe["coherente"] = False
-                  informe["errores"].append(
-                      "falta rol obligatorio {0}".format(rol)
-                  )
-
-              cont = eng.registro.primero(rol)
-              if cont is not None:
-                  entry["claves_contrato"] = list(cont.capacidades.keys())
-
-              for oficio in ESPERADO.get(rol, []):
-                  if cont is None:
-                      entry["capacidades_fallo"].append(oficio)
-                      if rol in ("AX", "MC", "CX", "UI"):
-                          informe["coherente"] = False
-                          informe["errores"].append(
-                              "{0}: sin módulo para oficio '{1}'".format(
-                                  rol, oficio
-                              )
-                          )
-                      continue
-
-                  # Acopla al INIT: oficio → alias → clave del contrato
-                  ok = False
-                  if hasattr(cont, "tiene_oficio") and cont.tiene_oficio(oficio):
-                      ok = True
-                  elif cont.tiene(oficio):
-                      ok = True
-                  else:
-                      for clave in ("verificar", "evaluar", "barrer", "resolver", "componer"):
-                          if clave in cont.capacidades and cont.tiene(clave):
-                              # solo cuenta si el oficio pedido es el de esa familia
-                              familia = {
-                                  "barrer": ("barrer", "verificar", "evaluar"),
-                                  "resolver": ("resolver", "verificar", "evaluar"),
-                                  "componer": ("componer", "verificar"),
-                              }.get(oficio, (oficio,))
-                              if clave in familia:
-                                  ok = True
-                                  break
-
-                  if ok:
-                      entry["capacidades_ok"].append(oficio)
-                  else:
-                      entry["capacidades_fallo"].append(oficio)
-                      informe["coherente"] = False
-                      informe["errores"].append(
-                          "{0}/{1}: oficio '{2}' no enlazado "
-                          "(init declara: {3})".format(
-                              rol,
-                              cont.nombre,
-                              oficio,
-                              list(cont.capacidades.keys()),
-                          )
-                      )
-
-              informe["roles"][rol] = entry
-
-          # Toda CLAVE que el INIT declaró debe ser callable
-          for cont in eng.registro.contenedores.values():
-              for clave in (cont.capacidades or {}):
-                  if not callable(cont.fn(clave)):
-                      informe["coherente"] = False
-                      informe["errores"].append(
-                          "{0}: capacidad declarada no callable: '{1}'".format(
-                              cont.nombre, clave
-                          )
-                      )
-
-          Path("diagnostics/contratos_report.json").write_text(
-              json.dumps(informe, indent=2, ensure_ascii=False, default=str),
-              encoding="utf-8",
-          )
-          print("contratos coherente:", informe["coherente"])
-          print("resultados_evaluacion_n:", informe["resultados_evaluacion_n"])
-          for e in informe["errores"]:
-              print("  ERROR:", e)
-          if not informe["coherente"]:
-              sys.exit(1)
-          print("OK  contratos enlazados al Engine")
-          EOF
+            diagnostics/contratos_report.json
 
       # ==========================================================
       # COMMIT DE HISTORIA
