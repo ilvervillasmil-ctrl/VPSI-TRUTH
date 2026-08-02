@@ -53,7 +53,7 @@ Principio operativo: **saber ≠ creer**. El sistema no “opina”; ejecuta con
 ## 2. Para qué sirve
 
 - **Auditar** afirmaciones, diálogos o documentos: contradicción, deriva de contexto, K sin ancla en \(O\).
-- **Exponer** el piso estructural \(\beta\): incluso con C=L=K=0, \(\mathrm{Tru}_{total}=\beta\); el techo observable involucra \(\alpha\).
+- **Exponer** el piso estructural β: incluso cuando C(D) = L(D) = K(D) = 0, se tiene Truₜₒₜₐₗ(D) = β; el techo observable está determinado por α.
 - **Sostener** interfaces, guías o sistemas posteriores que necesiten un **cálculo de verdad reproducible**, no una respuesta persuasiva.
 - **Permitir auditoría externa**: un tercero puede abrir `diagnostics/*.json` y verificar que el mapa Omega refleja la evidencia, no la inventa.
 
@@ -81,6 +81,8 @@ Humano / sistema externo
         ├──► CI escribe evaluaciones.json + contratos_report.json
         └──► Omega Report lee artefactos y presenta el mapa
 Entrada mínima conceptual: descripción (D) y, cuando aplique, enunciado de (O) / modo de entrada. Salida: estado, factores, Tru (cuando el camino está completo), errores y notas de contrato. Lo que el humano lee en CI: OMEGA_REPORT.md + JSON de evidencia.
+
+——-
 
 4. Arquitectura — diagrama de información
 flowchart TB
@@ -121,6 +123,8 @@ flowchart TB
     OM[Omega Report]
   end
 
+——-
+
   P --> E
   E --> CT
   E --> AX
@@ -140,14 +144,21 @@ flowchart TB
   CI --> CR
   EV --> OM
   CR --> OM
-Cadena causal (orden lógico, no “opinión del Engine”)
+
+——-
+###Cadena causal (orden lógico, no “opinión del Engine”)
+
 CT ancla constantes
 AX mantiene el grafo y detecta choques
 CX clasifica O, estado, permite_k
 CA calcula C, L, K (None/UNDEFINED si falta dato legítimo)
 FO aplica la fórmula de la verdad
 MC define el orden mecánico causa-efecto entre pasos
-Engine solo invoca capacidades listadas en cada CONTENEDOR
+Engine solo invoca capacidades listadas en cada
+
+——-
+
+CONTENEDOR
 CI verifica contratos y deposita evidencia
 Omega solo presenta
 Fatalidad estructural: si AX es incoherente, si falta un rol obligatorio, o si una capacidad declarada no es callable, el sistema no “sigue igual”: falla cerrado o el juez CI marca coherente: false.
@@ -264,6 +275,9 @@ diagnostics/
 ├── axioms_report.json
 ├── test_results.xml
 └── OMEGA_REPORT.md
+
+——-
+
 6.3 Qué hace / qué no hace (resumen por capa crítica)
 Módulo
 Hace
