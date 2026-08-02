@@ -80,8 +80,6 @@ OBLIGATORIOS = ("CT", "AX", "FO", "MC", "SF")
 # CONTENEDOR
 # ===============================================================
 
-# Nombre canónico de oficio → claves aceptadas en CONTENEDOR['capacidades']
-# No inventa capacidades nuevas: solo admite alias explícitos de la misma función.
 ALIAS_CAPACIDAD = {
     "barrer": ("barrer", "verificar", "evaluar"),
     "verificar": ("verificar", "barrer", "evaluar"),
@@ -113,14 +111,13 @@ class Contenedor:
         self.ruta = ruta
         self.requiere: List[str] = list(meta.get("requiere") or [])
         self.descripcion: str = str(meta.get("descripcion") or "")
-        # capacidades: nombre → callable | str (nombre de función en el módulo)
         raw = meta.get("capacidades") or {}
         if not isinstance(raw, dict):
             raw = {}
         self.capacidades: Dict[str, Any] = dict(raw)
 
     def fn(self, nombre: str):
-        """Resuelve capacidad por clave exacta del contrato. Nunca inventa nombres."""
+        """Clave exacta del contrato. Nunca inventa nombres."""
         ref = self.capacidades.get(nombre)
         if ref is None:
             return None
@@ -131,24 +128,17 @@ class Contenedor:
         return None
 
     def tiene(self, nombre: str) -> bool:
-        """True si la clave exacta del contrato es callable."""
         return callable(self.fn(nombre))
 
     def fn_oficio(self, nombre: str):
-        """
-        Resuelve capacidad canónica de oficio probando alias.
-        Ej.: pedir 'barrer' acepta clave 'verificar' si apunta a callable.
-        No inventa nombres fuera de ALIAS_CAPACIDAD.
-        """
-        claves = ALIAS_CAPACIDAD.get(nombre, (nombre,))
-        for clave in claves:
+        """Oficio canónico → función según claves que el INIT declaró."""
+        for clave in ALIAS_CAPACIDAD.get(nombre, (nombre,)):
             f = self.fn(clave)
             if callable(f):
                 return f
         return None
 
     def tiene_oficio(self, nombre: str) -> bool:
-        """True si alguna clave alias de oficio resuelve a callable."""
         return callable(self.fn_oficio(nombre))
 
     def como_dict(self) -> Dict:
@@ -182,7 +172,7 @@ class Registro:
         if cont.nombre in self.contenedores:
             self.rechazados.append({
                 "ruta": str(cont.ruta),
-                "razon": f"nombre duplicado: {cont.nombre}",
+                "razon": "nombre duplicado: {0}".format(cont.nombre),
             })
             return
         self.contenedores[cont.nombre] = cont
@@ -691,6 +681,7 @@ __all__ = [
     "Registro",
     "ROLES",
     "OBLIGATORIOS",
+    "ALIAS_CAPACIDAD",
     "UNDEFINED",
     "es_undefined",
     "ArranqueError",
