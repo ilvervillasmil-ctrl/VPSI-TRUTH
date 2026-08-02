@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 06:39:54 UTC    Commit: a3c55ebb0d2f
+Generado: 2026-08-02 08:07:47 UTC    Commit: 3a49bf334a4f
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -47,10 +47,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 315
+      declaraciones = 354
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 123, 'lema': 27, 'teorema': 90, 'corolario': 69, 'definicion': 6}
+      por_tipo      = {'axioma': 136, 'lema': 32, 'teorema': 103, 'corolario': 77, 'definicion': 6}
 
   ✅ Fórmulas (FO)
       coherente = True   faltas = []
@@ -73,15 +73,15 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 213
-  pares totales      : 22578
-  pares compatibles  : 6106
-  pares novedosos    : 1978
+  |Θ| (AX)           : 239
+  pares totales      : 28441
+  pares compatibles  : 7925
+  pares novedosos    : 3258
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
-  dominios           : ['constantes', 'contexto', 'epistemologia', 'evaluacion', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'self', 'semantica', 'temporal']
+  dominios           : ['cache', 'constantes', 'contexto', 'epistemologia', 'evaluacion', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'temporal']
   roles vacíos       : []
   U1                 : NO_STAGNANT
-  por_tipo_theta     : {'axioma': 123, 'teorema': 90}
+  por_tipo_theta     : {'axioma': 136, 'teorema': 103}
   --- capa canónica (paper TR1) ---
   |Θ|_can           : 24 / 24
   novedosos_can     : 102  (paper: 153)

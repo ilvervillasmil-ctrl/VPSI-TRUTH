@@ -8,18 +8,19 @@
     "coherente": true,
     "choques": [],
     "errores": [],
-    "declaraciones": 315,
+    "declaraciones": 354,
     "cuerpos": [
       "VPSI",
       "contexto_AX",
       "correlacion",
+      "realidad_AX",
       "self"
     ],
     "por_tipo": {
-      "axioma": 123,
-      "lema": 27,
-      "teorema": 90,
-      "corolario": 69,
+      "axioma": 136,
+      "lema": 32,
+      "teorema": 103,
+      "corolario": 77,
       "definicion": 6
     }
   },
@@ -358,18 +359,19 @@
           "corolario",
           "definicion"
         ],
-        "declaraciones": 315,
+        "declaraciones": 354,
         "por_tipo": {
-          "axioma": 123,
-          "lema": 27,
-          "teorema": 90,
-          "corolario": 69,
+          "axioma": 136,
+          "lema": 32,
+          "teorema": 103,
+          "corolario": 77,
           "definicion": 6
         },
         "cuerpos": [
           "VPSI",
           "contexto_AX",
           "correlacion",
+          "realidad_AX",
           "self"
         ],
         "errores": [],
@@ -676,18 +678,19 @@
       "coherente": true,
       "choques": [],
       "errores": [],
-      "declaraciones": 315,
+      "declaraciones": 354,
       "cuerpos": [
         "VPSI",
         "contexto_AX",
         "correlacion",
+        "realidad_AX",
         "self"
       ],
       "por_tipo": {
-        "axioma": 123,
-        "lema": 27,
-        "teorema": 90,
-        "corolario": 69,
+        "axioma": 136,
+        "lema": 32,
+        "teorema": 103,
+        "corolario": 77,
         "definicion": 6
       }
     },
@@ -2175,12 +2178,13 @@
   },
   "generatividad": {
     "contenedor": "axiomas",
-    "theta_n": 213,
-    "pares_totales": 22578,
-    "pares_compatibles": 6106,
-    "pares_novedosos": 1978,
+    "theta_n": 239,
+    "pares_totales": 28441,
+    "pares_compatibles": 7925,
+    "pares_novedosos": 3258,
     "im_vs_theta": "GENERATIVO",
     "dominios": [
+      "cache",
       "constantes",
       "contexto",
       "epistemologia",
@@ -2190,6 +2194,7 @@
       "logica",
       "meta",
       "ontologia",
+      "realidad",
       "self",
       "semantica",
       "temporal"
@@ -2197,8 +2202,8 @@
     "u1_proxy": "NO_STAGNANT",
     "errores_recoleccion": 0,
     "por_tipo_theta": {
-      "axioma": 123,
-      "teorema": 90
+      "axioma": 136,
+      "teorema": 103
     },
     "canonica": {
       "theta_n": 24,
