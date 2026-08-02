@@ -630,6 +630,19 @@
             "pide_evaluacion_engine": true,
             "requiere_aprobacion_dominio": true
           },
+          "logica": {
+            "archivo": "conocimiento_humano/logica.py",
+            "nombre": "logica",
+            "hace": "Traer y etiquetar material de lógica (sistemas formales, inferencia, metalógica); pedir evaluación a Engine bajo el O de esta disciplina; aprobar o rechazar el material antes de que suba.",
+            "provee": [
+              "material_etiquetado_logica",
+              "peticion_evaluacion_engine",
+              "aprobacion_dominio"
+            ],
+            "o_evaluacion": "Contraste de material lógico: sistemas formales, reglas de inferencia y consistencia declarada. Candidato a K bajo este O; no es ancla de R.",
+            "pide_evaluacion_engine": true,
+            "requiere_aprobacion_dominio": true
+          },
           "matematicas": {
             "archivo": "conocimiento_humano/matematicas.py",
             "nombre": "matematicas",
@@ -703,6 +716,7 @@
           "ciencias_tierra",
           "fisica",
           "ingenieria",
+          "logica",
           "matematicas",
           "medicina",
           "quimica",
