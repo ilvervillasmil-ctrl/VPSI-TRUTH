@@ -616,7 +616,8 @@
       "n_modulos": 1,
       "claves_contrato": [
         "verificar",
-        "inventario"
+        "inventario",
+        "registrar_resultado_dominio"
       ],
       "esperado": [],
       "resolucion": [
@@ -625,7 +626,7 @@
           "callable": true,
           "modulo": "realidad",
           "rol": "RE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -634,9 +635,18 @@
           "callable": true,
           "modulo": "realidad",
           "rol": "RE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "inventario"
+        },
+        {
+          "clave": "registrar_resultado_dominio",
+          "callable": true,
+          "modulo": "realidad",
+          "rol": "RE",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "registrar_resultado_dominio"
         }
       ],
       "ejecucion": [
@@ -652,7 +662,7 @@
         }
       ],
       "nombre": "realidad",
-      "version": "1.0"
+      "version": "1.1"
     },
     "VX": {
       "modulos": [
@@ -989,7 +999,7 @@
     "roles_obligatorios": 5,
     "contratos_validos": 13,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 53,
+    "capacidades_verificadas": 54,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 3,

@@ -294,13 +294,14 @@
         {
           "nombre": "realidad",
           "rol": "RE",
-          "version": "1.0",
+          "version": "1.1",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/realidad/__init__.py",
-          "descripcion": "Contenedor de realidad. Rol RE. Ancla de lo establecido y filtro de funciones únicas. Descubre funciones en la carpeta y comprueba que no se contradigan entre sí. Si hay contradicción interna, no pasa hacia arriba. No calcula Tru_total (eso es CA/FO). El Engine no tiene poder propio: ejecuta solo lo que este contrato declara.",
+          "descripcion": "Contenedor de realidad (RE). Ancla de contraste con representaciones de la realidad y dominios de conocimiento humano. Canal de acceso (acceso.py) + dominios que declaran su oficio y el O con el que piden evaluación a Engine. Simbiosis: Engine aplica la fórmula bajo ese O; el material solo sube si el dominio aprueba el resultado; este init vela no-contradicción entre todas las funciones/carpetas del módulo. No calcula Tru_Ri ni Tru_total. No privilegia instituciones. El Engine no tiene poder propio: ejecuta solo lo que este contrato y los contratos de dominio declaran.",
           "capacidades": {
             "verificar": "barrer",
-            "inventario": "inventario"
+            "inventario": "inventario",
+            "registrar_resultado_dominio": "registrar_resultado_dominio"
           }
         },
         {
@@ -561,8 +562,23 @@
       },
       "realidad": {
         "contenedor": "realidad",
-        "version": "1.0",
-        "funciones": {}
+        "version": "1.1",
+        "rol": "RE",
+        "funciones": {},
+        "coherente": true,
+        "dominios_simbiosis": [],
+        "acceso": {
+          "canal": "acceso.Canal",
+          "hay_requests": false,
+          "hay_acceso": true
+        },
+        "funcion": "Ancla de contraste con representaciones de la realidad. Canal (acceso) + dominios que piden evaluación al Engine bajo su O y solo dejan pasar material con aprobación propia. Este init vela no-contradicción entre dominios. No calcula Tru.",
+        "contrato_simbiosis": {
+          "quien_calcula": "Engine → CA/FO bajo O declarado por el dominio",
+          "quien_aprueba_material": "la carpeta/dominio que pidió la evaluación",
+          "quien_vela_modulo": "realidad/__init__.barrer (no-contradicción)",
+          "material_sin_aprobacion": "no sube"
+        }
       },
       "taxonomia": {
         "contenedor": "taxonomia",
@@ -1447,7 +1463,8 @@
         "n_modulos": 1,
         "claves_contrato": [
           "verificar",
-          "inventario"
+          "inventario",
+          "registrar_resultado_dominio"
         ],
         "esperado": [],
         "resolucion": [
@@ -1456,7 +1473,7 @@
             "callable": true,
             "modulo": "realidad",
             "rol": "RE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -1465,9 +1482,18 @@
             "callable": true,
             "modulo": "realidad",
             "rol": "RE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "inventario"
+          },
+          {
+            "clave": "registrar_resultado_dominio",
+            "callable": true,
+            "modulo": "realidad",
+            "rol": "RE",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "registrar_resultado_dominio"
           }
         ],
         "ejecucion": [
@@ -1483,7 +1509,7 @@
           }
         ],
         "nombre": "realidad",
-        "version": "1.0"
+        "version": "1.1"
       },
       "VX": {
         "modulos": [
@@ -1820,7 +1846,7 @@
       "roles_obligatorios": 5,
       "contratos_validos": 13,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 53,
+      "capacidades_verificadas": 54,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 3,
@@ -2158,13 +2184,14 @@
       {
         "nombre": "realidad",
         "rol": "RE",
-        "version": "1.0",
+        "version": "1.1",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/realidad/__init__.py",
-        "descripcion": "Contenedor de realidad. Rol RE. Ancla de lo establecido y filtro de funciones únicas. Descubre funciones en la carpeta y comprueba que no se contradigan entre sí. Si hay contradicción interna, no pasa hacia arriba. No calcula Tru_total (eso es CA/FO). El Engine no tiene poder propio: ejecuta solo lo que este contrato declara.",
+        "descripcion": "Contenedor de realidad (RE). Ancla de contraste con representaciones de la realidad y dominios de conocimiento humano. Canal de acceso (acceso.py) + dominios que declaran su oficio y el O con el que piden evaluación a Engine. Simbiosis: Engine aplica la fórmula bajo ese O; el material solo sube si el dominio aprueba el resultado; este init vela no-contradicción entre todas las funciones/carpetas del módulo. No calcula Tru_Ri ni Tru_total. No privilegia instituciones. El Engine no tiene poder propio: ejecuta solo lo que este contrato y los contratos de dominio declaran.",
         "capacidades": {
           "verificar": "barrer",
-          "inventario": "inventario"
+          "inventario": "inventario",
+          "registrar_resultado_dominio": "registrar_resultado_dominio"
         }
       },
       {

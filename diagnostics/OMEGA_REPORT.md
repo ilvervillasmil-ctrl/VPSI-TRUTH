@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 19:33:30 UTC    Commit: 8cebed530038
+Generado: 2026-08-02 20:26:56 UTC    Commit: bd00a32532db
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -59,7 +59,7 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=13  caps_ok=53  caps_fallo=0
+      coherente=True  validos=13  caps_ok=54  caps_fallo=0
 
   ✅ Camino de evaluación
       n = 3   origen = ci_auditoria_contratos
