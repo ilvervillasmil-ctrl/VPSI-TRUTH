@@ -580,10 +580,10 @@ class Engine:
         resultado["estado"] = "OK"
         return resultado
 
-        # -----------------------------------------------------------
+    # -----------------------------------------------------------
     # Introspección (sin actuar de más)
     # -----------------------------------------------------------
-        def censar(self) -> Dict:
+    def censar(self) -> Dict:
         return self.registro.resumen()
 
     def inventario(self) -> Dict:
@@ -591,9 +591,10 @@ class Engine:
         for cont in self.registro.contenedores.values():
             if cont.tiene("inventario"):
                 out = self._ejecutar_capacidad(cont, "inventario")
-                contenido[cont.nombre] = (
-                    out if not es_undefined(out) else {"error": "inventario falló"}
-                )
+                if es_undefined(out):
+                    contenido[cont.nombre] = {"error": "inventario falló"}
+                else:
+                    contenido[cont.nombre] = out
         return {
             "estado": self.estado,
             "errores_arranque": list(self.errores_arranque),
@@ -606,15 +607,9 @@ class Engine:
         }
 
     def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
-        """Lista acumulada de evaluaciones para Omega / auditoría de camino."""
         return list(self.resultados_evaluacion)
 
     def censar_generatividad(self) -> Dict:
-        """
-        TR1 / U1 vía contrato AX.
-        El Engine no calcula recombinaciones: solo invoca la capacidad
-        declarada y añade residual de arquitectura (roles vacíos).
-        """
         out = self.ejecutar_capacidad("AX", "generatividad")
 
         try:
