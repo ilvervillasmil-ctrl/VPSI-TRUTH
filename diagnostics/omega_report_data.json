@@ -578,6 +578,19 @@
             "pide_evaluacion_engine": true,
             "requiere_aprobacion_dominio": true
           },
+          "biologia": {
+            "archivo": "conocimiento_humano/biologia.py",
+            "nombre": "biologia",
+            "hace": "Traer y etiquetar material de biología y ciencias de la vida; pedir evaluación a Engine bajo el O de esta disciplina; aprobar o rechazar el material antes de que suba.",
+            "provee": [
+              "material_etiquetado_biologia",
+              "peticion_evaluacion_engine",
+              "aprobacion_dominio"
+            ],
+            "o_evaluacion": "Contraste de material biológico: organismos, sistemas vivos y evidencia experimental. Candidato a K bajo este O; no es ancla de R.",
+            "pide_evaluacion_engine": true,
+            "requiere_aprobacion_dominio": true
+          },
           "ciencias_tierra": {
             "archivo": "conocimiento_humano/ciencias_tierra.py",
             "nombre": "ciencias_tierra",
@@ -621,6 +634,7 @@
         "coherente": true,
         "dominios_simbiosis": [
           "astronomia",
+          "biologia",
           "ciencias_tierra",
           "fisica",
           "quimica"
