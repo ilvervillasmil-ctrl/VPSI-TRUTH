@@ -1,13 +1,5 @@
 [
   {
-    "timestamp": "2026-07-30T06:41:58.213804+00:00",
-    "passed": 2,
-    "failed": 0,
-    "total": 2,
-    "pass_rate": 100.0,
-    "axiomas_coherentes": true
-  },
-  {
     "utc": "2026-07-30T06:41:58.271219+00:00",
     "sha": "bc210fec6f37",
     "ref": "refs/heads/main",
@@ -1186,6 +1178,18 @@
   {
     "utc": "2026-08-02T22:42:45.754060+00:00",
     "sha": "c769a38bbf2c",
+    "ref": "refs/heads/main",
+    "total": 134,
+    "passed": 133,
+    "failed": 0,
+    "skipped": 1,
+    "rate": 99.25,
+    "previo": 133,
+    "estado": "STABLE"
+  },
+  {
+    "utc": "2026-08-02T22:44:01.234903+00:00",
+    "sha": "6b0b1ebfdba2",
     "ref": "refs/heads/main",
     "total": 134,
     "passed": 133,
