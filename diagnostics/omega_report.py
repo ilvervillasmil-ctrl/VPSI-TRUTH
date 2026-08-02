@@ -648,18 +648,28 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         except Exception:  # noqa: BLE001
             pass
 
-        # Lista de evaluaciones: solo si el Engine ya la tiene (otra fase la llenó)
-        try:
-            if hasattr(eng, "get_resultados_evaluacion"):
-                datos["resultados_evaluacion"] = list(
-                    eng.get_resultados_evaluacion() or []
-                )
-            elif hasattr(eng, "resultados_evaluacion"):
-                datos["resultados_evaluacion"] = list(
-                    eng.resultados_evaluacion or []
-                )
-        except Exception:  # noqa: BLE001
-            datos["resultados_evaluacion"] = []
+        # Camino de evaluación: SOLO evidencia de auditoría (sin humo, sin evaluar)
+        datos["resultados_evaluacion"] = []
+        eval_path = DIAGNOSTICS_DIR / "evaluaciones.json"
+        if eval_path.exists():
+            try:
+                doc = json.loads(eval_path.read_text(encoding="utf-8"))
+                if isinstance(doc, dict):
+                    resultados = doc.get("resultados")
+                    if isinstance(resultados, list):
+                        datos["resultados_evaluacion"] = resultados
+                        datos["evidencia_evaluacion"] = {
+                            "origen": doc.get("origen"),
+                            "n": doc.get("n", len(resultados)),
+                            "path": str(eval_path.name),
+                            "invocador_id": doc.get("invocador_id"),
+                        }
+            except Exception:  # noqa: BLE001
+                datos["evidencia_evaluacion"] = {
+                    "path": str(eval_path.name),
+                    "error": "json ilegible",
+                }
+        # No llamar eng.evaluar(). No inventar entradas.
 
         # Inventario (solo lectura de contratos montados)
         try:
