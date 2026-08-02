@@ -2,19 +2,20 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 354,
+  "declaraciones": 382,
   "cuerpos": [
     "VPSI",
     "contexto_AX",
     "correlacion",
     "realidad_AX",
-    "self"
+    "self",
+    "sentido_estructural_AX"
   ],
   "por_tipo": {
-    "axioma": 136,
-    "lema": 32,
-    "teorema": 103,
-    "corolario": 77,
+    "axioma": 149,
+    "lema": 35,
+    "teorema": 110,
+    "corolario": 82,
     "definicion": 6
   }
 }

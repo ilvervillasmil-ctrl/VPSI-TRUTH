@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 11:43:43 UTC    Commit: 1102dc33c5e5
+Generado: 2026-08-02 11:44:45 UTC    Commit: 6d13526ba98d
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -47,10 +47,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 354
+      declaraciones = 382
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 136, 'lema': 32, 'teorema': 103, 'corolario': 77, 'definicion': 6}
+      por_tipo      = {'axioma': 149, 'lema': 35, 'teorema': 110, 'corolario': 82, 'definicion': 6}
 
   ✅ Fórmulas (FO)
       coherente = True   faltas = []
@@ -73,15 +73,15 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 239
-  pares totales      : 28441
-  pares compatibles  : 7925
-  pares novedosos    : 3258
+  |Θ| (AX)           : 259
+  pares totales      : 33411
+  pares compatibles  : 9470
+  pares novedosos    : 4226
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
   dominios           : ['cache', 'constantes', 'contexto', 'epistemologia', 'evaluacion', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'temporal']
   roles vacíos       : []
   U1                 : NO_STAGNANT
-  por_tipo_theta     : {'axioma': 136, 'teorema': 103}
+  por_tipo_theta     : {'axioma': 149, 'teorema': 110}
   --- capa canónica (paper TR1) ---
   |Θ|_can           : 24 / 24
   novedosos_can     : 102  (paper: 153)
