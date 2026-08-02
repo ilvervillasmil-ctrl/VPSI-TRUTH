@@ -407,14 +407,13 @@ class Engine:
     # -----------------------------------------------------------
     # Evaluación (orquesta; no interpreta)
     # -----------------------------------------------------------
-        def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
+         def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
         cont = self.registro.primero(rol)
         if cont is None:
             return UNDEFINED
         return self._ejecutar_capacidad(cont, capacidad, *args, **kwargs)
 
     def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
-        """Lista acumulada de evaluaciones para Omega / auditoría."""
         return list(self.resultados_evaluacion)
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
@@ -422,16 +421,17 @@ class Engine:
         peticion = dict(peticion or {})
 
         def _emit(resultado: Dict[str, Any]) -> Dict[str, Any]:
-            """Entrega al caller y acumula para el paquete de datos (Omega)."""
             registro = {
                 "secuencia": len(self.resultados_evaluacion) + 1,
                 "entrada": {
-                    "contexto": peticion.get("contexto")
-                    or peticion.get("O_context")
-                    or peticion.get("Octx"),
-                    "tiene_C": "C" in peticion and peticion.get("C") is not None,
-                    "tiene_L": "L" in peticion and peticion.get("L") is not None,
-                    "tiene_K": "K" in peticion and peticion.get("K") is not None,
+                    "contexto": (
+                        peticion.get("contexto")
+                        or peticion.get("O_context")
+                        or peticion.get("Octx")
+                    ),
+                    "tiene_C": ("C" in peticion and peticion.get("C") is not None),
+                    "tiene_L": ("L" in peticion and peticion.get("L") is not None),
+                    "tiene_K": ("K" in peticion and peticion.get("K") is not None),
                 },
                 "resultado": dict(resultado),
             }
@@ -461,15 +461,15 @@ class Engine:
                 "fallos": list(self.fallos),
             })
 
-        # Preferir CA si declara calcular
         C = L = K = None
         ca = self.registro.primero("CA")
         if ca and ca.tiene("calcular"):
             calc = self._ejecutar_capacidad(ca, "calcular", peticion)
             if not es_undefined(calc) and isinstance(calc, dict):
-                C, L, K = calc.get("C"), calc.get("L"), calc.get("K")
+                C = calc.get("C")
+                L = calc.get("L")
+                K = calc.get("K")
 
-        # Si la petición trae factores explícitos, se usan (no se inventan)
         try:
             if "C" in peticion and peticion["C"] is not None:
                 C = Fraction(str(peticion["C"]))
@@ -480,7 +480,7 @@ class Engine:
         except Exception as e:
             return _emit({
                 "estado": "ERROR",
-                "razon": f"C, L o K inválidos: {e}",
+                "razon": "C, L o K inválidos: {0}".format(e),
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
             })
@@ -509,7 +509,7 @@ class Engine:
         except Exception as e:
             return _emit({
                 "estado": "ERROR",
-                "razon": f"cálculo Tru: {type(e).__name__}: {e}",
+                "razon": "cálculo Tru: {0}: {1}".format(type(e).__name__, e),
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
             })
@@ -526,6 +526,60 @@ class Engine:
             "fuentes_usadas": ["X", "O_context"],
             "fallos": list(self.fallos),
         })
+
+    def censar(self) -> Dict:
+        return self.registro.resumen()
+
+    def inventario(self) -> Dict:
+        contenido = {}
+        for cont in self.registro.contenedores.values():
+            if cont.tiene("inventario"):
+                out = self._ejecutar_capacidad(cont, "inventario")
+                if es_undefined(out):
+                    contenido[cont.nombre] = {"error": "inventario falló"}
+                else:
+                    contenido[cont.nombre] = out
+        return {
+            "estado": self.estado,
+            "errores_arranque": list(self.errores_arranque),
+            "registro": self.registro.resumen(),
+            "contenido": contenido,
+            "informe_axiomas": self.informe_axiomas,
+            "informe_mecanica": self.informe_mecanica,
+            "resultados_evaluacion": list(self.resultados_evaluacion),
+            "resultados_evaluacion_n": len(self.resultados_evaluacion),
+        }
+
+    def censar_generatividad(self) -> Dict:
+        out = self.ejecutar_capacidad("AX", "generatividad")
+
+        try:
+            resumen = self.censar() if hasattr(self, "censar") else {}
+        except Exception:
+            resumen = {}
+
+        roles_vacios = list(resumen.get("roles_vacios") or [])
+        rechazados = list(resumen.get("rechazados") or [])
+
+        if es_undefined(out) or not isinstance(out, dict):
+            return {
+                "estado": "UNDEFINED",
+                "razon": "AX.generatividad no disponible o falló",
+                "roles_vacios": roles_vacios,
+                "rechazados": rechazados,
+                "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
+                "nota": "Sin medición TR1; residual de roles usado como proxy U1.",
+            }
+
+        resultado = dict(out)
+        resultado["roles_vacios"] = roles_vacios
+        resultado["rechazados_n"] = len(rechazados)
+        if roles_vacios or resultado.get("pares_novedosos", 0) > 0:
+            resultado["u1_estado"] = "NO_STAGNANT"
+        else:
+            resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
+        resultado["estado"] = "OK"
+        return resultado
 
         # -----------------------------------------------------------
     # Introspección (sin actuar de más)
