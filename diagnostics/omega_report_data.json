@@ -507,9 +507,10 @@
         "reglas_internas": [
           "declaracion_O",
           "entrada_natural",
+          "peticion_anuncio",
           "secuencia_conversacion"
         ],
-        "total_reglas": 3,
+        "total_reglas": 4,
         "modos_entrada": [
           "conversacion",
           "afirmacion",
