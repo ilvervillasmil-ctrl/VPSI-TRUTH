@@ -642,6 +642,19 @@
             "o_evaluacion": "Contraste de material químico: sustancias, reacciones y propiedades declaradas. Candidato a K bajo este O; no es ancla de R.",
             "pide_evaluacion_engine": true,
             "requiere_aprobacion_dominio": true
+          },
+          "tecnologia": {
+            "archivo": "conocimiento_humano/tecnologia.py",
+            "nombre": "tecnologia",
+            "hace": "Traer y etiquetar material tecnológico aplicado (sistemas, estándares, documentación); pedir evaluación a Engine bajo el O de esta disciplina; aprobar o rechazar el material antes de que suba.",
+            "provee": [
+              "material_etiquetado_tecnologia",
+              "peticion_evaluacion_engine",
+              "aprobacion_dominio"
+            ],
+            "o_evaluacion": "Contraste de material tecnológico: sistemas, estándares y documentación técnica. Candidato a K bajo este O; no es ancla de R.",
+            "pide_evaluacion_engine": true,
+            "requiere_aprobacion_dominio": true
           }
         },
         "coherente": true,
@@ -651,7 +664,8 @@
           "ciencias_tierra",
           "fisica",
           "ingenieria",
-          "quimica"
+          "quimica",
+          "tecnologia"
         ],
         "acceso": {
           "canal": "acceso.Canal",
