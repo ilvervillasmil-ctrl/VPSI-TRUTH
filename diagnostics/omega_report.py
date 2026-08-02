@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.5)
+VPSI-TRUTH (Versión 9.6)
 ==============================
 
 Presentador objetivo + mapa de intervención.
@@ -24,7 +24,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 CURRENT_FILE = Path(__file__).resolve()
 DIAGNOSTICS_DIR = CURRENT_FILE.parent
@@ -33,11 +33,23 @@ REPO_ROOT = DIAGNOSTICS_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Marcas de estado (legibles en CI / terminal / GitHub)
+ICON_OK = "✅"
+ICON_FAIL = "❌"
+ICON_PEND = "⚪"
+ICON_WARN = "⚠️"
+ICON_INFO = "ℹ️"
+ICON_DOT = "·"
+ICON_MOD = "📦"
+ICON_ABS = "·"
+ICON_REJ = "🚫"
+ICON_SEQ = "🔹"
+
 OK = "OK"
 FALLO = "FALLO"
 PENDIENTE = "PENDIENTE"
 STRICT = os.getenv("OMEGA_STRICT", "0") == "1"
-VERSION = "9.5"
+VERSION = "9.6"
 
 CAMPOS_OBLIGATORIOS = (
     "estado_engine",
@@ -75,6 +87,41 @@ def validar_entrada(datos: Dict[str, Any]) -> List[str]:
 # =============================================================================
 # HELPERS DE PRESENTACIÓN
 # =============================================================================
+def _marca(ok: bool) -> str:
+    return ICON_OK if ok else ICON_FAIL
+
+
+def _marca_tri(estado: str) -> str:
+    """ok | fail | pend."""
+    if estado == OK:
+        return ICON_OK
+    if estado == FALLO:
+        return ICON_FAIL
+    return ICON_PEND
+
+
+def _fmt(v: Any) -> str:
+    if v is None:
+        return "—"
+    s = str(v).strip()
+    return s if s else "—"
+
+
+def _pick(d: Dict[str, Any], *keys: str) -> Any:
+    """Primera clave presente (soporta mayúsculas / anidados simples)."""
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    # nested frecuente
+    for nest in ("resultado", "truth", "valores", "salida"):
+        sub = d.get(nest)
+        if isinstance(sub, dict):
+            for k in keys:
+                if k in sub and sub[k] is not None:
+                    return sub[k]
+    return None
+
+
 def _tabla(
     headers: List[str],
     rows: List[List[str]],
@@ -108,11 +155,11 @@ def _bloque(titulo: str, lineas_bloq: List[str]) -> List[str]:
 def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
     out: List[str] = [
         "=" * 80,
-        "GENERATIVIDAD (TR1 / U1)",
+        "{0}  GENERATIVIDAD (TR1 / U1)".format(ICON_INFO),
         "=" * 80,
     ]
     if not g or g.get("estado") == "UNDEFINED":
-        out.append("  (sin datos — AX.generatividad no disponible en el paquete)")
+        out.append("  {0} sin datos — AX.generatividad no disponible en el paquete".format(ICON_PEND))
         if g:
             out.append("  U1 (proxy roles): {0}".format(g.get("u1_estado", "REVISAR")))
             out.append("  roles vacíos    : {0}".format(g.get("roles_vacios", [])))
@@ -121,11 +168,13 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
         out.append("")
         return out
 
+    im = g.get("im_vs_theta", "—")
+    marca_im = ICON_OK if im == "GENERATIVO" else (ICON_WARN if im == "ESTANCADO" else ICON_PEND)
     out.append("  |Θ| (AX)           : {0}".format(g.get("theta_n", "—")))
     out.append("  pares totales      : {0}".format(g.get("pares_totales", "—")))
     out.append("  pares compatibles  : {0}".format(g.get("pares_compatibles", "—")))
     out.append("  pares novedosos    : {0}".format(g.get("pares_novedosos", "—")))
-    out.append("  |Im(⊕)| ? |Θ|      : {0}".format(g.get("im_vs_theta", "—")))
+    out.append("  |Im(⊕)| ? |Θ|      : {0} {1}".format(marca_im, im))
     out.append("  dominios           : {0}".format(g.get("dominios", [])))
     out.append("  roles vacíos       : {0}".format(g.get("roles_vacios", [])))
     out.append("  U1                 : {0}".format(g.get("u1_estado", "—")))
@@ -146,12 +195,46 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
         out.append("  ids_sin_dominio   : {0}".format(can.get("ids_sin_dominio", [])))
         out.append("  dominios_can      : {0}".format(can.get("dominios", [])))
     else:
-        out.append("  (sin datos canónicos en el paquete)")
+        out.append("  {0} sin datos canónicos en el paquete".format(ICON_PEND))
 
     if g.get("nota"):
         out.append("  nota               : {0}".format(g["nota"]))
     out.append("")
     return out
+
+
+def _linea_eval(seq: int, total: int, r: Any) -> str:
+    """Una evaluación: seq k/n — nunca [1] solo (evita confusión con techo Tru=1)."""
+    if not isinstance(r, dict):
+        return "    {0} seq {1}/{2}  (entrada no es dict)".format(ICON_WARN, seq, total)
+
+    estado = _pick(r, "estado", "status", "state", "resultado_estado")
+    tru_ri = _pick(r, "tru_ri", "Tru_Ri", "Tru_ri", "ri", "TRU_RI")
+    tru_total = _pick(
+        r, "tru_total", "Tru_total", "Tru_Total", "total", "TRU_TOTAL"
+    )
+    seq_id = _pick(r, "secuencia", "seq", "n", "id")
+
+    est_s = _fmt(estado)
+    # marca por estado textual si existe
+    if est_s in ("OK", "OPERATIVO", "COMPLETO"):
+        m = ICON_OK
+    elif est_s in ("FALLO", "ERROR", "RECHAZADO"):
+        m = ICON_FAIL
+    elif est_s == "—":
+        m = ICON_PEND
+    else:
+        m = ICON_DOT
+
+    extra = ""
+    if seq_id is not None and str(seq_id) != str(seq):
+        extra = "  id_interno={0}".format(seq_id)
+
+    return (
+        "    {0} seq {1}/{2}  estado={3}  Tru_Ri={4}  Tru_total={5}{6}".format(
+            m, seq, total, est_s, _fmt(tru_ri), _fmt(tru_total), extra
+        )
+    )
 
 
 # =============================================================================
@@ -234,20 +317,22 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "errores": [],
         })
 
-    # Solo reporta ausencia: no inventa evaluaciones
-    if not datos.get("resultados_evaluacion"):
+    # Evidencia de evaluación: artefacto CI, no Engine limpio de Omega
+    evidencia = datos.get("evidencia_evaluacion") or {}
+    n_ev = int(evidencia.get("n") or 0)
+    if not datos.get("resultados_evaluacion") and n_ev == 0:
         acciones.append({
             "prioridad": 4,
             "tipo": "DATOS",
             "item": "resultados_evaluacion",
             "detalle": (
-                "Lista vacía en el paquete (Engine no entregó evaluaciones "
-                "acumuladas en esta sesión de carga)"
+                "Sin diagnostics/evaluaciones.json o lista vacía "
+                "(la auditoría aún no depositó evidencia)"
             ),
             "impacto": "No se puede auditar el camino de evaluación desde Omega",
             "accion": (
-                "Quien invoque evaluar() debe dejar la lista en Engine; "
-                "Omega solo la lee (get_resultados_evaluacion / inventario)"
+                "Ejecutar auditoría de contratos antes de Omega; "
+                "debe escribir diagnostics/evaluaciones.json"
             ),
             "errores": [],
         })
@@ -326,7 +411,7 @@ def presentar(datos: Dict[str, Any]) -> str:
 
     lineas += [
         "=" * 80,
-        "OMEGA REPORT — MAPA DE TRABAJO",
+        "{0}  OMEGA REPORT — MAPA DE TRABAJO".format(ICON_INFO),
         "VPSI-TRUTH (Versión {0})".format(VERSION),
         "Generado: {0}    Commit: {1}".format(ahora, sha),
         "Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención",
@@ -335,7 +420,9 @@ def presentar(datos: Dict[str, Any]) -> str:
     ]
 
     if faltas:
-        lineas.append("[{0}] Entrada incompleta — no se puede construir el mapa".format(FALLO))
+        lineas.append(
+            "{0} Entrada incompleta — no se puede construir el mapa".format(ICON_FAIL)
+        )
         for f in faltas:
             lineas.append("    - {0}".format(f))
         return "\n".join(lineas)
@@ -353,21 +440,33 @@ def presentar(datos: Dict[str, Any]) -> str:
 
     if estado == "OPERATIVO" and coherente and n_bloqueantes == 0:
         salud = "OPERATIVO — listo para avanzar"
+        icon_salud = ICON_OK
     elif estado == "OPERATIVO" and n_bloqueantes == 0:
         salud = "OPERATIVO con huecos no bloqueantes"
+        icon_salud = ICON_WARN
     else:
         salud = "DEGRADADO — hay bloqueos"
+        icon_salud = ICON_FAIL
 
     lineas += _bloque("ESTADO GLOBAL", [
-        "  Engine          : {0}".format(estado),
-        "  Axiomas         : {0}".format(
-            "coherente" if coherente else "INCOHERENTE"
+        "  {0} Engine          : {1}".format(
+            ICON_OK if estado == "OPERATIVO" else ICON_FAIL, estado
         ),
-        "  Contenedores    : {0}".format(total),
-        "  Roles vacíos    : {0}".format(len(vacios)),
-        "  Rechazados      : {0}".format(len(rechazados)),
-        "  Acciones abiertas: {0}".format(len(acciones)),
-        "  Salud           : {0}".format(salud),
+        "  {0} Axiomas         : {1}".format(
+            ICON_OK if coherente else ICON_FAIL,
+            "coherente" if coherente else "INCOHERENTE",
+        ),
+        "  {0} Contenedores    : {1}".format(ICON_MOD, total),
+        "  {0} Roles vacíos    : {1}".format(
+            ICON_OK if len(vacios) == 0 else ICON_WARN, len(vacios)
+        ),
+        "  {0} Rechazados      : {1}".format(
+            ICON_OK if len(rechazados) == 0 else ICON_FAIL, len(rechazados)
+        ),
+        "  {0} Acciones abiertas: {1}".format(
+            ICON_OK if len(acciones) == 0 else ICON_WARN, len(acciones)
+        ),
+        "  {0} Salud           : {1}".format(icon_salud, salud),
     ])
 
     roles = reg.get("roles") or {}
@@ -380,7 +479,7 @@ def presentar(datos: Dict[str, Any]) -> str:
         else:
             rows.append([rol, "VACÍO", "0", "(sin módulo)"])
 
-    lineas.append("MÓDULOS Y ROLES")
+    lineas.append("{0}  MÓDULOS Y ROLES".format(ICON_MOD))
     lineas.extend(
         "  " + l
         for l in _tabla(["ROL", "ESTADO", "N", "MÓDULOS"], rows, [4, 9, 3, 36])
@@ -388,32 +487,41 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("")
 
     lineas.append("=" * 80)
-    lineas.append("MAPA DE INTERVENCIÓN (ordenado por prioridad)")
+    lineas.append("{0}  MAPA DE INTERVENCIÓN (ordenado por prioridad)".format(ICON_WARN))
     lineas.append("=" * 80)
     lineas.append("")
 
     if not acciones:
-        lineas.append("  No hay acciones pendientes. Sistema limpio.")
+        lineas.append("  {0} No hay acciones pendientes. Sistema limpio.".format(ICON_OK))
         lineas.append("")
     else:
         for i, a in enumerate(acciones, 1):
-            lineas.append("  {0}. [{1}] {2}".format(i, a["tipo"], a["item"]))
+            tipo = a["tipo"]
+            if tipo == "BLOQUEANTE":
+                ic = ICON_FAIL
+            elif tipo in ("CONTRATO", "RECHAZADO"):
+                ic = ICON_FAIL
+            elif tipo == "DATOS":
+                ic = ICON_PEND
+            else:
+                ic = ICON_WARN
+            lineas.append("  {0} {1}. [{2}] {3}".format(ic, i, tipo, a["item"]))
             lineas.append("     Detalle   : {0}".format(a["detalle"]))
             lineas.append("     Impacto   : {0}".format(a["impacto"]))
             lineas.append("     Acción    : {0}".format(a["accion"]))
             if a["errores"]:
                 lineas.append("     Evidencia :")
                 for e in a["errores"][:3]:
-                    lineas.append("       · {0}".format(e))
+                    lineas.append("       {0} {1}".format(ICON_DOT, e))
             lineas.append("")
 
     lineas.append("=" * 80)
-    lineas.append("SALUD POR CAPA")
+    lineas.append("{0}  SALUD POR CAPA".format(ICON_INFO))
     lineas.append("=" * 80)
     lineas.append("")
 
     const = datos.get("constantes") or {}
-    lineas.append("  [{0}] Constantes (CT)".format(OK))
+    lineas.append("  {0} Constantes (CT)".format(ICON_OK))
     lineas.append(
         "      ALPHA = {0}   BETA = {1}".format(
             const.get("ALPHA"), const.get("BETA")
@@ -421,8 +529,7 @@ def presentar(datos: Dict[str, Any]) -> str:
     )
     lineas.append("")
 
-    marca_ax = OK if coherente else FALLO
-    lineas.append("  [{0}] Axiomas (AX)".format(marca_ax))
+    lineas.append("  {0} Axiomas (AX)".format(ICON_OK if coherente else ICON_FAIL))
     lineas.append("      declaraciones = {0}".format(ia.get("declaraciones", "?")))
     lineas.append("      choques       = {0}".format(len(ia.get("choques", []))))
     lineas.append("      errores       = {0}".format(len(ia.get("errores", []))))
@@ -432,33 +539,35 @@ def presentar(datos: Dict[str, Any]) -> str:
 
     fo = datos.get("informe_formulas")
     if fo:
-        marca_fo = OK if fo.get("coherente", True) else FALLO
-        lineas.append("  [{0}] Fórmulas (FO)".format(marca_fo))
+        ok_fo = bool(fo.get("coherente", True))
+        lineas.append("  {0} Fórmulas (FO)".format(ICON_OK if ok_fo else ICON_FAIL))
         lineas.append(
             "      coherente = {0}   faltas = {1}".format(
                 fo.get("coherente"), fo.get("faltas", [])
             )
         )
     else:
-        lineas.append("  [{0}] Fórmulas (FO) — informe no entregado".format(PENDIENTE))
+        lineas.append(
+            "  {0} Fórmulas (FO) — informe no entregado".format(ICON_PEND)
+        )
     lineas.append("")
 
     mc = datos.get("informe_mecanica")
     if mc:
-        marca_mc = OK if mc.get("coherente") else FALLO
-        lineas.append("  [{0}] Mecánica (MC)".format(marca_mc))
+        ok_mc = bool(mc.get("coherente"))
+        lineas.append("  {0} Mecánica (MC)".format(ICON_OK if ok_mc else ICON_FAIL))
         lineas.append("      coherente = {0}".format(mc.get("coherente")))
     else:
         lineas.append(
-            "  [{0}] Mecánica (MC) — informe no entregado".format(PENDIENTE)
+            "  {0} Mecánica (MC) — informe no entregado".format(ICON_PEND)
         )
     lineas.append("")
 
     ct = datos.get("contratos")
     if isinstance(ct, dict) and "coherente" in ct:
-        marca_ct = OK if ct.get("coherente") else FALLO
+        ok_ct = bool(ct.get("coherente"))
         res = ct.get("resumen") or {}
-        lineas.append("  [{0}] Contratos (CI)".format(marca_ct))
+        lineas.append("  {0} Contratos (CI)".format(ICON_OK if ok_ct else ICON_FAIL))
         lineas.append(
             "      coherente={0}  validos={1}  caps_ok={2}  caps_fallo={3}".format(
                 ct.get("coherente"),
@@ -469,35 +578,41 @@ def presentar(datos: Dict[str, Any]) -> str:
         )
     else:
         lineas.append(
-            "  [{0}] Contratos (CI) — sin contratos_report.json".format(PENDIENTE)
+            "  {0} Contratos (CI) — sin contratos_report.json".format(ICON_PEND)
         )
     lineas.append("")
 
+    # Camino de evaluación (seq k/n — no [1][2][3] sueltos)
     evals = datos.get("resultados_evaluacion") or []
+    ev = datos.get("evidencia_evaluacion") or {}
+    n_ev = len(evals)
     if evals:
-        lineas.append("  [{0}] Camino de evaluación".format(OK))
-        lineas.append("      evaluaciones = {0}".format(len(evals)))
-        for j, r in enumerate(evals[:4], 1):
+        lineas.append("  {0} Camino de evaluación".format(ICON_OK))
+        lineas.append(
+            "      n = {0}   origen = {1}".format(
+                n_ev, _fmt(ev.get("origen"))
+            )
+        )
+        for j, r in enumerate(evals[:6], 1):
+            lineas.append(_linea_eval(j, n_ev, r))
+        if n_ev > 6:
             lineas.append(
-                "      [{0}] estado={1}  Tru_Ri={2}  Tru_total={3}".format(
-                    j,
-                    r.get("estado"),
-                    r.get("tru_ri"),
-                    r.get("tru_total"),
+                "      {0} … y {1} más (ver evaluaciones.json)".format(
+                    ICON_DOT, n_ev - 6
                 )
             )
     else:
         lineas.append(
-            "  [{0}] Camino de evaluación — sin resultados en el paquete".format(
-                PENDIENTE
+            "  {0} Camino de evaluación — sin evidencia en evaluaciones.json".format(
+                ICON_PEND
             )
         )
     lineas.append("")
 
     tests = datos.get("tests")
     if tests:
-        marca_t = OK if tests.get("fallidos", 1) == 0 else FALLO
-        lineas.append("  [{0}] Tests".format(marca_t))
+        ok_t = tests.get("fallidos", 1) == 0
+        lineas.append("  {0} Tests".format(ICON_OK if ok_t else ICON_FAIL))
         lineas.append(
             "      total={0}  pasados={1}  fallidos={2}  tasa={3}%".format(
                 tests.get("total"),
@@ -508,52 +623,61 @@ def presentar(datos: Dict[str, Any]) -> str:
         )
     else:
         lineas.append(
-            "  [{0}] Tests — resultados no entregados".format(PENDIENTE)
+            "  {0} Tests — resultados no entregados".format(ICON_PEND)
         )
     lineas.append("")
 
     lineas.extend(_lineas_generatividad(datos.get("generatividad")))
 
     lineas.append("=" * 80)
-    lineas.append("INVENTARIO RÁPIDO")
+    lineas.append("{0}  INVENTARIO RÁPIDO".format(ICON_MOD))
     lineas.append("=" * 80)
     lineas.append("Presente:")
     for rol, mods in sorted(roles.items()):
         if mods:
-            lineas.append("  ✓ {0}: {1}".format(rol, ", ".join(mods)))
+            lineas.append(
+                "  {0} {1}: {2}".format(ICON_OK, rol, ", ".join(mods))
+            )
     lineas.append("Ausente:")
-    for rol in vacios:
-        lineas.append("  · {0}".format(rol))
+    if vacios:
+        for rol in vacios:
+            lineas.append("  {0} {1}".format(ICON_PEND, rol))
+    else:
+        lineas.append("  {0} (ninguno)".format(ICON_OK))
     lineas.append("Rechazado:")
     if rechazados:
         for r in rechazados:
             lineas.append(
-                "  ✗ {0} → {1}".format(
+                "  {0} {1} → {2}".format(
+                    ICON_REJ,
                     Path(r.get("ruta", "?")).parent.name,
                     r.get("razon", "?"),
                 )
             )
     else:
-        lineas.append("  (ninguno)")
+        lineas.append("  {0} (ninguno)".format(ICON_OK))
     lineas.append("")
 
     inv = datos.get("inventario_engine") or {}
     if inv:
         lineas.append("=" * 80)
-        lineas.append("INVENTARIO ENGINE (solo lectura)")
+        lineas.append("{0}  INVENTARIO ENGINE (solo lectura)".format(ICON_INFO))
         lineas.append("=" * 80)
-        lineas.append("  estado={0}  n_eval={1}".format(
-            inv.get("estado"),
-            inv.get("resultados_evaluacion_n", len(evals)),
-        ))
+        lineas.append(
+            "  estado={0}  n_eval_en_este_proceso={1}  "
+            "(el n del camino viene del artefacto CI)".format(
+                inv.get("estado"),
+                inv.get("resultados_evaluacion_n", 0),
+            )
+        )
         lineas.append("")
 
     lineas += [
         "=" * 80,
-        "CIERRE",
+        "{0}  CIERRE".format(icon_salud),
         "=" * 80,
         "  Versión Omega      : {0}".format(VERSION),
-        "  Salud              : {0}".format(salud),
+        "  Salud              : {0} {1}".format(icon_salud, salud),
         "  Acciones abiertas  : {0}".format(len(acciones)),
         "  Bloqueantes        : {0}".format(n_bloqueantes),
         "  Este reporte no recalculó nada.",
@@ -579,10 +703,7 @@ def _leer_json(path: Path) -> Any:
 
 def cargar_datos_desde_engine() -> Dict[str, Any]:
     """
-    Solo agrega lo que ya existe:
-      - estado e informes del Engine al arrancar
-      - capacidades de módulos vía contrato (fn exacta)
-      - diagnostics/*.json y test_results.xml si el CI los dejó
+    Solo agrega lo que ya existe.
     No llama evaluar(). No inventa resultados_evaluacion.
     """
     datos: Dict[str, Any] = {
@@ -594,9 +715,9 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         "fallos_engine": [],
         "inventario_engine": {},
         "contratos": None,
+        "evidencia_evaluacion": {},
     }
 
-    # Artefactos CI (pueden existir antes que el Engine)
     contratos = _leer_json(DIAGNOSTICS_DIR / "contratos_report.json")
     if isinstance(contratos, dict):
         datos["contratos"] = contratos
@@ -648,7 +769,7 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         except Exception:  # noqa: BLE001
             pass
 
-        # Camino de evaluación: SOLO evidencia de auditoría (sin humo, sin evaluar)
+        # Camino: SOLO evaluaciones.json
         datos["resultados_evaluacion"] = []
         eval_path = DIAGNOSTICS_DIR / "evaluaciones.json"
         if eval_path.exists():
@@ -669,23 +790,15 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
                     "path": str(eval_path.name),
                     "error": "json ilegible",
                 }
-        # No llamar eng.evaluar(). No inventar entradas.
 
-        # Inventario (solo lectura de contratos montados)
         try:
             if hasattr(eng, "inventario"):
                 inv = eng.inventario()
                 if isinstance(inv, dict):
                     datos["inventario_engine"] = inv
-                    # si inventario expone la lista, usarla solo si aún está vacía
-                    if not datos["resultados_evaluacion"]:
-                        re = inv.get("resultados_evaluacion")
-                        if isinstance(re, list):
-                            datos["resultados_evaluacion"] = re
         except Exception:  # noqa: BLE001
             pass
 
-        # FO vía contrato (clave exacta del CONTENEDOR)
         try:
             cont_fo = None
             if hasattr(eng, "registro"):
@@ -701,12 +814,15 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         except Exception:  # noqa: BLE001
             pass
 
-        # AX generatividad vía contrato
         try:
             if hasattr(eng, "censar_generatividad"):
                 datos["generatividad"] = eng.censar_generatividad()
             else:
-                cont_ax = eng.registro.primero("AX") if hasattr(eng, "registro") else None
+                cont_ax = (
+                    eng.registro.primero("AX")
+                    if hasattr(eng, "registro")
+                    else None
+                )
                 if cont_ax is not None:
                     fn = cont_ax.fn("generatividad")
                     if callable(fn):
@@ -719,9 +835,12 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
                 "razon": "{0}: {1}".format(type(e).__name__, e),
             }
 
-        # CA centinela (barrer/verificar) — informe opcional
         try:
-            cont_ca = eng.registro.primero("CA") if hasattr(eng, "registro") else None
+            cont_ca = (
+                eng.registro.primero("CA")
+                if hasattr(eng, "registro")
+                else None
+            )
             if cont_ca is not None:
                 fn = cont_ca.fn("verificar")
                 if callable(fn):
@@ -735,7 +854,6 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         datos["estado_engine"] = "RECHAZADO"
         datos["errores_arranque"] = ["{0}: {1}".format(type(e).__name__, e)]
 
-    # tests xml (artefacto CI)
     xml_path = DIAGNOSTICS_DIR / "test_results.xml"
     if xml_path.exists():
         try:
