@@ -404,7 +404,7 @@ def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         permite = _permite_k(registro)
         o_ctx = registro.get("enunciado_O") or registro.get("O_id") or UNDEFINED
 
-                ids = ["CX-A14", "CX-A1", "CX-C4"]
+        ids = ["CX-A14", "CX-A1", "CX-C4"]
         if registro["estado"] != "estable":
             ids.extend(["CX-A10", "CX-T13"])
         if registro.get("ligaduras"):
