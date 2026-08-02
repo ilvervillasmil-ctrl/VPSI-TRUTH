@@ -407,7 +407,7 @@ class Engine:
     # -----------------------------------------------------------
     # Evaluación (orquesta; no interpreta)
     # -----------------------------------------------------------
-         def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
+    def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
         cont = self.registro.primero(rol)
         if cont is None:
             return UNDEFINED
