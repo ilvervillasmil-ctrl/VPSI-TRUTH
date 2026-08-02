@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 23:18:18 UTC    Commit: 28b41cfb18a1
+Generado: 2026-08-02 23:28:08 UTC    Commit: 7408ab778087
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -48,10 +48,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 382
+      declaraciones = 397
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 149, 'lema': 35, 'teorema': 110, 'corolario': 82, 'definicion': 6}
+      por_tipo      = {'axioma': 154, 'lema': 35, 'teorema': 114, 'corolario': 85, 'definicion': 9}
 
   ✅ Fórmulas (FO)
       coherente = True   faltas = []
@@ -74,15 +74,15 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 259
-  pares totales      : 33411
-  pares compatibles  : 9470
-  pares novedosos    : 4226
+  |Θ| (AX)           : 268
+  pares totales      : 35778
+  pares compatibles  : 9819
+  pares novedosos    : 4535
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
-  dominios           : ['cache', 'constantes', 'contexto', 'epistemologia', 'evaluacion', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'temporal']
+  dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal']
   roles vacíos       : []
   U1                 : NO_STAGNANT
-  por_tipo_theta     : {'axioma': 149, 'teorema': 110}
+  por_tipo_theta     : {'axioma': 154, 'teorema': 114}
   --- capa canónica (paper TR1) ---
   |Θ|_can           : 24 / 24
   novedosos_can     : 102  (paper: 153)

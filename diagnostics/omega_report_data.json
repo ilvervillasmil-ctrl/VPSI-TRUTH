@@ -8,21 +8,22 @@
     "coherente": true,
     "choques": [],
     "errores": [],
-    "declaraciones": 382,
+    "declaraciones": 397,
     "cuerpos": [
       "VPSI",
       "contexto_AX",
       "correlacion",
+      "peticion_anuncio_AX",
       "realidad_AX",
       "self",
       "sentido_estructural_AX"
     ],
     "por_tipo": {
-      "axioma": 149,
+      "axioma": 154,
       "lema": 35,
-      "teorema": 110,
-      "corolario": 82,
-      "definicion": 6
+      "teorema": 114,
+      "corolario": 85,
+      "definicion": 9
     }
   },
   "errores_arranque": [],
@@ -383,18 +384,19 @@
           "corolario",
           "definicion"
         ],
-        "declaraciones": 382,
+        "declaraciones": 397,
         "por_tipo": {
-          "axioma": 149,
+          "axioma": 154,
           "lema": 35,
-          "teorema": 110,
-          "corolario": 82,
-          "definicion": 6
+          "teorema": 114,
+          "corolario": 85,
+          "definicion": 9
         },
         "cuerpos": [
           "VPSI",
           "contexto_AX",
           "correlacion",
+          "peticion_anuncio_AX",
           "realidad_AX",
           "self",
           "sentido_estructural_AX"
@@ -934,21 +936,22 @@
       "coherente": true,
       "choques": [],
       "errores": [],
-      "declaraciones": 382,
+      "declaraciones": 397,
       "cuerpos": [
         "VPSI",
         "contexto_AX",
         "correlacion",
+        "peticion_anuncio_AX",
         "realidad_AX",
         "self",
         "sentido_estructural_AX"
       ],
       "por_tipo": {
-        "axioma": 149,
+        "axioma": 154,
         "lema": 35,
-        "teorema": 110,
-        "corolario": 82,
-        "definicion": 6
+        "teorema": 114,
+        "corolario": 85,
+        "definicion": 9
       }
     },
     "informe_mecanica": {
@@ -2632,17 +2635,22 @@
   },
   "generatividad": {
     "contenedor": "axiomas",
-    "theta_n": 259,
-    "pares_totales": 33411,
-    "pares_compatibles": 9470,
-    "pares_novedosos": 4226,
+    "theta_n": 268,
+    "pares_totales": 35778,
+    "pares_compatibles": 9819,
+    "pares_novedosos": 4535,
     "im_vs_theta": "GENERATIVO",
     "dominios": [
+      "auditoria",
+      "axiomas",
       "cache",
+      "citacion",
       "constantes",
       "contexto",
+      "engine",
       "epistemologia",
       "evaluacion",
+      "formulas",
       "inferencia_causal",
       "informacion",
       "logica",
@@ -2651,13 +2659,14 @@
       "realidad",
       "self",
       "semantica",
+      "taxonomia",
       "temporal"
     ],
     "u1_proxy": "NO_STAGNANT",
     "errores_recoleccion": 0,
     "por_tipo_theta": {
-      "axioma": 149,
-      "teorema": 110
+      "axioma": 154,
+      "teorema": 114
     },
     "canonica": {
       "theta_n": 24,
