@@ -407,22 +407,44 @@ class Engine:
     # -----------------------------------------------------------
     # Evaluación (orquesta; no interpreta)
     # -----------------------------------------------------------
-    def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
+        def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
         cont = self.registro.primero(rol)
         if cont is None:
             return UNDEFINED
         return self._ejecutar_capacidad(cont, capacidad, *args, **kwargs)
 
+    def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
+        """Lista acumulada de evaluaciones para Omega / auditoría."""
+        return list(self.resultados_evaluacion)
+
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         self.fallos = []
+        peticion = dict(peticion or {})
+
+        def _emit(resultado: Dict[str, Any]) -> Dict[str, Any]:
+            """Entrega al caller y acumula para el paquete de datos (Omega)."""
+            registro = {
+                "secuencia": len(self.resultados_evaluacion) + 1,
+                "entrada": {
+                    "contexto": peticion.get("contexto")
+                    or peticion.get("O_context")
+                    or peticion.get("Octx"),
+                    "tiene_C": "C" in peticion and peticion.get("C") is not None,
+                    "tiene_L": "L" in peticion and peticion.get("L") is not None,
+                    "tiene_K": "K" in peticion and peticion.get("K") is not None,
+                },
+                "resultado": dict(resultado),
+            }
+            self.resultados_evaluacion.append(registro)
+            return resultado
 
         if self.estado != "OPERATIVO":
-            return {
+            return _emit({
                 "estado": "RECHAZADO",
                 "razon": "Engine no operativo",
                 "errores_arranque": list(self.errores_arranque),
                 "fallos": list(self.fallos),
-            }
+            })
 
         o_ctx = (
             peticion.get("contexto")
@@ -430,14 +452,14 @@ class Engine:
             or peticion.get("Octx")
         )
         if not o_ctx:
-            return {
+            return _emit({
                 "estado": "UNDEFINED",
                 "razon": "K indefinido: falta O_context (Corolario Def-5.3.1)",
                 "factores": {"C": None, "L": None, "K": "UNDEFINED"},
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
                 "fallos": list(self.fallos),
-            }
+            })
 
         # Preferir CA si declara calcular
         C = L = K = None
@@ -456,17 +478,20 @@ class Engine:
             if "K" in peticion and peticion["K"] is not None:
                 K = Fraction(str(peticion["K"]))
         except Exception as e:
-            return {
+            return _emit({
                 "estado": "ERROR",
                 "razon": f"C, L o K inválidos: {e}",
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
-            }
+            })
 
         if C is None or L is None or K is None:
-            return {
+            return _emit({
                 "estado": "PARCIAL",
-                "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+                "razon": (
+                    "Faltan factores C/L/K "
+                    "(CA no los entregó o no vinieron en la petición)"
+                ),
                 "contexto": o_ctx,
                 "factores": {
                     "C": str(C) if C is not None else None,
@@ -474,7 +499,7 @@ class Engine:
                     "K": str(K) if K is not None else None,
                 },
                 "fallos": list(self.fallos),
-            }
+            })
 
         try:
             tru_ri_fn, tru_total_fn = self.get_formulas()
@@ -482,14 +507,14 @@ class Engine:
             ri = tru_ri_fn(C, L, K)
             tt = tru_total_fn(C, L, K)
         except Exception as e:
-            return {
+            return _emit({
                 "estado": "ERROR",
                 "razon": f"cálculo Tru: {type(e).__name__}: {e}",
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
-            }
+            })
 
-        return {
+        return _emit({
             "estado": "OK",
             "contexto": o_ctx,
             "factores": {"C": str(C), "L": str(L), "K": str(K)},
@@ -500,12 +525,12 @@ class Engine:
             "R_i_equals_R": False,
             "fuentes_usadas": ["X", "O_context"],
             "fallos": list(self.fallos),
-        }
+        })
 
         # -----------------------------------------------------------
     # Introspección (sin actuar de más)
     # -----------------------------------------------------------
-    def censar(self) -> Dict:
+        def censar(self) -> Dict:
         return self.registro.resumen()
 
     def inventario(self) -> Dict:
@@ -523,7 +548,13 @@ class Engine:
             "contenido": contenido,
             "informe_axiomas": self.informe_axiomas,
             "informe_mecanica": self.informe_mecanica,
+            "resultados_evaluacion": list(self.resultados_evaluacion),
+            "resultados_evaluacion_n": len(self.resultados_evaluacion),
         }
+
+    def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
+        """Lista acumulada de evaluaciones para Omega / auditoría de camino."""
+        return list(self.resultados_evaluacion)
 
     def censar_generatividad(self) -> Dict:
         """
