@@ -369,7 +369,7 @@ class Engine:
         except ArranqueError as e:
             self.errores_arranque.append(str(e))
 
-    # -----------------------------------------------------------
+        # -----------------------------------------------------------
     # Ancla CT
     # -----------------------------------------------------------
     def get_constantes(self) -> Dict[str, Fraction]:
@@ -379,7 +379,6 @@ class Engine:
             beta = getattr(mod, "BETA", None)
             if isinstance(alpha, Fraction) and isinstance(beta, Fraction):
                 return {"ALPHA": alpha, "BETA": beta}
-            # fallback por capacidad si el contrato la declara
             a_fn, b_fn = cont.fn("alpha"), cont.fn("beta")
             if callable(a_fn) and callable(b_fn):
                 return {"ALPHA": a_fn(), "BETA": b_fn()}
@@ -388,12 +387,10 @@ class Engine:
     def get_formulas(self):
         for cont in self.registro.por_rol.get("FO", []):
             mod = cont.modulo
-            # truth puede vivir en submódulo
             tru_ri = getattr(mod, "tru_ri", None)
             tru_total = getattr(mod, "tru_total", None)
             if callable(tru_ri) and callable(tru_total):
                 return tru_ri, tru_total
-            # capacidad
             ri_fn = cont.fn("tru_ri")
             tt_fn = cont.fn("tru_total")
             if callable(ri_fn) and callable(tt_fn):
@@ -402,7 +399,9 @@ class Engine:
             from modules.formulas.truth import tru_ri, tru_total
             return tru_ri, tru_total
         except ImportError as e:
-            raise ArranqueError(f"Fórmulas tru_ri/tru_total no disponibles: {e}")
+            raise ArranqueError(
+                "Fórmulas tru_ri/tru_total no disponibles: {0}".format(e)
+            )
 
     # -----------------------------------------------------------
     # Evaluación (orquesta; no interpreta)
