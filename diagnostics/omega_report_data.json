@@ -617,6 +617,19 @@
             "pide_evaluacion_engine": true,
             "requiere_aprobacion_dominio": true
           },
+          "ingenieria": {
+            "archivo": "conocimiento_humano/ingenieria.py",
+            "nombre": "ingenieria",
+            "hace": "Traer y etiquetar material de ingeniería (diseño, sistemas, normas técnicas); pedir evaluación a Engine bajo el O de esta disciplina; aprobar o rechazar el material antes de que suba.",
+            "provee": [
+              "material_etiquetado_ingenieria",
+              "peticion_evaluacion_engine",
+              "aprobacion_dominio"
+            ],
+            "o_evaluacion": "Contraste de material de ingeniería: diseños, especificaciones y normas. Candidato a K bajo este O; no es ancla de R.",
+            "pide_evaluacion_engine": true,
+            "requiere_aprobacion_dominio": true
+          },
           "quimica": {
             "archivo": "conocimiento_humano/quimica.py",
             "nombre": "quimica",
@@ -637,6 +650,7 @@
           "biologia",
           "ciencias_tierra",
           "fisica",
+          "ingenieria",
           "quimica"
         ],
         "acceso": {
