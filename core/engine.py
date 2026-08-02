@@ -79,8 +79,33 @@ OBLIGATORIOS = ("CT", "AX", "FO", "MC", "SF")
 # ===============================================================
 # CONTENEDOR
 # ===============================================================
+
+# Nombre canónico de oficio → claves aceptadas en CONTENEDOR['capacidades']
+# No inventa capacidades nuevas: solo admite alias explícitos de la misma función.
+ALIAS_CAPACIDAD = {
+    "barrer": ("barrer", "verificar", "evaluar"),
+    "verificar": ("verificar", "barrer", "evaluar"),
+    "evaluar": ("evaluar", "verificar", "barrer"),
+    "resolver": ("resolver", "verificar", "evaluar"),
+    "componer": ("componer", "verificar"),
+    "inventario": ("inventario",),
+    "calcular": ("calcular",),
+    "generatividad": ("generatividad",),
+    "censo": ("censo", "verificar", "barrer"),
+    "reportar": ("reportar",),
+}
+
+
 class Contenedor:
-    def __init__(self, nombre: str, rol: str, version: str, modulo: Any, ruta: Path, meta: Dict):
+    def __init__(
+        self,
+        nombre: str,
+        rol: str,
+        version: str,
+        modulo: Any,
+        ruta: Path,
+        meta: Dict,
+    ):
         self.nombre = nombre
         self.rol = rol
         self.version = version
@@ -95,7 +120,7 @@ class Contenedor:
         self.capacidades: Dict[str, Any] = dict(raw)
 
     def fn(self, nombre: str):
-        """Resuelve capacidad del contrato. Nunca inventa nombres."""
+        """Resuelve capacidad por clave exacta del contrato. Nunca inventa nombres."""
         ref = self.capacidades.get(nombre)
         if ref is None:
             return None
@@ -106,7 +131,25 @@ class Contenedor:
         return None
 
     def tiene(self, nombre: str) -> bool:
+        """True si la clave exacta del contrato es callable."""
         return callable(self.fn(nombre))
+
+    def fn_oficio(self, nombre: str):
+        """
+        Resuelve capacidad canónica de oficio probando alias.
+        Ej.: pedir 'barrer' acepta clave 'verificar' si apunta a callable.
+        No inventa nombres fuera de ALIAS_CAPACIDAD.
+        """
+        claves = ALIAS_CAPACIDAD.get(nombre, (nombre,))
+        for clave in claves:
+            f = self.fn(clave)
+            if callable(f):
+                return f
+        return None
+
+    def tiene_oficio(self, nombre: str) -> bool:
+        """True si alguna clave alias de oficio resuelve a callable."""
+        return callable(self.fn_oficio(nombre))
 
     def como_dict(self) -> Dict:
         caps = {}
