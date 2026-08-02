@@ -481,7 +481,7 @@ class DiagnosticoGlobal:
                 "raiz": "pytest no generó diagnostics/test_results.xml en este entorno",
             })
 
-        # ----- 7. Censo de disco modules/ (cobertura estructural) -----
+                # ----- 7. Censo de disco modules/ (cobertura estructural) -----
         if modules_dir.is_dir():
             for child in sorted(modules_dir.iterdir()):
                 if not child.is_dir() or child.name.startswith(("_", ".")):
@@ -532,10 +532,15 @@ class DiagnosticoGlobal:
             score += aporte
         pct = round(score * 100.0, 2)
 
+        # ----- 11. Reportes pasivos de módulos (recibir_reporte) -----
+        reportes_buf = list(getattr(DiagnosticoGlobal, "_reportes", None) or [])
+        reportes_n = len(reportes_buf)
+        reportes_cola = reportes_buf[-20:]  # cola: no volcar historial entero
+
         # ----- informe -----
         informe = {
             "tipo": "diagnostico_global",
-            "version": "1.0",
+            "version": "1.1",
             "timestamp": stamp,
             "repo_root": str(root.resolve()),
             "pct_global": pct,
@@ -545,7 +550,10 @@ class DiagnosticoGlobal:
             "causas_raiz": causas,
             "registro": {
                 "total_contenedores": total_cont,
-                "roles": {k: list(v) if isinstance(v, list) else v for k, v in roles.items()},
+                "roles": {
+                    k: list(v) if isinstance(v, list) else v
+                    for k, v in roles.items()
+                },
                 "roles_vacios": vacios,
                 "roles_vacios_fase": vacios_fase,
                 "roles_vacios_otros": vacios_otros,
@@ -559,9 +567,12 @@ class DiagnosticoGlobal:
                 "im_vs_theta": gen.get("im_vs_theta") if isinstance(gen, dict) else None,
                 "canonica": can,
             },
+            "reportes_modulos_n": reportes_n,
+            "reportes_modulos": reportes_cola,
             "nota": (
                 "Solo lectura. Cero actuación. "
-                "Omega señala la herida; este informe señala causa raíz y % global."
+                "Omega señala la herida; este informe señala causa raíz y % global. "
+                "reportes_modulos = cola de DiagnosticoGlobal.recibir_reporte."
             ),
         }
         return informe
