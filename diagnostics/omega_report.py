@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
 OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.4)
+VPSI-TRUTH (Versión 9.5)
 ==============================
 
 Presentador objetivo + mapa de intervención.
 
-No recalcula.
-Lee solo lo que el Engine y los módulos ya produjeron.
-Ordena lo que falta por prioridad de trabajo.
-Cada hueco indica: qué es · dónde · por qué importa · qué hacer.
+Contrato de este artefacto:
+  - Solo reporta.
+  - No recalcula Tru_Ri / Tru_total.
+  - No inventa evaluaciones (sin humo).
+  - Lee únicamente lo que Engine, módulos y artefactos CI ya produjeron.
+  - Cada hueco indica: qué es · dónde · por qué importa · qué hacer.
 
 Autor: Ilver Villasmil
 ORCID: 0009-0009-3413-4270
@@ -35,6 +37,7 @@ OK = "OK"
 FALLO = "FALLO"
 PENDIENTE = "PENDIENTE"
 STRICT = os.getenv("OMEGA_STRICT", "0") == "1"
+VERSION = "9.5"
 
 CAMPOS_OBLIGATORIOS = (
     "estado_engine",
@@ -52,7 +55,7 @@ def validar_entrada(datos: Dict[str, Any]) -> List[str]:
         return ["entrada no es dict"]
     for campo in CAMPOS_OBLIGATORIOS:
         if campo not in datos:
-            faltas.append(f"falta campo obligatorio: {campo}")
+            faltas.append("falta campo obligatorio: {0}".format(campo))
     if "constantes" in datos:
         c = datos["constantes"]
         if not isinstance(c, dict) or "ALPHA" not in c or "BETA" not in c:
@@ -63,14 +66,20 @@ def validar_entrada(datos: Dict[str, Any]) -> List[str]:
             faltas.append("informe_axiomas inválido o incompleto")
     if "estado_engine" in datos:
         if datos["estado_engine"] not in ("OPERATIVO", "RECHAZADO", "NO_INICIADO"):
-            faltas.append(f"estado_engine inválido: {datos['estado_engine']}")
+            faltas.append(
+                "estado_engine inválido: {0}".format(datos["estado_engine"])
+            )
     return faltas
 
 
 # =============================================================================
 # HELPERS DE PRESENTACIÓN
 # =============================================================================
-def _tabla(headers: List[str], rows: List[List[str]], anchos: List[int] | None = None) -> List[str]:
+def _tabla(
+    headers: List[str],
+    rows: List[List[str]],
+    anchos: List[int] | None = None,
+) -> List[str]:
     if anchos is None:
         anchos = [
             max(len(h), max((len(str(r[i])) for r in rows), default=0))
@@ -79,7 +88,11 @@ def _tabla(headers: List[str], rows: List[List[str]], anchos: List[int] | None =
     sep = "+" + "+".join("-" * (w + 2) for w in anchos) + "+"
 
     def fila(vals: List[str]) -> str:
-        return "| " + " | ".join(str(v).ljust(anchos[i]) for i, v in enumerate(vals)) + " |"
+        return (
+            "| "
+            + " | ".join(str(v).ljust(anchos[i]) for i, v in enumerate(vals))
+            + " |"
+        )
 
     out = [sep, fila(headers), sep]
     for r in rows:
@@ -93,55 +106,56 @@ def _bloque(titulo: str, lineas_bloq: List[str]) -> List[str]:
 
 
 def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
-    """Presenta TR1/U1. Solo lectura del paquete; no calcula."""
     out: List[str] = [
         "=" * 80,
         "GENERATIVIDAD (TR1 / U1)",
         "=" * 80,
     ]
     if not g or g.get("estado") == "UNDEFINED":
-        out.append("  (sin datos — AX.generatividad no disponible)")
+        out.append("  (sin datos — AX.generatividad no disponible en el paquete)")
         if g:
-            out.append(f"  U1 (proxy roles): {g.get('u1_estado', 'REVISAR')}")
-            out.append(f"  roles vacíos    : {g.get('roles_vacios', [])}")
+            out.append("  U1 (proxy roles): {0}".format(g.get("u1_estado", "REVISAR")))
+            out.append("  roles vacíos    : {0}".format(g.get("roles_vacios", [])))
             if g.get("razon"):
-                out.append(f"  razon           : {g.get('razon')}")
+                out.append("  razon           : {0}".format(g.get("razon")))
         out.append("")
         return out
 
-    # capa operativa (repo)
-    out.append(f"  |Θ| (AX)           : {g.get('theta_n', '—')}")
-    out.append(f"  pares totales      : {g.get('pares_totales', '—')}")
-    out.append(f"  pares compatibles  : {g.get('pares_compatibles', '—')}")
-    out.append(f"  pares novedosos    : {g.get('pares_novedosos', '—')}")
-    out.append(f"  |Im(⊕)| ? |Θ|      : {g.get('im_vs_theta', '—')}")
-    out.append(f"  dominios           : {g.get('dominios', [])}")
-    out.append(f"  roles vacíos       : {g.get('roles_vacios', [])}")
-    out.append(f"  U1                 : {g.get('u1_estado', '—')}")
+    out.append("  |Θ| (AX)           : {0}".format(g.get("theta_n", "—")))
+    out.append("  pares totales      : {0}".format(g.get("pares_totales", "—")))
+    out.append("  pares compatibles  : {0}".format(g.get("pares_compatibles", "—")))
+    out.append("  pares novedosos    : {0}".format(g.get("pares_novedosos", "—")))
+    out.append("  |Im(⊕)| ? |Θ|      : {0}".format(g.get("im_vs_theta", "—")))
+    out.append("  dominios           : {0}".format(g.get("dominios", [])))
+    out.append("  roles vacíos       : {0}".format(g.get("roles_vacios", [])))
+    out.append("  U1                 : {0}".format(g.get("u1_estado", "—")))
     if g.get("por_tipo_theta"):
-        out.append(f"  por_tipo_theta     : {g.get('por_tipo_theta')}")
+        out.append("  por_tipo_theta     : {0}".format(g.get("por_tipo_theta")))
 
-    # capa canónica (paper TR1) — ANTES del return
     can = g.get("canonica") or {}
+    out.append("  --- capa canónica (paper TR1) ---")
     if can:
-        out.append("  --- capa canónica (paper TR1) ---")
-        out.append(f"  |Θ|_can           : {can.get('theta_n', '—')} / 24")
-        out.append(f"  novedosos_can     : {can.get('pares_novedosos', '—')}  (paper: 153)")
-        out.append(f"  |Im| ? |Θ| can    : {can.get('im_vs_theta', '—')}")
-        out.append(f"  ids_faltantes     : {can.get('ids_faltantes', [])}")
-        out.append(f"  ids_sin_dominio   : {can.get('ids_sin_dominio', [])}")
-        out.append(f"  dominios_can      : {can.get('dominios', [])}")
+        out.append("  |Θ|_can           : {0} / 24".format(can.get("theta_n", "—")))
+        out.append(
+            "  novedosos_can     : {0}  (paper: 153)".format(
+                can.get("pares_novedosos", "—")
+            )
+        )
+        out.append("  |Im| ? |Θ| can    : {0}".format(can.get("im_vs_theta", "—")))
+        out.append("  ids_faltantes     : {0}".format(can.get("ids_faltantes", [])))
+        out.append("  ids_sin_dominio   : {0}".format(can.get("ids_sin_dominio", [])))
+        out.append("  dominios_can      : {0}".format(can.get("dominios", [])))
     else:
-        out.append("  --- capa canónica (paper TR1) ---")
         out.append("  (sin datos canónicos en el paquete)")
 
     if g.get("nota"):
-        out.append(f"  nota               : {g['nota']}")
+        out.append("  nota               : {0}".format(g["nota"]))
     out.append("")
     return out
-        
+
+
 # =============================================================================
-# CONSTRUCCIÓN DEL MAPA DE TRABAJO
+# MAPA DE INTERVENCIÓN (solo a partir del paquete)
 # =============================================================================
 def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
     acciones: List[Dict[str, Any]] = []
@@ -154,7 +168,7 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "prioridad": 1,
             "tipo": "BLOQUEANTE",
             "item": "Engine",
-            "detalle": f"estado = {datos.get('estado_engine')}",
+            "detalle": "estado = {0}".format(datos.get("estado_engine")),
             "impacto": "Nada confiable puede evaluarse si el Engine no está OPERATIVO",
             "accion": "Revisar errores_arranque y compuertas de arranque",
             "errores": datos.get("errores_arranque") or [],
@@ -167,12 +181,33 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "tipo": "BLOQUEANTE",
             "item": "Axiomas",
             "detalle": (
-                f"choques={len(ia.get('choques', []))} "
-                f"errores={len(ia.get('errores', []))}"
+                "choques={0} errores={1}".format(
+                    len(ia.get("choques", [])),
+                    len(ia.get("errores", [])),
+                )
             ),
             "impacto": "Sin axiomatización coherente el sistema no debe avanzar",
             "accion": "Resolver choques en modules/axiomas y VPSI.py",
-            "errores": ia.get("choques", [])[:5],
+            "errores": (ia.get("choques") or [])[:5],
+        })
+
+    ct = datos.get("contratos")
+    if isinstance(ct, dict) and ct.get("coherente") is False:
+        acciones.append({
+            "prioridad": 2,
+            "tipo": "CONTRATO",
+            "item": "auditoria_contratos",
+            "detalle": (
+                "contratos_report coherente=False errores_n={0}".format(
+                    len(ct.get("errores") or [])
+                )
+            ),
+            "impacto": "El juez CI reportó fallos de contrato o ejecución",
+            "accion": "Leer diagnostics/contratos_report.json y corregir init/Engine",
+            "errores": [
+                (e.get("mensaje") if isinstance(e, dict) else str(e))
+                for e in (ct.get("errores") or [])[:5]
+            ],
         })
 
     for r in rechazados:
@@ -185,7 +220,7 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "detalle": razon,
             "impacto": "El módulo existe en disco pero el Engine lo ignora",
             "accion": "Registrar el rol en core.engine.ROLES o corregir CONTENEDOR['rol']",
-            "errores": [f"{ruta} → {razon}"],
+            "errores": ["{0} → {1}".format(ruta, razon)],
         })
 
     for rol in vacios:
@@ -194,19 +229,26 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "tipo": "VACÍO",
             "item": rol,
             "detalle": "rol admitido sin módulo montado",
-            "impacto": f"Capacidad del rol {rol} no disponible",
-            "accion": f"Crear o activar módulo con CONTENEDOR['rol'] = '{rol}'",
+            "impacto": "Capacidad del rol {0} no disponible".format(rol),
+            "accion": "Crear o activar módulo con CONTENEDOR['rol'] = '{0}'".format(rol),
             "errores": [],
         })
 
+    # Solo reporta ausencia: no inventa evaluaciones
     if not datos.get("resultados_evaluacion"):
         acciones.append({
             "prioridad": 4,
             "tipo": "DATOS",
             "item": "resultados_evaluacion",
-            "detalle": "Engine no pasó resultados de evaluar() al reporte",
-            "impacto": "No se puede auditar el camino de evaluación desde Omega Report",
-            "accion": "Hacer que el Engine entregue la lista de evaluaciones al paquete de datos",
+            "detalle": (
+                "Lista vacía en el paquete (Engine no entregó evaluaciones "
+                "acumuladas en esta sesión de carga)"
+            ),
+            "impacto": "No se puede auditar el camino de evaluación desde Omega",
+            "accion": (
+                "Quien invoque evaluar() debe dejar la lista en Engine; "
+                "Omega solo la lee (get_resultados_evaluacion / inventario)"
+            ),
             "errores": [],
         })
 
@@ -217,7 +259,7 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "item": "tests",
             "detalle": "resultados de pytest no entregados al reporte",
             "impacto": "No se ve cobertura ni regresiones desde el mapa",
-            "accion": "Parsear diagnostics/test_results.xml y pasarlo en el paquete de datos",
+            "accion": "Generar diagnostics/test_results.xml antes de Omega",
             "errores": [],
         })
 
@@ -226,13 +268,23 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "prioridad": 4,
             "tipo": "DATOS",
             "item": "informe_formulas",
-            "detalle": "no entregado",
+            "detalle": "no entregado por FO en el paquete",
             "impacto": "No se confirma el estado del módulo FO desde el reporte",
-            "accion": "Engine debe invocar formulas.barrer() y adjuntar el resultado",
+            "accion": "Exponer verificar/barrer en FO y que Engine lo adjunte al cargar",
             "errores": [],
         })
 
-    # Generatividad ausente o estancada (no bloquea arranque; informa mapa)
+    if not isinstance(ct, dict):
+        acciones.append({
+            "prioridad": 4,
+            "tipo": "DATOS",
+            "item": "contratos_report",
+            "detalle": "diagnostics/contratos_report.json ausente",
+            "impacto": "Sin mapa del juez CI de contratos en este run",
+            "accion": "Ejecutar auditoría estructural de contratos antes de Omega",
+            "errores": [],
+        })
+
     g = datos.get("generatividad")
     if not g or g.get("estado") == "UNDEFINED":
         acciones.append({
@@ -250,8 +302,9 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "tipo": "TR1",
             "item": "generatividad",
             "detalle": (
-                f"|Θ|={g.get('theta_n')} novedosos={g.get('pares_novedosos')} "
-                f"→ ESTANCADO"
+                "|Θ|={0} novedosos={1} → ESTANCADO".format(
+                    g.get("theta_n"), g.get("pares_novedosos")
+                )
             ),
             "impacto": "El cuerpo axiomático no expande dominios por recombinación",
             "accion": "Revisar campo gobierna en declaraciones o ampliar dominios cruzados",
@@ -274,17 +327,17 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas += [
         "=" * 80,
         "OMEGA REPORT — MAPA DE TRABAJO",
-        "VPSI-TRUTH (Versión 9.4)",
-        f"Generado: {ahora}    Commit: {sha}",
-        "Modo: SOLO PRESENTACIÓN · prioriza intervención · no recalcula",
+        "VPSI-TRUTH (Versión {0})".format(VERSION),
+        "Generado: {0}    Commit: {1}".format(ahora, sha),
+        "Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención",
         "=" * 80,
         "",
     ]
 
     if faltas:
-        lineas.append(f"[{FALLO}] Entrada incompleta — no se puede construir el mapa")
+        lineas.append("[{0}] Entrada incompleta — no se puede construir el mapa".format(FALLO))
         for f in faltas:
-            lineas.append(f"    - {f}")
+            lineas.append("    - {0}".format(f))
         return "\n".join(lineas)
 
     estado = datos["estado_engine"]
@@ -295,7 +348,6 @@ def presentar(datos: Dict[str, Any]) -> str:
     vacios = reg.get("roles_vacios") or []
     rechazados = reg.get("rechazados") or []
     acciones = construir_acciones(datos)
-
     bloqueantes = [a for a in acciones if a["tipo"] == "BLOQUEANTE"]
     n_bloqueantes = len(bloqueantes)
 
@@ -307,13 +359,15 @@ def presentar(datos: Dict[str, Any]) -> str:
         salud = "DEGRADADO — hay bloqueos"
 
     lineas += _bloque("ESTADO GLOBAL", [
-        f"  Engine          : {estado}",
-        f"  Axiomas         : {'coherente' if coherente else 'INCOHERENTE'}",
-        f"  Contenedores    : {total}",
-        f"  Roles vacíos    : {len(vacios)}",
-        f"  Rechazados      : {len(rechazados)}",
-        f"  Acciones abiertas: {len(acciones)}",
-        f"  Salud           : {salud}",
+        "  Engine          : {0}".format(estado),
+        "  Axiomas         : {0}".format(
+            "coherente" if coherente else "INCOHERENTE"
+        ),
+        "  Contenedores    : {0}".format(total),
+        "  Roles vacíos    : {0}".format(len(vacios)),
+        "  Rechazados      : {0}".format(len(rechazados)),
+        "  Acciones abiertas: {0}".format(len(acciones)),
+        "  Salud           : {0}".format(salud),
     ])
 
     roles = reg.get("roles") or {}
@@ -327,11 +381,10 @@ def presentar(datos: Dict[str, Any]) -> str:
             rows.append([rol, "VACÍO", "0", "(sin módulo)"])
 
     lineas.append("MÓDULOS Y ROLES")
-    lineas.extend("  " + l for l in _tabla(
-        ["ROL", "ESTADO", "N", "MÓDULOS"],
-        rows,
-        [4, 9, 3, 36],
-    ))
+    lineas.extend(
+        "  " + l
+        for l in _tabla(["ROL", "ESTADO", "N", "MÓDULOS"], rows, [4, 9, 3, 36])
+    )
     lineas.append("")
 
     lineas.append("=" * 80)
@@ -344,14 +397,14 @@ def presentar(datos: Dict[str, Any]) -> str:
         lineas.append("")
     else:
         for i, a in enumerate(acciones, 1):
-            lineas.append(f"  {i}. [{a['tipo']}] {a['item']}")
-            lineas.append(f"     Detalle   : {a['detalle']}")
-            lineas.append(f"     Impacto   : {a['impacto']}")
-            lineas.append(f"     Acción    : {a['accion']}")
+            lineas.append("  {0}. [{1}] {2}".format(i, a["tipo"], a["item"]))
+            lineas.append("     Detalle   : {0}".format(a["detalle"]))
+            lineas.append("     Impacto   : {0}".format(a["impacto"]))
+            lineas.append("     Acción    : {0}".format(a["accion"]))
             if a["errores"]:
                 lineas.append("     Evidencia :")
                 for e in a["errores"][:3]:
-                    lineas.append(f"       · {e}")
+                    lineas.append("       · {0}".format(e))
             lineas.append("")
 
     lineas.append("=" * 80)
@@ -360,65 +413,105 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("")
 
     const = datos.get("constantes") or {}
-    lineas.append(f"  [{OK}] Constantes (CT)")
-    lineas.append(f"      ALPHA = {const.get('ALPHA')}   BETA = {const.get('BETA')}")
+    lineas.append("  [{0}] Constantes (CT)".format(OK))
+    lineas.append(
+        "      ALPHA = {0}   BETA = {1}".format(
+            const.get("ALPHA"), const.get("BETA")
+        )
+    )
     lineas.append("")
 
     marca_ax = OK if coherente else FALLO
-    lineas.append(f"  [{marca_ax}] Axiomas (AX)")
-    lineas.append(f"      declaraciones = {ia.get('declaraciones', '?')}")
-    lineas.append(f"      choques       = {len(ia.get('choques', []))}")
-    lineas.append(f"      errores       = {len(ia.get('errores', []))}")
+    lineas.append("  [{0}] Axiomas (AX)".format(marca_ax))
+    lineas.append("      declaraciones = {0}".format(ia.get("declaraciones", "?")))
+    lineas.append("      choques       = {0}".format(len(ia.get("choques", []))))
+    lineas.append("      errores       = {0}".format(len(ia.get("errores", []))))
     if ia.get("por_tipo"):
-        lineas.append(f"      por_tipo      = {ia.get('por_tipo')}")
+        lineas.append("      por_tipo      = {0}".format(ia.get("por_tipo")))
     lineas.append("")
 
     fo = datos.get("informe_formulas")
     if fo:
-        marca_fo = OK if fo.get("coherente") else FALLO
-        lineas.append(f"  [{marca_fo}] Fórmulas (FO)")
+        marca_fo = OK if fo.get("coherente", True) else FALLO
+        lineas.append("  [{0}] Fórmulas (FO)".format(marca_fo))
         lineas.append(
-            f"      coherente = {fo.get('coherente')}   faltas = {fo.get('faltas', [])}"
+            "      coherente = {0}   faltas = {1}".format(
+                fo.get("coherente"), fo.get("faltas", [])
+            )
         )
     else:
-        lineas.append(f"  [{PENDIENTE}] Fórmulas (FO) — informe no entregado")
+        lineas.append("  [{0}] Fórmulas (FO) — informe no entregado".format(PENDIENTE))
     lineas.append("")
 
     mc = datos.get("informe_mecanica")
     if mc:
         marca_mc = OK if mc.get("coherente") else FALLO
-        lineas.append(f"  [{marca_mc}] Mecánica (MC)")
-        lineas.append(f"      coherente = {mc.get('coherente')}")
+        lineas.append("  [{0}] Mecánica (MC)".format(marca_mc))
+        lineas.append("      coherente = {0}".format(mc.get("coherente")))
     else:
-        lineas.append(f"  [{PENDIENTE}] Mecánica (MC) — informe no entregado")
+        lineas.append(
+            "  [{0}] Mecánica (MC) — informe no entregado".format(PENDIENTE)
+        )
+    lineas.append("")
+
+    ct = datos.get("contratos")
+    if isinstance(ct, dict) and "coherente" in ct:
+        marca_ct = OK if ct.get("coherente") else FALLO
+        res = ct.get("resumen") or {}
+        lineas.append("  [{0}] Contratos (CI)".format(marca_ct))
+        lineas.append(
+            "      coherente={0}  validos={1}  caps_ok={2}  caps_fallo={3}".format(
+                ct.get("coherente"),
+                res.get("contratos_validos", "?"),
+                res.get("capacidades_verificadas", "?"),
+                res.get("capacidades_fallidas", "?"),
+            )
+        )
+    else:
+        lineas.append(
+            "  [{0}] Contratos (CI) — sin contratos_report.json".format(PENDIENTE)
+        )
     lineas.append("")
 
     evals = datos.get("resultados_evaluacion") or []
     if evals:
-        lineas.append(f"  [{OK}] Camino de evaluación")
-        lineas.append(f"      evaluaciones = {len(evals)}")
+        lineas.append("  [{0}] Camino de evaluación".format(OK))
+        lineas.append("      evaluaciones = {0}".format(len(evals)))
         for j, r in enumerate(evals[:4], 1):
             lineas.append(
-                f"      [{j}] estado={r.get('estado')}  "
-                f"Tru_Ri={r.get('tru_ri')}  Tru_total={r.get('tru_total')}"
+                "      [{0}] estado={1}  Tru_Ri={2}  Tru_total={3}".format(
+                    j,
+                    r.get("estado"),
+                    r.get("tru_ri"),
+                    r.get("tru_total"),
+                )
             )
     else:
-        lineas.append(f"  [{PENDIENTE}] Camino de evaluación — sin resultados entregados")
+        lineas.append(
+            "  [{0}] Camino de evaluación — sin resultados en el paquete".format(
+                PENDIENTE
+            )
+        )
     lineas.append("")
 
     tests = datos.get("tests")
     if tests:
         marca_t = OK if tests.get("fallidos", 1) == 0 else FALLO
-        lineas.append(f"  [{marca_t}] Tests")
+        lineas.append("  [{0}] Tests".format(marca_t))
         lineas.append(
-            f"      total={tests.get('total')}  pasados={tests.get('pasados')}  "
-            f"fallidos={tests.get('fallidos')}  tasa={tests.get('tasa')}%"
+            "      total={0}  pasados={1}  fallidos={2}  tasa={3}%".format(
+                tests.get("total"),
+                tests.get("pasados"),
+                tests.get("fallidos"),
+                tests.get("tasa"),
+            )
         )
     else:
-        lineas.append(f"  [{PENDIENTE}] Tests — resultados no entregados")
+        lineas.append(
+            "  [{0}] Tests — resultados no entregados".format(PENDIENTE)
+        )
     lineas.append("")
 
-    # TR1 / U1 (presentación pura)
     lineas.extend(_lineas_generatividad(datos.get("generatividad")))
 
     lineas.append("=" * 80)
@@ -427,28 +520,44 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("Presente:")
     for rol, mods in sorted(roles.items()):
         if mods:
-            lineas.append(f"  ✓ {rol}: {', '.join(mods)}")
+            lineas.append("  ✓ {0}: {1}".format(rol, ", ".join(mods)))
     lineas.append("Ausente:")
     for rol in vacios:
-        lineas.append(f"  · {rol}")
+        lineas.append("  · {0}".format(rol))
     lineas.append("Rechazado:")
     if rechazados:
         for r in rechazados:
             lineas.append(
-                f"  ✗ {Path(r.get('ruta', '?')).parent.name} → {r.get('razon', '?')}"
+                "  ✗ {0} → {1}".format(
+                    Path(r.get("ruta", "?")).parent.name,
+                    r.get("razon", "?"),
+                )
             )
     else:
         lineas.append("  (ninguno)")
     lineas.append("")
 
+    inv = datos.get("inventario_engine") or {}
+    if inv:
+        lineas.append("=" * 80)
+        lineas.append("INVENTARIO ENGINE (solo lectura)")
+        lineas.append("=" * 80)
+        lineas.append("  estado={0}  n_eval={1}".format(
+            inv.get("estado"),
+            inv.get("resultados_evaluacion_n", len(evals)),
+        ))
+        lineas.append("")
+
     lineas += [
         "=" * 80,
         "CIERRE",
         "=" * 80,
-        f"  Salud              : {salud}",
-        f"  Acciones abiertas  : {len(acciones)}",
-        f"  Bloqueantes        : {n_bloqueantes}",
+        "  Versión Omega      : {0}".format(VERSION),
+        "  Salud              : {0}".format(salud),
+        "  Acciones abiertas  : {0}".format(len(acciones)),
+        "  Bloqueantes        : {0}".format(n_bloqueantes),
         "  Este reporte no recalculó nada.",
+        "  Este reporte no ejecutó humo ni evaluar().",
         "  El orden de la lista = orden recomendado de trabajo.",
         "=" * 80,
     ]
@@ -457,15 +566,40 @@ def presentar(datos: Dict[str, Any]) -> str:
 
 
 # =============================================================================
-# CARGA DESDE ENGINE
+# CARGA DESDE ENGINE + ARTEFACTOS (solo lectura)
 # =============================================================================
+def _leer_json(path: Path) -> Any:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def cargar_datos_desde_engine() -> Dict[str, Any]:
+    """
+    Solo agrega lo que ya existe:
+      - estado e informes del Engine al arrancar
+      - capacidades de módulos vía contrato (fn exacta)
+      - diagnostics/*.json y test_results.xml si el CI los dejó
+    No llama evaluar(). No inventa resultados_evaluacion.
+    """
     datos: Dict[str, Any] = {
         "estado_engine": "NO_INICIADO",
         "constantes": {},
         "informe_axiomas": {},
         "errores_arranque": [],
+        "resultados_evaluacion": [],
+        "fallos_engine": [],
+        "inventario_engine": {},
+        "contratos": None,
     }
+
+    # Artefactos CI (pueden existir antes que el Engine)
+    contratos = _leer_json(DIAGNOSTICS_DIR / "contratos_report.json")
+    if isinstance(contratos, dict):
+        datos["contratos"] = contratos
 
     try:
         from core.engine import Engine, ArranqueError
@@ -473,15 +607,14 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         try:
             eng = Engine(
                 raiz_modulos=str(REPO_ROOT / "modules"),
-                invocador_id="core",
+                invocador_id="omega_report",
                 strict=False,
             )
         except TypeError:
-            # firmas antiguas
             try:
                 eng = Engine(
                     str(REPO_ROOT / "modules"),
-                    invocador_id="core",
+                    invocador_id="omega_report",
                     verificar_axiomas=False,
                     strict=False,
                 )
@@ -495,9 +628,12 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
             return datos
 
         datos["estado_engine"] = getattr(eng, "estado", "OPERATIVO")
-        datos["errores_arranque"] = list(getattr(eng, "errores_arranque", None) or [])
+        datos["errores_arranque"] = list(
+            getattr(eng, "errores_arranque", None) or []
+        )
         datos["informe_axiomas"] = getattr(eng, "informe_axiomas", None) or {}
         datos["informe_mecanica"] = getattr(eng, "informe_mecanica", None) or {}
+        datos["fallos_engine"] = list(getattr(eng, "fallos", None) or [])
 
         if hasattr(eng, "registro") and hasattr(eng.registro, "resumen"):
             datos["registro_modulos"] = eng.registro.resumen()
@@ -512,70 +648,113 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         except Exception:  # noqa: BLE001
             pass
 
-        # FO
+        # Lista de evaluaciones: solo si el Engine ya la tiene (otra fase la llenó)
         try:
-            reg = datos.get("registro_modulos") or {}
-            roles = reg.get("roles") or {}
-            # fallback: intentar capacidad FO vía Engine
-            if hasattr(eng, "ejecutar_capacidad"):
-                fo_out = eng.ejecutar_capacidad("FO", "verificar")
-                if isinstance(fo_out, dict):
-                    datos["informe_formulas"] = fo_out
-                else:
-                    fo_out = eng.ejecutar_capacidad("FO", "barrer")
-                    if isinstance(fo_out, dict):
-                        datos["informe_formulas"] = fo_out
+            if hasattr(eng, "get_resultados_evaluacion"):
+                datos["resultados_evaluacion"] = list(
+                    eng.get_resultados_evaluacion() or []
+                )
+            elif hasattr(eng, "resultados_evaluacion"):
+                datos["resultados_evaluacion"] = list(
+                    eng.resultados_evaluacion or []
+                )
+        except Exception:  # noqa: BLE001
+            datos["resultados_evaluacion"] = []
+
+        # Inventario (solo lectura de contratos montados)
+        try:
+            if hasattr(eng, "inventario"):
+                inv = eng.inventario()
+                if isinstance(inv, dict):
+                    datos["inventario_engine"] = inv
+                    # si inventario expone la lista, usarla solo si aún está vacía
+                    if not datos["resultados_evaluacion"]:
+                        re = inv.get("resultados_evaluacion")
+                        if isinstance(re, list):
+                            datos["resultados_evaluacion"] = re
         except Exception:  # noqa: BLE001
             pass
 
-        # TR1 / U1
+        # FO vía contrato (clave exacta del CONTENEDOR)
+        try:
+            cont_fo = None
+            if hasattr(eng, "registro"):
+                cont_fo = eng.registro.primero("FO")
+            if cont_fo is not None:
+                for cap in ("verificar", "barrer", "inventario"):
+                    fn = cont_fo.fn(cap)
+                    if callable(fn):
+                        out = fn()
+                        if isinstance(out, dict):
+                            datos["informe_formulas"] = out
+                            break
+        except Exception:  # noqa: BLE001
+            pass
+
+        # AX generatividad vía contrato
         try:
             if hasattr(eng, "censar_generatividad"):
                 datos["generatividad"] = eng.censar_generatividad()
-            elif hasattr(eng, "ejecutar_capacidad"):
-                g = eng.ejecutar_capacidad("AX", "generatividad")
-                if isinstance(g, dict):
-                    datos["generatividad"] = g
+            else:
+                cont_ax = eng.registro.primero("AX") if hasattr(eng, "registro") else None
+                if cont_ax is not None:
+                    fn = cont_ax.fn("generatividad")
+                    if callable(fn):
+                        g = fn()
+                        if isinstance(g, dict):
+                            datos["generatividad"] = g
         except Exception as e:  # noqa: BLE001
             datos["generatividad"] = {
                 "estado": "UNDEFINED",
-                "razon": f"{type(e).__name__}: {e}",
+                "razon": "{0}: {1}".format(type(e).__name__, e),
             }
 
-        # tests xml
-        xml_path = DIAGNOSTICS_DIR / "test_results.xml"
-        if xml_path.exists():
-            try:
-                import xml.etree.ElementTree as ET
-
-                raiz = ET.parse(xml_path).getroot()
-                suites = (
-                    [raiz]
-                    if raiz.tag == "testsuite"
-                    else list(raiz.iter("testsuite"))
-                )
-                total = fallos = errores = omitidos = 0
-                for s in suites:
-                    total += int(s.get("tests", 0))
-                    fallos += int(s.get("failures", 0))
-                    errores += int(s.get("errors", 0))
-                    omitidos += int(s.get("skipped", 0))
-                fallidos = fallos + errores
-                pasados = total - fallidos - omitidos
-                tasa = (pasados / total * 100) if total else 0.0
-                datos["tests"] = {
-                    "total": total,
-                    "pasados": pasados,
-                    "fallidos": fallidos,
-                    "omitidos": omitidos,
-                    "tasa": round(tasa, 2),
-                }
-            except Exception:  # noqa: BLE001
-                pass
+        # CA centinela (barrer/verificar) — informe opcional
+        try:
+            cont_ca = eng.registro.primero("CA") if hasattr(eng, "registro") else None
+            if cont_ca is not None:
+                fn = cont_ca.fn("verificar")
+                if callable(fn):
+                    out = fn()
+                    if isinstance(out, dict):
+                        datos["informe_calculator"] = out
+        except Exception:  # noqa: BLE001
+            pass
 
     except Exception as e:  # noqa: BLE001
         datos["estado_engine"] = "RECHAZADO"
-        datos["errores_arranque"] = [f"{type(e).__name__}: {e}"]
+        datos["errores_arranque"] = ["{0}: {1}".format(type(e).__name__, e)]
+
+    # tests xml (artefacto CI)
+    xml_path = DIAGNOSTICS_DIR / "test_results.xml"
+    if xml_path.exists():
+        try:
+            import xml.etree.ElementTree as ET
+
+            raiz = ET.parse(xml_path).getroot()
+            suites = (
+                [raiz]
+                if raiz.tag == "testsuite"
+                else list(raiz.iter("testsuite"))
+            )
+            total = fallos = errores = omitidos = 0
+            for s in suites:
+                total += int(s.get("tests", 0))
+                fallos += int(s.get("failures", 0))
+                errores += int(s.get("errors", 0))
+                omitidos += int(s.get("skipped", 0))
+            fallidos = fallos + errores
+            pasados = total - fallidos - omitidos
+            tasa = (pasados / total * 100) if total else 0.0
+            datos["tests"] = {
+                "total": total,
+                "pasados": pasados,
+                "fallidos": fallidos,
+                "omitidos": omitidos,
+                "tasa": round(tasa, 2),
+            }
+        except Exception:  # noqa: BLE001
+            pass
 
     return datos
 
@@ -591,7 +770,7 @@ def main() -> None:
         json.dumps(datos, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
-    print(f"\nJSON: {out_json}")
+    print("\nJSON: {0}".format(out_json))
 
     faltas = validar_entrada(datos)
     if STRICT and (datos.get("estado_engine") != "OPERATIVO" or faltas):
