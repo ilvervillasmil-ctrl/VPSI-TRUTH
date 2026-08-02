@@ -404,7 +404,7 @@ def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         permite = _permite_k(registro)
         o_ctx = registro.get("enunciado_O") or registro.get("O_id") or UNDEFINED
 
-        ids = ["CX-A14", "CX-A1", "CX-C4"]
+                ids = ["CX-A14", "CX-A1", "CX-C4"]
         if registro["estado"] != "estable":
             ids.extend(["CX-A10", "CX-T13"])
         if registro.get("ligaduras"):
@@ -435,7 +435,9 @@ def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
                 "no reclamar Tru/K completo (CX-A14, CX-C4)"
             )
         if not permite:
-            salida["notas"].append("permite_k=False: O no estable o sub-ruta incompleta")
+            salida["notas"].append(
+                "permite_k=False: O no estable o sub-ruta incompleta"
+            )
 
     if not reglas:
         salida["notas"].append(
@@ -443,10 +445,19 @@ def resolver(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         )
 
     if not salida.get("coherente", False):
-        DiagnosticoGlobal.recibir_reporte(
-            modulo="contexto",
-            errores=[{"tipo": "error_contexto", "detalle": e} for e in errores],
-        )
+        try:
+            from core.diagnostico import DiagnosticoGlobal
+            fn = getattr(DiagnosticoGlobal, "recibir_reporte", None)
+            if callable(fn):
+                fn(
+                    modulo="contexto",
+                    errores=[
+                        {"tipo": "error_contexto", "detalle": e}
+                        for e in (errores or [])
+                    ],
+                )
+        except Exception:
+            pass
 
     return salida
 
