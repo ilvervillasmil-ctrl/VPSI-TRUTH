@@ -61,7 +61,7 @@ Implementación típica: biblioteca + orquestador (`Engine`) + pipeline CI como 
 
 ---
 
-## 3. Cómo se usa (visión)
+### 3. Cómo se usa (visión)
 
 ```text
 Humano / sistema externo
@@ -84,7 +84,7 @@ Entrada mínima conceptual: descripción (D) y, cuando aplique, enunciado de (O)
 
 ——-
 
-4. Arquitectura — diagrama de información
+##4. Arquitectura — diagrama de información
 flowchart TB
   subgraph entrada [Entrada]
     P[Petición / descripción D]
@@ -146,6 +146,7 @@ flowchart TB
   CR --> OM
 
 ——-
+
 ###Cadena causal (orden lógico, no “opinión del Engine”)
 
 CT ancla constantes
@@ -158,7 +159,7 @@ Engine solo invoca capacidades listadas en cada
 
 ——-
 
-CONTENEDOR
+***CONTENEDOR***
 CI verifica contratos y deposita evidencia
 Omega solo presenta
 Fatalidad estructural: si AX es incoherente, si falta un rol obligatorio, o si una capacidad declarada no es callable, el sistema no “sigue igual”: falla cerrado o el juez CI marca coherente: false.
