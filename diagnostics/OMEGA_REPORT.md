@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-02 20:42:06 UTC    Commit: 43160e34b617
+Generado: 2026-08-02 20:48:07 UTC    Commit: fa7f7fe86f9e
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
