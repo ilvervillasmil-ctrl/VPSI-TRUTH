@@ -389,6 +389,144 @@ jobs:
             diagnostics/OMEGA_REPORT.md
 
       # ==========================================================
+      # CONTRATOS ENLAZADOS AL ENGINE
+      # ==========================================================
+      - name: Verificar contratos enlazados
+        run: |
+          python - <<'EOF'
+          import json
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, ".")
+          from core.engine import Engine, ROLES, OBLIGATORIOS, ArranqueError
+
+          Path("diagnostics").mkdir(exist_ok=True)
+
+          # Capacidades mínimas de oficio por rol (determinista)
+          ESPERADO = {
+              "CT": [],  # ancla por atributos ALPHA/BETA
+              "AX": ["barrer"],
+              "FO": [],  # tru_ri/tru_total vía módulo o capacidad
+              "MC": ["barrer"],
+              "CX": ["resolver"],
+              "CA": [],
+              "DG": [],
+              "SF": [],
+              "RE": [],
+              "VX": [],
+              "TX": [],
+              "CH": [],
+              "UI": ["componer", "barrer"],
+          }
+
+          informe = {
+              "coherente": True,
+              "errores": [],
+              "avisos": [],
+              "roles": {},
+              "resultados_evaluacion_n": 0,
+          }
+
+          try:
+              eng = Engine(Path("modules"), invocador_id="ci_contratos", strict=True)
+          except ArranqueError as e:
+              informe["coherente"] = False
+              informe["errores"].append("arranque: {0}".format(e))
+              Path("diagnostics/contratos_report.json").write_text(
+                  json.dumps(informe, indent=2, ensure_ascii=False),
+                  encoding="utf-8",
+              )
+              print(json.dumps(informe, indent=2, ensure_ascii=False))
+              sys.exit(1)
+
+          if not hasattr(eng, "resultados_evaluacion"):
+              informe["coherente"] = False
+              informe["errores"].append(
+                  "Engine sin atributo resultados_evaluacion "
+                  "(falta self.resultados_evaluacion = [] en __init__)"
+              )
+
+          # Humo: una evaluación UNDEFINED y una parcial/OK si aplica
+          if eng.estado == "OPERATIVO":
+              eng.evaluar({})  # sin O → UNDEFINED, debe acumular
+              eng.evaluar({
+                  "contexto": "ci_humo_contratos",
+                  "C": "1",
+                  "L": "1",
+                  "K": "1",
+              })
+              n = len(getattr(eng, "resultados_evaluacion", []) or [])
+              informe["resultados_evaluacion_n"] = n
+              if n < 1:
+                  informe["coherente"] = False
+                  informe["errores"].append(
+                      "resultados_evaluacion vacío tras evaluar()"
+                  )
+
+          resumen = eng.censar()
+          roles = resumen.get("roles") or {}
+          for rol in ROLES:
+              mods = list(roles.get(rol) or [])
+              entry = {
+                  "modulos": mods,
+                  "obligatorio": rol in OBLIGATORIOS,
+                  "presente": len(mods) > 0,
+                  "capacidades_ok": [],
+                  "capacidades_fallo": [],
+              }
+              if rol in OBLIGATORIOS and not mods:
+                  informe["coherente"] = False
+                  informe["errores"].append("falta rol obligatorio {0}".format(rol))
+
+              cont = eng.registro.primero(rol)
+              for cap in ESPERADO.get(rol, []):
+                  if cont is None:
+                      entry["capacidades_fallo"].append(cap)
+                      if rol in ("AX", "MC", "CX"):
+                          informe["coherente"] = False
+                          informe["errores"].append(
+                              "{0}: sin módulo; falta capacidad {1}".format(rol, cap)
+                          )
+                      continue
+                  fn = cont.fn(cap)
+                  if callable(fn):
+                      entry["capacidades_ok"].append(cap)
+                  else:
+                      entry["capacidades_fallo"].append(cap)
+                      informe["coherente"] = False
+                      informe["errores"].append(
+                          "{0}/{1}: capacidad '{2}' no resoluble".format(
+                              rol, cont.nombre, cap
+                          )
+                      )
+              informe["roles"][rol] = entry
+
+          # Contenedores: toda capacidad declarada debe resolver
+          for cont in eng.registro.contenedores.values():
+              for cap in (cont.capacidades or {}):
+                  if not callable(cont.fn(cap)):
+                      informe["coherente"] = False
+                      informe["errores"].append(
+                          "{0}: capacidad declarada no callable: {1}".format(
+                              cont.nombre, cap
+                          )
+                      )
+
+          Path("diagnostics/contratos_report.json").write_text(
+              json.dumps(informe, indent=2, ensure_ascii=False, default=str),
+              encoding="utf-8",
+          )
+          print("contratos coherente:", informe["coherente"])
+          print("resultados_evaluacion_n:", informe["resultados_evaluacion_n"])
+          for e in informe["errores"]:
+              print("  ERROR:", e)
+          if not informe["coherente"]:
+              sys.exit(1)
+          print("OK  contratos enlazados al Engine")
+          EOF
+
+      # ==========================================================
       # COMMIT DE HISTORIA
       # ==========================================================
       - name: Commit coherence history
@@ -399,7 +537,8 @@ jobs:
 
           for f in diagnostics/coherence_history.json \
                    diagnostics/axioms_report.json \
-                   diagnostics/OMEGA_REPORT.md; do
+                   diagnostics/OMEGA_REPORT.md \
+                   diagnostics/contratos_report.json; do
             [ -f "$f" ] && git add "$f"
           done
 
