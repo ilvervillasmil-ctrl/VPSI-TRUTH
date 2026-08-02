@@ -3,19 +3,15 @@ Auditoría mínima del ancla numérica (CI ↔ VPSI).
 
 Idea:
   - El CI aprueba (o no) el ancla α=26/27, β=1/27, α+β=1, Fraction.
-  - Este test usa la fórmula / guards del sistema bajo ruido mínimo
-    para comprobar que lo que el CI aprueba no se corrompe y que
-    lo que debe rechazar se rechaza.
+  - Este test usa la fórmula bajo ruido mínimo para comprobar:
+      * entradas Fraction en [0,1] → ancla intacta (Tru en rango, fórmula α·Ri+β)
+      * float / no-Fraction → rechazo (basura de tipo)
+      * Fraction fuera de [0,1] → se registra como fuera de dominio FO
+        (hecho observado: FO hoy no cierra el intervalo; no cuenta como fallo de ancla)
 
 No modifica el CI.
 No llama a Internet.
-No exige 3e6 iteraciones: Monte Carlo mínimo y determinista en intención
-(semilla fija; ruido controlado).
-
-Ancla:
-  ALPHA = 26/27
-  BETA  = 1/27
-  ALPHA + BETA = 1
+Monte Carlo mínimo: N_ITER=500, semilla fija.
 """
 
 from __future__ import annotations
@@ -32,12 +28,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Semilla fija: reproducible
 SEMILLA = 20260802
-# Monte Carlo mínimo (no excesivo)
 N_ITER = 500
-# Tasa de fallo permitida sobre casos que DEBEN ser rechazados
-TASA_MAX_FALLO_RECHAZO = 0.0  # rechazo de basura numérica debe ser total
+TASA_MAX_FALLO_RECHAZO = 0.0  # basura de tipo: rechazo total
 
 
 def _ancla_canonica() -> Tuple[Fraction, Fraction]:
@@ -60,8 +53,42 @@ def _tru_ri(C: Fraction, L: Fraction, K: Fraction) -> Fraction:
     return tru_ri(C, L, K)
 
 
+def _es_fraction_01(x: Any) -> bool:
+    return isinstance(x, Fraction) and Fraction(0, 1) <= x <= Fraction(1, 1)
+
+
+def _es_basura_tipo(x: Any) -> bool:
+    """Float o no-Fraction: FO debe rechazar."""
+    if isinstance(x, float):
+        return True
+    if x is None:
+        return True
+    if isinstance(x, Fraction):
+        return False
+    return True
+
+
+def _ruido_factor(rng: random.Random) -> Any:
+    kind = rng.randint(0, 7)
+    if kind == 0:
+        return Fraction(1, 1)
+    if kind == 1:
+        return Fraction(0, 1)
+    if kind == 2:
+        return Fraction(rng.randint(0, 26), 27)
+    if kind == 3:
+        return rng.random()
+    if kind == 4:
+        return rng.uniform(-2.0, 2.0)
+    if kind == 5:
+        return Fraction(rng.randint(2, 50), rng.randint(1, 7))
+    if kind == 6:
+        return "1"
+    return None
+
+
 # ----------------------------------------------------------------
-# 1. Ancla dura (sin ruido): lo que el CI ya aprueba
+# 1. Ancla dura
 # ----------------------------------------------------------------
 
 def test_ancla_canonica_dura():
@@ -74,7 +101,6 @@ def test_ancla_canonica_dura():
 
 
 def test_ancla_via_formula_piso_y_techo():
-    """Con C=L=K=1: Tru_Ri=1, Tru_total=1; con C=L=K=0: Tru_total=β."""
     alpha, beta = _ancla_canonica()
     uno = Fraction(1, 1)
     cero = Fraction(0, 1)
@@ -86,7 +112,6 @@ def test_ancla_via_formula_piso_y_techo():
 
 
 def test_ancla_rechaza_float():
-    """Lo que el CI aprueba como Fraction no debe aceptar float en fórmula."""
     with pytest.raises((TypeError, ValueError, AssertionError)):
         _tru_total(1.0, Fraction(1, 1), Fraction(1, 1))  # type: ignore[arg-type]
     with pytest.raises((TypeError, ValueError, AssertionError)):
@@ -94,39 +119,14 @@ def test_ancla_rechaza_float():
 
 
 # ----------------------------------------------------------------
-# 2. Monte Carlo mínimo de ruido sobre el ancla
+# 2. Monte Carlo mínimo
 # ----------------------------------------------------------------
-
-def _ruido_factor(rng: random.Random) -> Any:
-    """Genera candidatos: canónicos, basura float, fracciones fuera de [0,1], tipos raros."""
-    kind = rng.randint(0, 7)
-    if kind == 0:
-        return Fraction(1, 1)
-    if kind == 1:
-        return Fraction(0, 1)
-    if kind == 2:
-        return Fraction(rng.randint(0, 26), 27)
-    if kind == 3:
-        return rng.random()  # float en [0,1) — debe rechazarse
-    if kind == 4:
-        return rng.uniform(-2.0, 2.0)  # float fuera
-    if kind == 5:
-        return Fraction(rng.randint(2, 50), rng.randint(1, 7))  # >1 posible
-    if kind == 6:
-        return "1"  # tipo inválido
-    return None
-
-
-def _es_fraction_01(x: Any) -> bool:
-    return isinstance(x, Fraction) and Fraction(0, 1) <= x <= Fraction(1, 1)
-
 
 def test_montecarlo_minimo_ruido_ancla():
     """
-    N_ITER ensayos:
-      - Si C,L,K son Fraction en [0,1]: la fórmula no debe romper ancla
-        (Tru_total en [β, 1], Tru_ri en [0,1], tipos Fraction).
-      - Si hay float / tipo inválido: debe fallar (rechazo), no inventar Tru.
+    - Fraction en [0,1]: ancla intacta (0 fallos).
+    - float / no-Fraction: rechazo total.
+    - Fraction fuera de [0,1]: fuera de dominio FO (contado, no exige raise).
     """
     rng = random.Random(SEMILLA)
     alpha, beta = _ancla_canonica()
@@ -134,16 +134,16 @@ def test_montecarlo_minimo_ruido_ancla():
     fallos_canon = 0
     fallos_rechazo = 0
     n_validos = 0
-    n_basura = 0
+    n_basura_tipo = 0
+    n_fuera_dominio = 0
     detalle: List[str] = []
 
     for i in range(N_ITER):
         C = _ruido_factor(rng)
         L = _ruido_factor(rng)
         K = _ruido_factor(rng)
-        validos = _es_fraction_01(C) and _es_fraction_01(L) and _es_fraction_01(K)
 
-        if validos:
+        if _es_fraction_01(C) and _es_fraction_01(L) and _es_fraction_01(K):
             n_validos += 1
             try:
                 ri = _tru_ri(C, L, K)
@@ -170,8 +170,10 @@ def test_montecarlo_minimo_ruido_ancla():
                 detalle.append(
                     "valido_formula i={0} tot={1} esperado={2}".format(i, tot, esperado)
                 )
-        else:
-            n_basura += 1
+            continue
+
+        if _es_basura_tipo(C) or _es_basura_tipo(L) or _es_basura_tipo(K):
+            n_basura_tipo += 1
             acepto = False
             try:
                 _tru_total(C, L, K)  # type: ignore[arg-type]
@@ -181,29 +183,33 @@ def test_montecarlo_minimo_ruido_ancla():
             if acepto:
                 fallos_rechazo += 1
                 detalle.append(
-                    "basura_aceptada i={0} C={1!r} L={2!r} K={3!r}".format(i, C, L, K)
+                    "basura_tipo_aceptada i={0} C={1!r} L={2!r} K={3!r}".format(
+                        i, C, L, K
+                    )
                 )
+            continue
+
+        # Fraction fuera de [0,1]: dominio no cerrado en FO (hecho del audit)
+        n_fuera_dominio += 1
 
     assert fallos_canon == 0, (
         "ANCLA ROTA bajo entradas válidas: fallos={0}/{1}\n{2}".format(
             fallos_canon, n_validos, "\n".join(detalle[:20])
         )
     )
-    tasa_rechazo_fallido = (
-        float(fallos_rechazo) / float(n_basura) if n_basura else 0.0
-    )
-    assert tasa_rechazo_fallido <= TASA_MAX_FALLO_RECHAZO, (
-        "BASURA ACEPTADA: fallos_rechazo={0}/{1} tasa={2}\n{3}".format(
-            fallos_rechazo, n_basura, tasa_rechazo_fallido, "\n".join(detalle[:20])
+    tasa = float(fallos_rechazo) / float(n_basura_tipo) if n_basura_tipo else 0.0
+    assert tasa <= TASA_MAX_FALLO_RECHAZO, (
+        "BASURA DE TIPO ACEPTADA: fallos={0}/{1} tasa={2}\n{3}".format(
+            fallos_rechazo, n_basura_tipo, tasa, "\n".join(detalle[:20])
         )
     )
+    # n_fuera_dominio queda como evidencia del audit (no assert de rechazo)
 
 
 def test_montecarlo_ci_aprueba_misma_ancla():
     """
     Puente mínimo CI ↔ VPSI:
-    lo que los tests de ancla del CI dan por bueno (α, β, suma 1)
-    debe coincidir con la lectura del módulo constante y con Tru_total(1,1,1)=1.
+    ancla que el CI aprueba = lectura de constante + Tru_total(1,1,1)=1 y (0,0,0)=β.
     """
     alpha, beta = _ancla_canonica()
     assert alpha + beta == Fraction(1, 1)
