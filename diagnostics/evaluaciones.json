@@ -1,0 +1,87 @@
+{
+  "tipo": "evidencia_evaluacion",
+  "version": "1.0",
+  "origen": "ci_auditoria_contratos",
+  "invocador_id": "ci_auditoria",
+  "estado_engine": "OPERATIVO",
+  "n": 3,
+  "resultados": [
+    {
+      "secuencia": 1,
+      "entrada": {
+        "contexto": null,
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false
+      },
+      "resultado": {
+        "estado": "UNDEFINED",
+        "razon": "K indefinido: falta O_context (Corolario Def-5.3.1)",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": "UNDEFINED"
+        },
+        "tru_ri": "UNDEFINED",
+        "tru_total": "UNDEFINED",
+        "fallos": []
+      }
+    },
+    {
+      "secuencia": 2,
+      "entrada": {
+        "contexto": "ci_auditoria_humo",
+        "tiene_C": true,
+        "tiene_L": true,
+        "tiene_K": true
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "ci_auditoria_humo",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1"
+        },
+        "tru_ri": "1",
+        "tru_total": "1",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": []
+      }
+    },
+    {
+      "secuencia": 3,
+      "entrada": {
+        "contexto": "ci_auditoria_humo",
+        "tiene_C": true,
+        "tiene_L": true,
+        "tiene_K": true
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "ci_auditoria_humo",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1"
+        },
+        "tru_ri": "1",
+        "tru_total": "1",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": []
+      }
+    }
+  ]
+}

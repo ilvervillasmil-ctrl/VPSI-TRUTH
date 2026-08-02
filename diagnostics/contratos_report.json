@@ -1003,5 +1003,9 @@
     "invocador_id": "ci_auditoria",
     "errores_arranque": [],
     "determinismo_censar": "OK"
+  },
+  "evidencia_evaluacion": {
+    "path": "diagnostics/evaluaciones.json",
+    "n": 3
   }
 }
