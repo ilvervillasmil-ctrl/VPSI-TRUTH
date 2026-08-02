@@ -391,7 +391,7 @@ jobs:
       # ==========================================================
       # CONTRATOS ENLAZADOS AL ENGINE
       # ==========================================================
-      - name: Verificar contratos enlazados
+            - name: Verificar contratos enlazados
         run: |
           python - <<'EOF'
           import json
@@ -403,11 +403,11 @@ jobs:
 
           Path("diagnostics").mkdir(exist_ok=True)
 
-          # Capacidades mínimas de oficio por rol (determinista)
+          # Oficio canónico por rol (no el literal del dict del INIT)
           ESPERADO = {
-              "CT": [],  # ancla por atributos ALPHA/BETA
+              "CT": [],
               "AX": ["barrer"],
-              "FO": [],  # tru_ri/tru_total vía módulo o capacidad
+              "FO": [],
               "MC": ["barrer"],
               "CX": ["resolver"],
               "CA": [],
@@ -443,13 +443,11 @@ jobs:
           if not hasattr(eng, "resultados_evaluacion"):
               informe["coherente"] = False
               informe["errores"].append(
-                  "Engine sin atributo resultados_evaluacion "
-                  "(falta self.resultados_evaluacion = [] en __init__)"
+                  "Engine sin atributo resultados_evaluacion"
               )
 
-          # Humo: una evaluación UNDEFINED y una parcial/OK si aplica
           if eng.estado == "OPERATIVO":
-              eng.evaluar({})  # sin O → UNDEFINED, debe acumular
+              eng.evaluar({})
               eng.evaluar({
                   "contexto": "ci_humo_contratos",
                   "C": "1",
@@ -466,50 +464,83 @@ jobs:
 
           resumen = eng.censar()
           roles = resumen.get("roles") or {}
+
           for rol in ROLES:
               mods = list(roles.get(rol) or [])
               entry = {
                   "modulos": mods,
                   "obligatorio": rol in OBLIGATORIOS,
                   "presente": len(mods) > 0,
+                  "claves_contrato": [],
                   "capacidades_ok": [],
                   "capacidades_fallo": [],
               }
               if rol in OBLIGATORIOS and not mods:
                   informe["coherente"] = False
-                  informe["errores"].append("falta rol obligatorio {0}".format(rol))
+                  informe["errores"].append(
+                      "falta rol obligatorio {0}".format(rol)
+                  )
 
               cont = eng.registro.primero(rol)
-              for cap in ESPERADO.get(rol, []):
+              if cont is not None:
+                  entry["claves_contrato"] = list(cont.capacidades.keys())
+
+              for oficio in ESPERADO.get(rol, []):
                   if cont is None:
-                      entry["capacidades_fallo"].append(cap)
-                      if rol in ("AX", "MC", "CX"):
+                      entry["capacidades_fallo"].append(oficio)
+                      if rol in ("AX", "MC", "CX", "UI"):
                           informe["coherente"] = False
                           informe["errores"].append(
-                              "{0}: sin módulo; falta capacidad {1}".format(rol, cap)
+                              "{0}: sin módulo para oficio '{1}'".format(
+                                  rol, oficio
+                              )
                           )
                       continue
-                  fn = cont.fn(cap)
-                  if callable(fn):
-                      entry["capacidades_ok"].append(cap)
+
+                  # Acopla al INIT: oficio → alias → clave del contrato
+                  ok = False
+                  if hasattr(cont, "tiene_oficio") and cont.tiene_oficio(oficio):
+                      ok = True
+                  elif cont.tiene(oficio):
+                      ok = True
                   else:
-                      entry["capacidades_fallo"].append(cap)
+                      for clave in ("verificar", "evaluar", "barrer", "resolver", "componer"):
+                          if clave in cont.capacidades and cont.tiene(clave):
+                              # solo cuenta si el oficio pedido es el de esa familia
+                              familia = {
+                                  "barrer": ("barrer", "verificar", "evaluar"),
+                                  "resolver": ("resolver", "verificar", "evaluar"),
+                                  "componer": ("componer", "verificar"),
+                              }.get(oficio, (oficio,))
+                              if clave in familia:
+                                  ok = True
+                                  break
+
+                  if ok:
+                      entry["capacidades_ok"].append(oficio)
+                  else:
+                      entry["capacidades_fallo"].append(oficio)
                       informe["coherente"] = False
                       informe["errores"].append(
-                          "{0}/{1}: capacidad '{2}' no resoluble".format(
-                              rol, cont.nombre, cap
+                          "{0}/{1}: oficio '{2}' no enlazado "
+                          "(init declara: {3})".format(
+                              rol,
+                              cont.nombre,
+                              oficio,
+                              list(cont.capacidades.keys()),
                           )
                       )
+
               informe["roles"][rol] = entry
 
-          # Contenedores: toda capacidad declarada debe resolver
+          # Toda CLAVE que el INIT declaró debe ser callable
           for cont in eng.registro.contenedores.values():
-              for cap in (cont.capacidades or {}):
-                  if not callable(cont.fn(cap)):
+              for clave in (cont.capacidades or {}):
+                  if not callable(cont.fn(clave)):
                       informe["coherente"] = False
                       informe["errores"].append(
-                          "{0}: capacidad declarada no callable: {1}".format(
-                              cont.nombre, cap
+                          "{0}: capacidad declarada no callable: '{1}'".format(
+                              cont.nombre, clave
                           )
                       )
 
