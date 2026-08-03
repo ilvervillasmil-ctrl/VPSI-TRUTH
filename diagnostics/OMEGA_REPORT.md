@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-03 20:59:03 UTC    Commit: 658e96216133
+Generado: 2026-08-03 21:19:59 UTC    Commit: 06b33b88f3dd
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
@@ -114,10 +114,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 329
+      declaraciones = 394
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 117, 'lema': 34, 'teorema': 84, 'corolario': 80, 'definicion': 14}
+      por_tipo      = {'axioma': 141, 'lema': 41, 'teorema': 103, 'corolario': 95, 'definicion': 14}
 
   ✅ Fórmulas (FO)
       coherente = True
@@ -137,12 +137,12 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 201
-  pares totales      : 20100
-  pares compatibles  : 5835
-  pares novedosos    : 3333
+  |Θ| (AX)           : 244
+  pares totales      : 29646
+  pares compatibles  : 9158
+  pares novedosos    : 5276
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
-  dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
+  dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'correlacion', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
   U1                 : NO_STAGNANT
   --- capa canónica ---
   |Θ|_can            : 24 / 24
