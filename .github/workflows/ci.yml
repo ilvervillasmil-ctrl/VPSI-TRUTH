@@ -238,7 +238,7 @@ jobs:
           EOF
 
       # ==========================================================
-      # COMPUERTA 5 --- ENGINE OPERATIVO
+      # COMPUERTA 5 --- ENGINE OPERATIVO (solo arranque; sin valuación inventada)
       # ==========================================================
       - name: Engine operativo
         run: |
@@ -261,23 +261,13 @@ jobs:
               print(eng.errores_arranque)
               sys.exit(1)
 
-          r = eng.evaluar({
-              "contexto": "prueba CI",
-              "C": "1",
-              "L": "1",
-              "K": "1",
-          })
-
-          if r.get("estado") != "OK":
-              print("FALLO: evaluar() no devolvió OK")
-              print(r)
-              sys.exit(1)
-
-          print("OK  Engine operativo y evaluar() funcional")
+          # Sin evaluar() con C/L/K puestos a mano: la valuación la hacen los tests reales.
+          print("OK  Engine operativo (arranque)")
+          print("    contenedores:", eng.registro.total())
           EOF
 
       # ==========================================================
-      # PRUEBAS
+      # PRUEBAS (única fuente de ciclos de valuación en CI)
       # ==========================================================
       - name: Run tests
         run: |
@@ -288,14 +278,13 @@ jobs:
           COLLATZ_HEAVY: "1"
 
       # ==========================================================
-      # AUDITORÍA ESTRUCTURAL DE CONTRATOS (escribe evaluaciones.json)
+      # AUDITORÍA ESTRUCTURAL DE CONTRATOS (sin humo de ejecución)
       # ==========================================================
       - name: Auditoría estructural de contratos
         run: |
           python - <<'EOF'
           import json
           import sys
-          import traceback
           from pathlib import Path
 
           sys.path.insert(0, ".")
@@ -303,40 +292,28 @@ jobs:
 
           Path("diagnostics").mkdir(exist_ok=True)
 
+          # Cobertura de contrato: claves que el CONTENEDOR debe declarar.
+          # No se invocan aquí (sin humo). Solo resolución callable + presencia.
           ESPERADO = {
               "CT": [],
               "AX": ["verificar", "inventario", "axiomas", "generatividad"],
               "FO": [],
               "MC": ["verificar", "evaluar", "inventario", "axiomas"],
               "CX": ["verificar", "evaluar", "inventario", "axiomas"],
-              "CA": [],
+              "CA": ["calcular"],
               "DG": [],
               "SF": [],
               "RE": [],
               "VX": [],
               "TX": [],
               "CH": [],
+              "CIT": ["anunciar", "inventario", "verificar"],
               "UI": ["componer", "barrer", "inventario", "verificar"],
-          }
-
-          HUMO_SEGURO = {
-              "inventario": lambda fn: fn(),
-              "axiomas": lambda fn: fn(),
-              "generatividad": lambda fn: fn(),
-              "verificar": lambda fn: fn(),
-              "evaluar": lambda fn: (
-                  fn()
-                  if getattr(fn, "__code__", None) and fn.__code__.co_argcount <= 1
-                  else fn(None)
-              ),
-              "barrer": lambda fn: fn(),
-              "componer": lambda fn: fn({}),
-              "resolver": lambda fn: fn(None),
           }
 
           informe = {
               "tipo": "auditoria_estructural_contratos",
-              "version": "1.1",
+              "version": "1.2",
               "coherente": True,
               "errores": [],
               "avisos": [],
@@ -345,16 +322,19 @@ jobs:
                   "invariantes": [],
                   "registro": [],
                   "resolucion": [],
-                  "ejecucion": [],
                   "cobertura": [],
                   "determinismo": [],
-                  "idempotencia": [],
                   "integridad": [],
               },
               "roles": {},
               "resumen": {},
               "resultados_evaluacion_n": 0,
               "evidencia_arranque": {},
+              "nota": (
+                  "Sin humo: no se invocan capacidades. "
+                  "Solo arranque, callable y cobertura de claves. "
+                  "Valuación C/L/K/Tru = tests reales / uso real."
+              ),
           }
 
           def fallar(cat, msg, **extra):
@@ -421,6 +401,7 @@ jobs:
               if not hasattr(eng, attr):
                   fallar("invariantes", "falta atributo Engine.{0}".format(attr))
 
+          # Determinismo de censo (estructura), no de valuación
           try:
               eng_b = Engine(Path("modules"), invocador_id="ci_auditoria_b", strict=True)
               a = resumen_canonico(eng)
@@ -437,67 +418,13 @@ jobs:
           except ArranqueError as e:
               fallar("determinismo", "segundo Engine no arrancó: {0}".format(e))
 
-          if hasattr(eng, "resultados_evaluacion"):
-              n0 = len(eng.resultados_evaluacion)
-              payload = {
-                  "contexto": "ci_auditoria_humo",
-                  "C": "1",
-                  "L": "1",
-                  "K": "1",
-              }
-              r1 = eng.evaluar({})
-              r2 = eng.evaluar(payload)
-              r3 = eng.evaluar(payload)
-              n1 = len(eng.resultados_evaluacion)
-              informe["resultados_evaluacion_n"] = n1
-
-              if n1 < n0 + 3:
-                  fallar(
-                      "idempotencia",
-                      "evaluar no acumuló 3 entradas esperadas",
-                      antes=n0,
-                      despues=n1,
-                  )
-
-              if r2.get("estado") != r3.get("estado"):
-                  fallar(
-                      "idempotencia",
-                      "misma petición produjo estados distintos",
-                      estado_1=r2.get("estado"),
-                      estado_2=r3.get("estado"),
-                  )
-
-              if eng.registro.total() if hasattr(eng.registro, "total") else len(
-                  eng.registro.contenedores
-              ) < 1:
-                  fallar("idempotencia", "registro vacío tras evaluar()")
-
-          # Evidencia persistente para Omega (sin que Omega evalúe)
-          evals = []
-          if hasattr(eng, "get_resultados_evaluacion"):
-              evals = list(eng.get_resultados_evaluacion() or [])
-          elif hasattr(eng, "resultados_evaluacion"):
-              evals = list(eng.resultados_evaluacion or [])
-
-          Path("diagnostics").mkdir(exist_ok=True)
-          evaluaciones_doc = {
-              "tipo": "evidencia_evaluacion",
-              "version": "1.0",
-              "origen": "ci_auditoria_contratos",
-              "invocador_id": getattr(eng, "invocador_id", "ci_auditoria"),
-              "estado_engine": getattr(eng, "estado", None),
-              "n": len(evals),
-              "resultados": evals,
-          }
-          Path("diagnostics/evaluaciones.json").write_text(
-              json.dumps(evaluaciones_doc, indent=2, ensure_ascii=False, default=str),
-              encoding="utf-8",
-          )
-          informe["resultados_evaluacion_n"] = len(evals)
-          informe["evidencia_evaluacion"] = {
-              "path": "diagnostics/evaluaciones.json",
-              "n": len(evals),
-          }
+          # Registro no vacío (fix de precedencia: total primero, luego comparar)
+          if hasattr(eng.registro, "total"):
+              n_reg = eng.registro.total()
+          else:
+              n_reg = len(eng.registro.contenedores)
+          if n_reg < 1:
+              fallar("registro", "registro vacío tras arranque")
 
           resumen = eng.censar()
           roles_map = resumen.get("roles") or {}
@@ -534,7 +461,6 @@ jobs:
                   "claves_contrato": [],
                   "esperado": list(ESPERADO.get(rol, [])),
                   "resolucion": [],
-                  "ejecucion": [],
               }
               fallo_local = False
 
@@ -563,6 +489,7 @@ jobs:
               entry["nombre"] = cont.nombre
               entry["version"] = cont.version
 
+              # Solo resolución: ¿callable? No se invoca (sin humo).
               for clave in list(cont.capacidades.keys()):
                   fn = cont.fn(clave)
                   item = {
@@ -592,35 +519,6 @@ jobs:
                   caps_verificadas += 1
                   entry["resolucion"].append(item)
 
-                  if clave in HUMO_SEGURO:
-                      try:
-                          HUMO_SEGURO[clave](fn)
-                          entry["ejecucion"].append({
-                              "clave": clave,
-                              "ok": True,
-                              "modulo": cont.nombre,
-                          })
-                      except Exception as e:
-                          entry["ejecucion"].append({
-                              "clave": clave,
-                              "ok": False,
-                              "modulo": cont.nombre,
-                              "error": "{0}: {1}".format(type(e).__name__, e),
-                              "traceback": traceback.format_exc()[-800:],
-                          })
-                          fallar(
-                              "ejecucion",
-                              "capacidad declarada lanzó al invocar",
-                              rol=rol,
-                              modulo=cont.nombre,
-                              version=cont.version,
-                              clave=clave,
-                              error="{0}: {1}".format(type(e).__name__, e),
-                              traceback=traceback.format_exc()[-800:],
-                          )
-                          caps_fallidas += 1
-                          fallo_local = True
-
               for clave in ESPERADO.get(rol, []):
                   if clave not in cont.capacidades:
                       fallar(
@@ -641,6 +539,37 @@ jobs:
                   contratos_validos += 1
 
               informe["roles"][rol] = entry
+
+          # Evidencia de evaluación: solo lo que este Engine acumule.
+          # Sin evaluar() inventado aquí. Los tests son la valuación real.
+          evals = []
+          if hasattr(eng, "get_resultados_evaluacion"):
+              evals = list(eng.get_resultados_evaluacion() or [])
+          elif hasattr(eng, "resultados_evaluacion"):
+              evals = list(eng.resultados_evaluacion or [])
+
+          evaluaciones_doc = {
+              "tipo": "evidencia_evaluacion",
+              "version": "1.1",
+              "origen": "ci_auditoria_contratos",
+              "invocador_id": getattr(eng, "invocador_id", "ci_auditoria"),
+              "estado_engine": getattr(eng, "estado", None),
+              "n": len(evals),
+              "resultados": evals,
+              "nota": (
+                  "Sin humo en auditoría. n puede ser 0 si no hubo ciclo real "
+                  "en este proceso; pytest aporta valuación en su propio camino."
+              ),
+          }
+          Path("diagnostics/evaluaciones.json").write_text(
+              json.dumps(evaluaciones_doc, indent=2, ensure_ascii=False, default=str),
+              encoding="utf-8",
+          )
+          informe["resultados_evaluacion_n"] = len(evals)
+          informe["evidencia_evaluacion"] = {
+              "path": "diagnostics/evaluaciones.json",
+              "n": len(evals),
+          }
 
           total_caps = caps_verificadas + caps_fallidas
           pct = (
@@ -669,7 +598,7 @@ jobs:
           )
 
           print("=" * 60)
-          print("AUDITORÍA ESTRUCTURAL DE CONTRATOS v1.1")
+          print("AUDITORÍA ESTRUCTURAL DE CONTRATOS v1.2 (sin humo)")
           print("=" * 60)
           print("coherente:", informe["coherente"])
           print(
@@ -691,7 +620,7 @@ jobs:
           EOF
 
       # ==========================================================
-      # OMEGA REPORT (después de la auditoría → puede leer evaluaciones.json)
+      # OMEGA REPORT (solo presenta evidencia existente)
       # ==========================================================
       - name: Run Omega Report
         run: |
