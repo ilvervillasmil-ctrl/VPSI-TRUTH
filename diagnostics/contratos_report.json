@@ -384,7 +384,9 @@
       "claves_contrato": [
         "calcular",
         "verificar",
-        "inventario"
+        "inventario",
+        "extraer_conteos",
+        "inyectar_conteos"
       ],
       "esperado": [
         "calcular"
@@ -395,7 +397,7 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.1",
+          "version": "1.2",
           "ok": true,
           "fn_name": "calcular"
         },
@@ -404,7 +406,7 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.1",
+          "version": "1.2",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -413,13 +415,31 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.1",
+          "version": "1.2",
           "ok": true,
           "fn_name": "inventario"
+        },
+        {
+          "clave": "extraer_conteos",
+          "callable": true,
+          "modulo": "calculator",
+          "rol": "CA",
+          "version": "1.2",
+          "ok": true,
+          "fn_name": "extraer_conteos"
+        },
+        {
+          "clave": "inyectar_conteos",
+          "callable": true,
+          "modulo": "calculator",
+          "rol": "CA",
+          "version": "1.2",
+          "ok": true,
+          "fn_name": "inyectar_en_peticion"
         }
       ],
       "nombre": "calculator",
-      "version": "1.1"
+      "version": "1.2"
     },
     "CX": {
       "modulos": [
@@ -907,7 +927,7 @@
     "roles_obligatorios": 5,
     "contratos_validos": 14,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 65,
+    "capacidades_verificadas": 67,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 0,

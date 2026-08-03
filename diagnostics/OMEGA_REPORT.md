@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-03 05:32:35 UTC    Commit: 87483ef56b4c
+Generado: 2026-08-03 05:38:41 UTC    Commit: 4326613c3ca1
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
@@ -10,26 +10,33 @@ Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
   AUDITORÍA DEL VPSI  ·  el repositorio como objeto
   Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores del ciclo
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ⚠️ PARCIAL
-  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
+  Estado     : ✅ OK
   permite_k  : True
 
   📐  CÁLCULO  (fórmula canónica VPSI)
   ┌─────────────────────────────────────────────────────────┐
-  │  C          =  —                                       │
-  │  L          =  —                                       │
-  │  K          =  —                                       │
+  │  C          =  1                                       │
+  │  L          =  1                                       │
+  │  K          =  1                                       │
   │─────────────────────────────────────────────────────────│
   │  Tru_Ri     =  C · L · K                              │
-  │             =  —                                       │
+  │             =  1                                       │
   │─────────────────────────────────────────────────────────│
   │  Tru_total  =  (Tru_Ri · α) + β                       │
-  │             =  —                                       │
+  │             =  1                                       │
+  │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
 
   Taxonomía  : none
   📎 Citas (teoremas / axiomas / normas):
-       1. [citacion] CIT-CICLO
+       1. CX-A14
+       2. CX-A1
+       3. CX-C4
+       4. PA-A1
+       5. PA-A2
+       6. PA-T1
+       7. PA-C2
+       8. [citacion] CIT-CICLO
   CIT resumen: n_citas=1  n_anuncios=1
   Origen     : omega_report:PETICION_AUDITORIA_VPSI
   Secuencia  : 1
@@ -91,10 +98,7 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ⚪ 1. [DATOS] auditoria_vpsi
-     Detalle   : Sin valuación de auto-auditoría del repo en el paquete
-     Impacto   : La caja 1 no puede mostrar C/L/K/Tru
-     Acción    : Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado
+  ✅ Sin acciones pendientes.
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -119,7 +123,7 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=14  caps_ok=65  caps_fallo=0
+      coherente=True  validos=14  caps_ok=67  caps_fallo=0
 
   ✅ Tests (pytest — forma)
       total=134  pasados=133  fallidos=0  tasa=99.25%
@@ -167,7 +171,7 @@ Rechazado:
 ================================================================================
   Versión Omega      : 9.8
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 1
+  Acciones abiertas  : 0
   Bloqueantes        : 0
   Caja 1             : Auditoría del VPSI (sistema)
   Caja 2             : Último test evaluado
