@@ -744,6 +744,7 @@
         "rol": "CA",
         "archivos": [
           "coherencia.py",
+          "conteos.py",
           "correlacion_k.py",
           "logica.py"
         ],
@@ -3408,6 +3409,7 @@
     "choques": [],
     "archivos": [
       "coherencia.py",
+      "conteos.py",
       "correlacion_k.py",
       "logica.py"
     ],
@@ -3416,7 +3418,9 @@
       "K",
       "L"
     ],
-    "archivos_extra": [],
+    "archivos_extra": [
+      "conteos"
+    ],
     "nota": "archivos_extra son candidatos a nuevos factores; añadir convención o API antes de usarlos en calcular()"
   },
   "tests": {
