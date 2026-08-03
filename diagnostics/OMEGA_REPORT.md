@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-03 20:55:39 UTC    Commit: 61b80689a2b4
+Generado: 2026-08-03 20:59:03 UTC    Commit: 658e96216133
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
@@ -114,10 +114,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 418
+      declaraciones = 329
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 159, 'lema': 39, 'teorema': 115, 'corolario': 91, 'definicion': 14}
+      por_tipo      = {'axioma': 117, 'lema': 34, 'teorema': 84, 'corolario': 80, 'definicion': 14}
 
   ✅ Fórmulas (FO)
       coherente = True
@@ -137,10 +137,10 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 274
-  pares totales      : 37401
-  pares compatibles  : 10388
-  pares novedosos    : 4972
+  |Θ| (AX)           : 201
+  pares totales      : 20100
+  pares compatibles  : 5835
+  pares novedosos    : 3333
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
   dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
   U1                 : NO_STAGNANT

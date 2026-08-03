@@ -2,9 +2,9 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 418,
+  "declaraciones": 329,
   "cuerpos": [
-    "VPSI",
+    "VPSI_AX",
     "contexto_AX",
     "correlacion",
     "indefinido_AX",
@@ -14,10 +14,10 @@
     "sentido_estructural_AX"
   ],
   "por_tipo": {
-    "axioma": 159,
-    "lema": 39,
-    "teorema": 115,
-    "corolario": 91,
+    "axioma": 117,
+    "lema": 34,
+    "teorema": 84,
+    "corolario": 80,
     "definicion": 14
   },
   "ids_dominio_k_o": [

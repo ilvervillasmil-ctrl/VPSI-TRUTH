@@ -8,9 +8,9 @@
     "coherente": true,
     "choques": [],
     "errores": [],
-    "declaraciones": 418,
+    "declaraciones": 329,
     "cuerpos": [
-      "VPSI",
+      "VPSI_AX",
       "contexto_AX",
       "correlacion",
       "indefinido_AX",
@@ -20,10 +20,10 @@
       "sentido_estructural_AX"
     ],
     "por_tipo": {
-      "axioma": 159,
-      "lema": 39,
-      "teorema": 115,
-      "corolario": 91,
+      "axioma": 117,
+      "lema": 34,
+      "teorema": 84,
+      "corolario": 80,
       "definicion": 14
     },
     "ids_dominio_k_o": [
@@ -809,16 +809,16 @@
           "corolario",
           "definicion"
         ],
-        "declaraciones": 418,
+        "declaraciones": 329,
         "por_tipo": {
-          "axioma": 159,
-          "lema": 39,
-          "teorema": 115,
-          "corolario": 91,
+          "axioma": 117,
+          "lema": 34,
+          "teorema": 84,
+          "corolario": 80,
           "definicion": 14
         },
         "cuerpos": [
-          "VPSI",
+          "VPSI_AX",
           "contexto_AX",
           "correlacion",
           "indefinido_AX",
@@ -1589,9 +1589,9 @@
       "coherente": true,
       "choques": [],
       "errores": [],
-      "declaraciones": 418,
+      "declaraciones": 329,
       "cuerpos": [
-        "VPSI",
+        "VPSI_AX",
         "contexto_AX",
         "correlacion",
         "indefinido_AX",
@@ -1601,10 +1601,10 @@
         "sentido_estructural_AX"
       ],
       "por_tipo": {
-        "axioma": 159,
-        "lema": 39,
-        "teorema": 115,
-        "corolario": 91,
+        "axioma": 117,
+        "lema": 34,
+        "teorema": 84,
+        "corolario": 80,
         "definicion": 14
       },
       "ids_dominio_k_o": [
@@ -3494,10 +3494,10 @@
   },
   "generatividad": {
     "contenedor": "axiomas",
-    "theta_n": 274,
-    "pares_totales": 37401,
-    "pares_compatibles": 10388,
-    "pares_novedosos": 4972,
+    "theta_n": 201,
+    "pares_totales": 20100,
+    "pares_compatibles": 5835,
+    "pares_novedosos": 3333,
     "im_vs_theta": "GENERATIVO",
     "dominios": [
       "auditoria",
@@ -3525,8 +3525,8 @@
     "u1_proxy": "NO_STAGNANT",
     "errores_recoleccion": 0,
     "por_tipo_theta": {
-      "axioma": 159,
-      "teorema": 115
+      "axioma": 117,
+      "teorema": 84
     },
     "canonica": {
       "theta_n": 24,
