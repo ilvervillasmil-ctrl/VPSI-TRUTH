@@ -23,20 +23,20 @@ Autor: Ilver Villasmil · ORCID: [0009-0009-3413-4270](https://orcid.org/0009-00
 3. Calcular factores **C** (coherencia), **L** (lógica), **K** (correlación con el dominio).
 4. Aplicar la **Fórmula de la Verdad**:
 
-**Truᵣᵢ(D) = C(D) · L(D) · K(D)**
+\[
+\mathrm{Tru}_{Ri}(D) = C(D) \cdot L(D) \cdot K(D)
+\]
 
-**Truₜₒₜₐₗ(D) = (Truᵣᵢ(D) · α) + β**
+\[
+\mathrm{Tru}_{total}(D) = \bigl(\mathrm{Tru}_{Ri}(D) \cdot \alpha\bigr) + \beta
+\]
 
-con **α = ²⁶⁄₂₇ y β = ¹⁄₂₇**
+con **α = 26/27** y **β = 1/27**  
+(dominio estricto: `fractions.Fraction`; sin floats en la ruta de decisión).
 
-(dominio estricto: fractions.Fraction; sin floats en la ruta de decisión).
-
-——-
 5. Dejar **evidencia** inspectable (JSON, reportes, CI) para que cualquiera contraste el informe con los datos.
 
 Principio operativo: **saber ≠ creer**. El sistema no “opina”; ejecuta contratos. Si el grafo axiomático se contradice o un módulo declara una capacidad que no puede resolver, el sistema **se detiene o se delata** (arranque rechazado, contrato incoherente, choque axiomático).
-
-——-
 
 ### Qué no es
 
@@ -53,7 +53,7 @@ Principio operativo: **saber ≠ creer**. El sistema no “opina”; ejecuta con
 ## 2. Para qué sirve
 
 - **Auditar** afirmaciones, diálogos o documentos: contradicción, deriva de contexto, K sin ancla en \(O\).
-- **Exponer** el piso estructural β: incluso cuando C(D) = L(D) = K(D) = 0, se tiene Truₜₒₜₐₗ(D) = β; el techo observable está determinado por α.
+- **Exponer** el piso estructural β: incluso cuando \(C = L = K = 0\), se tiene \(\mathrm{Tru}_{total} = \beta\); el techo observable está determinado por α.
 - **Sostener** interfaces, guías o sistemas posteriores que necesiten un **cálculo de verdad reproducible**, no una respuesta persuasiva.
 - **Permitir auditoría externa**: un tercero puede abrir `diagnostics/*.json` y verificar que el mapa Omega refleja la evidencia, no la inventa.
 
@@ -61,30 +61,28 @@ Implementación típica: biblioteca + orquestador (`Engine`) + pipeline CI como 
 
 ---
 
-### 3. Cómo se usa (visión)
+## 3. Cómo se usa (visión)
 
 ```text
 Humano / sistema externo
         │
-        │  petición (dict: contexto, factores o material a clasificar)
+        │  petición (dict: contexto, descripción, modo de entrada)
         ▼
    Engine.evaluar(peticion)
         │
         │  orquesta solo lo declarado en cada CONTENEDOR
         ▼
-   módulos (CX → CA → FO · AX · MC · …)
+   CX → (conteos) → CA → FO · AX · MC · CIT · …
         │
         ▼
    resultado estructurado + acumulación en resultados_evaluacion
         │
-        ├──► CACHE (evidencia de secuencia, si está montado)
-        ├──► CI escribe evaluaciones.json + contratos_report.json
+        ├──► diagnostics.evidencia.depositar()  (fusión por origen)
+        ├──► CI escribe contratos_report.json
         └──► Omega Report lee artefactos y presenta el mapa
-Entrada mínima conceptual: descripción (D) y, cuando aplique, enunciado de (O) / modo de entrada. Salida: estado, factores, Tru (cuando el camino está completo), errores y notas de contrato. Lo que el humano lee en CI: OMEGA_REPORT.md + JSON de evidencia.
+Entrada mínima: descripción (D) y, cuando aplique, enunciado de (O) / modo de entrada. Salida: estado, factores, Tru (cuando el camino está completo), errores y notas de contrato. Lo que el humano lee en CI: OMEGA_REPORT.md + JSON de evidencia.
 
-——-
-
-##4. Arquitectura — diagrama de información
+4. Arquitectura — diagrama de información
 flowchart TB
   subgraph entrada [Entrada]
     P[Petición / descripción D]
@@ -101,6 +99,7 @@ flowchart TB
 
   subgraph calculo [Cálculo]
     CX[CX contexto / O]
+    CO[conteos k/m r/p f/c]
     CA[CA C L K]
     FO[FO Tru_Ri Tru_total]
     MC[MC correlación mecánica]
@@ -113,22 +112,23 @@ flowchart TB
     CH[CH cache]
     SF[SF self fase]
     UI[UI interfaz]
-    DG[DG diagnóstico enlace]
+    DG[DG diagnóstico]
+    CIT[CIT citación]
   end
 
   subgraph evidencia [Evidencia y presentación]
     CI[CI juez externo]
-    EV[evaluaciones.json]
+    EV[evaluaciones.json fusión por origen]
     CR[contratos_report.json]
     OM[Omega Report]
   end
-
-——-
 
   P --> E
   E --> CT
   E --> AX
   E --> CX
+  E --> CO
+  CO --> CA
   E --> CA
   E --> FO
   E --> MC
@@ -139,29 +139,24 @@ flowchart TB
   E --> SF
   E --> UI
   E --> DG
+  E --> CIT
   E --> CI
   CI --> EV
   CI --> CR
   EV --> OM
   CR --> OM
-
-——-
-
-###Cadena causal (orden lógico, no “opinión del Engine”)
-
-CT ancla constantes
-AX mantiene el grafo y detecta choques
-CX clasifica O, estado, permite_k
-CA calcula C, L, K (None/UNDEFINED si falta dato legítimo)
-FO aplica la fórmula de la verdad
-MC define el orden mecánico causa-efecto entre pasos
-Engine solo invoca capacidades listadas en cada
-
-——-
-
-***CONTENEDOR***
-CI verifica contratos y deposita evidencia
-Omega solo presenta
+Cadena causal (orden lógico, no “opinión del Engine”)
+	1	CT ancla constantes
+	2	AX mantiene el grafo y detecta choques
+	3	CX clasifica (O), estado, permite_k
+	4	conteos materializa (k/m), (r/p), (f/c) desde el texto (ruta operacional)
+	5	CA calcula (C), (L), (K) (None/UNDEFINED si falta dato legítimo)
+	6	FO aplica la fórmula de la verdad
+	7	MC define el orden mecánico causa-efecto entre pasos
+	8	CIT anuncia sin recalcular
+	9	Engine solo invoca capacidades listadas en cada CONTENEDOR
+	10	CI verifica contratos y fusiona evidencia por origen
+	11	Omega solo presenta
 Fatalidad estructural: si AX es incoherente, si falta un rol obligatorio, o si una capacidad declarada no es callable, el sistema no “sigue igual”: falla cerrado o el juez CI marca coherente: false.
 
 5. El Engine
@@ -181,13 +176,14 @@ ArranqueError si strict y hay errores de arranque
 Engine no es el experto de cada dominio. Cada módulo es autoridad de su función; Engine es el director que solo puede pedir lo que el contrato permite.
 modules/
   /
-    __init__.py     ← contrato CONTENEDOR + centinela (barrer/verificar/…)
+    __init__.py     ← contrato CONTENEDOR + centinela
     *.py            ← lógica de dominio (el init audita coherencia interna)
 core/
   engine.py         ← orquestación
 diagnostics/
+  evidencia.py      ← depositario único (fusión por origen)
   omega_report.py   ← solo presentación
-  *.json            ← evidencia CI
+  *.json            ← evidencia CI / tests
 
 6. Módulos — catálogo
 Cada módulo expone un CONTENEDOR con al menos: nombre, rol, version, requiere, capacidades (mapa clave → función real).
@@ -199,12 +195,12 @@ Función en una frase
 Capacidades típicas
 CT
 constante
-Ancla (\alpha,\beta) del repo
+Ancla (α, β) del repo
 alpha, beta, inventario
 AX
 axiomas
 Cuerpo axiomático, choques, generatividad
-verificar/barrer, inventario, axiomas, generatividad
+verificar, inventario, axiomas, generatividad
 FO
 formulas
 Fórmula de la verdad (Fraction)
@@ -219,15 +215,15 @@ Reglas de O, clasificación, permite_k
 verificar/resolver, evaluar, inventario, axiomas
 CA
 calculator
-Calcula C, L, K
-calcular, verificar/barrer, inventario
+Calcula C, L, K (+ conteos operacionales)
+calcular, verificar, inventario, extraer_conteos
 RE
 realidad
 Ancla / filtro de representaciones de realidad
 verificar, inventario
 TX
 taxonomia
-Taxonomías deterministas (p. ej. manipulación)
+Taxonomías deterministas
 verificar, aplicar, inventario, axiomas
 VX
 verificacion
@@ -235,57 +231,64 @@ Auditoría de verificación de sistema
 verificar, axiomas
 CH
 cache
-Registro inmutable de secuencias / evidencia
-verificar, depositar, leer, secuencia, inventario
+Registro de secuencias / evidencia
+verificar, depositar, leer, inventario
 SF
 self
 Yo funcional en fase (capas L0–L7)
-verificar, barrer, yo_funcional, oscilar
+verificar, barrer, yo_funcional
 UI
 interfaz
 Composición de interfaces; sin autoridad de cálculo
-componer, barrer, inventario, observar, …
+componer, barrer, inventario
 DG
 diagnostico
-Enlace / censo de diagnóstico (sin poder de alterar verdad)
-censo, verificar, presentar, reportar, inventario
+Presentación / censo; sin poder de alterar verdad
+verificar, generar_reporte, leer_evidencia, inventario
+CIT
+citacion
+Anuncio de normas y resultados sin recalcular
+anunciar, inventario, verificar
 6.2 Conexión entre carpetas (vista repo)
 modules/
 ├── constante/              CT   anclas α, β
 ├── axiomas/                AX   grafo · choques · TR1
-│   └── (cuerpos: VPSI, contexto_AX, correlacion, self, …)
+│   └── (cuerpos: VPSI, contexto_AX, correlacion, self,
+│        realidad_AX, indefinido_AX, sentido_estructural_AX, …)
 ├── formulas/               FO   truth.py → tru_ri, tru_total
 ├── correlacion_mecanica/   MC   orden mecánico · archivos MC
 ├── contexto/               CX   reglas de O · clasificadores
-├── calculator/             CA   coherencia.py · logica.py · correlacion_k.py
+├── calculator/             CA   coherencia · logica · correlacion_k · conteos
 ├── realidad/               RE   filtro / ancla de R
 ├── taxonomia/              TX   p.ej. manipulation_TX.py
-├── verificacion/           VX   auditar_sistema
-├── cache/                  CH   depósito de evidencia
+├── verificacion/           VX
+├── cache/                  CH
 ├── self/                   SF   capas L0…L7 (fase)
-├── interfaz/               UI   composición UI
+├── interfaz/               UI
+├── citacion/               CIT  anuncio sin recálculo
 └── diagnostico/            DG   puente de diagnóstico
 
 core/
 └── engine.py               orquestador + Contenedor + Registro
 
 diagnostics/
-├── omega_report.py         presentador 9.6
-├── evaluaciones.json       evidencia de evaluar() (CI)
+├── evidencia.py            depositario (fusión por origen)
+├── omega_report.py         presentador 9.8
+├── evaluaciones.json       evidencia de evaluar() (tests + CI)
 ├── contratos_report.json   juez de contratos (CI)
 ├── axioms_report.json
 ├── test_results.xml
 └── OMEGA_REPORT.md
-
-——-
-
-6.3 Qué hace / qué no hace (resumen por capa crítica)
+6.3 Qué hace / qué no hace (capas críticas)
 Módulo
 Hace
 No hace
 CX
 Define reglas para armar y clasificar contexto; permite_k
 No calcula Tru_total
+conteos (CA)
+Produce (k/m), (r/p), (f/c) desde texto
+No calcula C/L/K ni Tru
 CA
 Calcula C, L, K según petición
 No aplica α/β (eso es FO)
@@ -298,6 +301,9 @@ No orquesta el pipeline completo
 MC
 Especifica el orden mecánico
 No sustituye el juicio axiomático
+CIT
+Anuncia citas y resultados del ciclo
+No recalcula Tru
 Omega
 Presenta
 No evalúa, no hace humo, no rellena huecos
@@ -311,15 +317,15 @@ Campos conceptuales de una declaración:
 	•	depende_de / gobierna
 	•	enunciado
 Choques: contradicción directa o de cota → barrer() marca incoherente → el sistema no debe “seguir como si el grafo fuera sano”.
-Generatividad (TR1 / U1): mide si el grafo recombina y produce pares novedosos en dominios (|Im(⊕)| vs (|\Theta|)). “GENERATIVO” describe expansión del grafo, no omnisciencia ni verdad absoluta del marco.
+Generatividad (TR1 / U1): mide si el grafo recombina y produce pares novedosos en dominios ((|\mathrm{Im}(\oplus)|) vs (|\Theta|)). “GENERATIVO” describe expansión del grafo, no omnisciencia ni verdad absoluta del marco.
 
 8. Fractalidad y escalas de contexto
 El mismo aparato se aplica a:
 	•	una palabra o morfología,
 	•	una frase,
 	•	un turno de diálogo,
-	•	una conversación con cambios de O,
-	•	un dominio formal (p. ej. propulsión) donde las expansiones deben seguir reglas de estabilidad de O.
+	•	una conversación con cambios de (O),
+	•	un dominio formal donde las expansiones deben seguir reglas de estabilidad de (O).
 Contexto indefinido o con ligaduras contradictorias no se “suaviza”: se clasifica y, si corresponde, se niega K completo o se degrada coherencia/lógica en la ruta de evaluación.
 Eso es fractal en el sentido operativo: misma familia de reglas a varias escalas, no metáfora decorativa.
 
@@ -344,21 +350,24 @@ sin random/ML en decisión
 Contratos
 Contenedor.fn
 clave declarada debe ser callable real
+Conteo operacional
+calculator/conteos.py
+alimenta CA sin inventar factores
 9.2 Filtro externo (CI)
 Pipeline típico:
-	1	Invariante (\alpha+\beta=1)
+	1	Invariante ((\alpha + \beta = 1))
 	2	Barrido axiomático (detalle de choques)
 	3	Sin imports estocásticos
 	4	Fórmulas y dominio Fraction
-	5	Engine operativo + evaluar mínimo
-	6	Pytest
-	7	Auditoría estructural de contratos (determinismo, idempotencia, cobertura)
-	8	Escritura de evaluaciones.json (evidencia de las evaluaciones de esa auditoría)
-	9	Omega Report (solo lectura de artefactos)
-	10	Coherence guard (regresión de tests)
-	11	Upload + commit de historia de diagnósticos
+	5	Engine operativo (solo arranque; sin valuación inventada)
+	6	Pytest (única fuente de ciclos de valuación en CI)
+	7	Auditoría estructural de contratos (determinismo, cobertura, fusión de evidencia)
+	8	Omega Report (solo lectura de artefactos)
+	9	Coherence guard (regresión de tests)
+	10	Upload + commit de historia de diagnósticos
+Evidencia: diagnostics.evidencia.depositar() fusiona por origen. Los tests no se pisan con el paso de contratos. Omega lee el archivo consolidado.
 Cualquiera puede descargar los artefactos y contrastar:
-evaluaciones.json     → qué devolvió evaluar en la auditoría
+evaluaciones.json     → qué devolvió evaluar (tests + CI)
 contratos_report.json → si los contratos cuadran
 OMEGA_REPORT.md       → si el mapa refleja esos datos
 Omega no es el juez: es el visor. El juez es el CI + los contratos + AX.
@@ -366,10 +375,12 @@ Omega no es el juez: es el visor. El juez es el CI + los contratos + AX.
 10. Artefactos `diagnostics/`
 Archivo
 Significado
+evidencia.py
+Depositario único; fusión por origen
 evaluaciones.json
-Evidencia persistente de evaluar() generada por la auditoría CI
+Evidencia persistente de evaluar() (tests + CI)
 contratos_report.json
-Informe del juez de contratos (roles, capacidades, coherente)
+Informe del juez de contratos
 axioms_report.json
 Salida de barrer() AX
 test_results.xml
@@ -381,7 +392,7 @@ Mapa de trabajo legible
 omega_report_data.json
 Paquete estructurado que Omega serializó
 omega_report.py
-Código del presentador (v9.6)
+Código del presentador (v9.8)
 
 11. Cómo correr
 Requisitos
@@ -391,9 +402,8 @@ Requisitos
 Local (idea)
 python -m pip install -r requirements.txt
 pytest tests/ -v --tb=short --junit-xml=diagnostics/test_results.xml
-# Arranque manual del Engine y, si existen artefactos, Omega:
 python diagnostics/omega_report.py
-El orden correcto cuando se quiere el camino de evaluación en Omega es el del CI: auditoría de contratos (escribe evaluaciones.json) → luego Omega.
+El orden correcto cuando se quiere el camino de evaluación en Omega es el del CI: tests (depositan evidencia) → auditoría de contratos (fusiona) → Omega.
 Variables útiles
 	•	OMEGA_STRICT=1 — Omega sale con código ≠ 0 si la entrada está incompleta o el Engine no está operativo.
 
@@ -404,12 +414,16 @@ CT, AX, FO, dominio Fraction
 Núcleo estable
 Engine + contratos + CI juez
 Operativo
-CX, CA, MC
+CX, CA (+ conteos), MC
 En uso; extensibles por archivos bajo el init
+Evidencia por origen + Omega 9.8
+Vivo — Caja 1 y Caja 2 se llenan con ciclos reales
+Conversación → Tru sin números a mano
+Demostrado en CI (p. ej. último turno → β)
 CH, SF, UI
 En fase / parcial
-Omega 9.6
-Presentación pura + puente de evidencia
+K fino entre turnos (conflicto factual)
+Grueso; correlación léxica, no aún conflicto de hechos
 “Organismo” pleno
 No reivindicado: mecánica con interdependencia y fail-closed
 El repositorio genera estructura (TR1) cuando el grafo y los contratos lo permiten; no fuerza narrativa de completitud.
@@ -419,4 +433,4 @@ Ilver Villasmil Investigador independiente ORCID: 0009-0009-3413-4270
 Marco: Universal Integration System (UIS) / Villasmil–Omega / UCF / VPSI-TRUTH.
 
 Este documento describe el sistema tal como está diseñado para ser auditado: contratos, evidencia y presentación separados. Si el mapa y los JSON no coinciden, prevalece la evidencia.
-
+Actualizado a lo que el CI ya demostró: fusión de evidencia, conteos, Omega 9.8 con las dos cajas vivas, y madurez honesta (K todavía grueso).
