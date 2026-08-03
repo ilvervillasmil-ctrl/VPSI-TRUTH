@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.7)
+VPSI-TRUTH (Versión 9.7.1)
 ==============================
 
 Presentador objetivo + mapa de intervención + valuación detallada.
@@ -50,7 +50,7 @@ OK = "OK"
 FALLO = "FALLO"
 PENDIENTE = "PENDIENTE"
 STRICT = os.getenv("OMEGA_STRICT", "0") == "1"
-VERSION = "9.7"
+VERSION = "9.7.1"
 
 CAMPOS_OBLIGATORIOS = (
     "estado_engine",
@@ -123,6 +123,7 @@ def _cuerpo_resultado(r: Dict[str, Any]) -> Dict[str, Any]:
         or "tru_total" in inner
         or "factores" in inner
         or "Tru_total" in inner
+        or "citacion" in inner
     ):
         return inner
     return r
@@ -227,18 +228,13 @@ def _lineas_valuacion_ciclo(
     if razon:
         out.append("      razon          : {0}".format(_fmt(razon)[:160]))
 
-    # CLK — solo si el ciclo los trajo
     out.append(
         "      {0} C={1}  L={2}  K={3}".format(
             ICON_CLK, _fmt(fac["C"]), _fmt(fac["L"]), _fmt(fac["K"])
         )
     )
-    out.append(
-        "      Tru_Ri        : {0}".format(_fmt(tru_ri))
-    )
-    out.append(
-        "      Tru_total     : {0}".format(_fmt(tru_total))
-    )
+    out.append("      Tru_Ri        : {0}".format(_fmt(tru_ri)))
+    out.append("      Tru_total     : {0}".format(_fmt(tru_total)))
 
     if body.get("alpha") is not None or body.get("beta") is not None:
         out.append(
@@ -288,7 +284,7 @@ def _lineas_valuacion_ciclo(
         out.append(
             "      {0} citacion   : estado={1}  n_citas={2}  n_anuncios={3}".format(
                 ICON_CIT,
-                _fmt(cit.get("estado") or cit.get("ok")),
+                _fmt(cit.get("estado") if cit.get("estado") is not None else cit.get("ok")),
                 _fmt(cit.get("n_citas")),
                 _fmt(cit.get("n_anuncios")),
             )
@@ -308,6 +304,41 @@ def _lineas_valuacion_ciclo(
                 out.append(
                     "        · … y {0} anuncios más".format(len(anuncios) - 5)
                 )
+    return out
+
+
+def _resumen_citaciones(evals: List[Any]) -> List[str]:
+    """Agrega citación presente en los ciclos (solo lectura)."""
+    out: List[str] = []
+    total_citas = 0
+    total_anuncios = 0
+    ciclos_con_cit = 0
+    for r in evals:
+        if not isinstance(r, dict):
+            continue
+        body = _cuerpo_resultado(r)
+        cit = body.get("citacion") if isinstance(body.get("citacion"), dict) else None
+        if not cit:
+            continue
+        ciclos_con_cit += 1
+        try:
+            total_citas += int(cit.get("n_citas") or 0)
+        except (TypeError, ValueError):
+            pass
+        try:
+            total_anuncios += int(cit.get("n_anuncios") or 0)
+        except (TypeError, ValueError):
+            pass
+    if ciclos_con_cit == 0:
+        out.append(
+            "  {0} Citación: ningún ciclo trajo bloque citacion".format(ICON_PEND)
+        )
+    else:
+        out.append(
+            "  {0} Citación: ciclos_con_cit={1}  n_citas≈{2}  n_anuncios≈{3}".format(
+                ICON_CIT, ciclos_con_cit, total_citas, total_anuncios
+            )
+        )
     return out
 
 
@@ -343,6 +374,9 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
     out.append("  dominios           : {0}".format(g.get("dominios", [])))
     out.append("  roles vacíos       : {0}".format(g.get("roles_vacios", [])))
     out.append("  U1                 : {0}".format(g.get("u1_estado", "—")))
+    if g.get("por_tipo_theta"):
+        out.append("  por_tipo_theta     : {0}".format(g.get("por_tipo_theta")))
+
     can = g.get("canonica") or {}
     out.append("  --- capa canónica (paper TR1) ---")
     if can:
@@ -353,6 +387,9 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
             )
         )
         out.append("  |Im| ? |Θ| can    : {0}".format(can.get("im_vs_theta", "—")))
+        out.append("  ids_faltantes     : {0}".format(can.get("ids_faltantes", [])))
+        out.append("  ids_sin_dominio   : {0}".format(can.get("ids_sin_dominio", [])))
+        out.append("  dominios_can      : {0}".format(can.get("dominios", [])))
     else:
         out.append("  {0} sin datos canónicos en el paquete".format(ICON_PEND))
     if g.get("nota"):
@@ -367,8 +404,10 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
 def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
     acciones: List[Dict[str, Any]] = []
     reg = datos.get("registro_modulos") or {}
-    vacios = reg.get("roles_vacios") or []
-    rechazados = reg.get("rechazados") or []
+    vacios = list(reg.get("roles_vacios") or [])
+    rechazados = list(reg.get("rechazados") or [])
+    roles = reg.get("roles") or {}
+    ct = datos.get("contratos")
 
     if datos.get("estado_engine") != "OPERATIVO":
         acciones.append({
@@ -378,7 +417,7 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "detalle": "estado = {0}".format(datos.get("estado_engine")),
             "impacto": "Nada confiable si el Engine no está OPERATIVO",
             "accion": "Revisar errores_arranque y compuertas de arranque",
-            "errores": datos.get("errores_arranque") or [],
+            "errores": list(datos.get("errores_arranque") or []),
         })
 
     ia = datos.get("informe_axiomas") or {}
@@ -388,14 +427,14 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "tipo": "BLOQUEANTE",
             "item": "Axiomas",
             "detalle": "choques={0} errores={1}".format(
-                len(ia.get("choques", [])), len(ia.get("errores", []))
+                len(ia.get("choques") or []),
+                len(ia.get("errores") or []),
             ),
             "impacto": "Sin axiomatización coherente el sistema no debe avanzar",
             "accion": "Resolver choques en modules/axiomas",
-            "errores": (ia.get("choques") or [])[:5],
+            "errores": list(ia.get("choques") or [])[:5],
         })
 
-    ct = datos.get("contratos")
     if isinstance(ct, dict) and ct.get("coherente") is False:
         acciones.append({
             "prioridad": 2,
@@ -413,13 +452,15 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
         })
 
     for r in rechazados:
+        if not isinstance(r, dict):
+            continue
         ruta = r.get("ruta", "?")
         razon = r.get("razon", "?")
         acciones.append({
             "prioridad": 2,
             "tipo": "RECHAZADO",
-            "item": Path(ruta).parent.name if ruta != "?" else "?",
-            "detalle": razon,
+            "item": Path(str(ruta)).parent.name if ruta != "?" else "?",
+            "detalle": str(razon),
             "impacto": "Módulo en disco ignorado por Engine",
             "accion": "Registrar rol en ROLES o corregir CONTENEDOR['rol']",
             "errores": ["{0} → {1}".format(ruta, razon)],
@@ -429,28 +470,42 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
         acciones.append({
             "prioridad": 3,
             "tipo": "VACÍO",
-            "item": rol,
+            "item": str(rol),
             "detalle": "rol admitido sin módulo montado",
             "impacto": "Capacidad del rol {0} no disponible".format(rol),
             "accion": "Crear o activar módulo con CONTENEDOR['rol']='{0}'".format(rol),
             "errores": [],
         })
 
+    # CIT: si el rol no está cargado
+    if "CIT" in vacios or not (roles.get("CIT") or []):
+        # evitar duplicar si ya está en vacios como acción VACÍO
+        if "CIT" not in vacios:
+            acciones.append({
+                "prioridad": 3,
+                "tipo": "VACÍO",
+                "item": "CIT",
+                "detalle": "rol CIT sin módulo montado",
+                "impacto": "No habrá cadena de anuncio aunque pedir_anuncio=True",
+                "accion": "Montar modules/citacion con CONTENEDOR rol=CIT",
+                "errores": [],
+            })
+
     evidencia = datos.get("evidencia_evaluacion") or {}
     n_ev = int(evidencia.get("n") or 0)
-    if not datos.get("resultados_evaluacion") and n_ev == 0:
+    if not (datos.get("resultados_evaluacion") or []) and n_ev == 0:
         acciones.append({
             "prioridad": 4,
             "tipo": "DATOS",
             "item": "resultados_evaluacion",
             "detalle": (
-                "Sin ciclos en evaluations.json (normal si CI va sin humo "
+                "Sin ciclos en evaluaciones.json (normal si CI va sin humo "
                 "y los tests no depositaron en ese artefacto)"
             ),
             "impacto": "Omega no puede mostrar C/L/K/Tru de ciclos",
             "accion": (
                 "Que los tests reales escriban evidencia o que un proceso "
-                "deposite evaluations.json tras evaluar() legítimo"
+                "legítimo deposite evaluaciones.json tras evaluar()"
             ),
             "errores": [],
         })
@@ -477,6 +532,17 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             "errores": [],
         })
 
+    if not datos.get("informe_formulas"):
+        acciones.append({
+            "prioridad": 4,
+            "tipo": "DATOS",
+            "item": "informe_formulas",
+            "detalle": "FO no entregó verificar/barrer/inventario",
+            "impacto": "No se confirma estado FO desde el reporte",
+            "accion": "Exponer verificar/barrer en FO",
+            "errores": [],
+        })
+
     g = datos.get("generatividad")
     if not g or g.get("estado") == "UNDEFINED":
         acciones.append({
@@ -498,19 +564,6 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
             ),
             "impacto": "Cuerpo axiomático no expande por recombinación",
             "accion": "Revisar gobierna / dominios cruzados",
-            "errores": [],
-        })
-
-    # CIT ausente en roles si ESPERADO lo exige (solo aviso de inventario)
-    roles = (reg.get("roles") or {})
-    if "CIT" in vacios or not (roles.get("CIT") or []):
-        acciones.append({
-            "prioridad": 3,
-            "tipo": "VACÍO",
-            "item": "CIT",
-            "detalle": "rol CIT sin módulo montado",
-            "impacto": "No habrá cadena de anuncio aunque pedir_anuncio=True",
-            "accion": "Montar modules/citacion con CONTENEDOR rol=CIT",
             "errores": [],
         })
 
@@ -550,8 +603,9 @@ def presentar(datos: Dict[str, Any]) -> str:
     coherente = bool(ia.get("coherente"))
     reg = datos.get("registro_modulos") or {}
     total = reg.get("total", 0)
-    vacios = reg.get("roles_vacios") or []
-    rechazados = reg.get("rechazados") or []
+    vacios = list(reg.get("roles_vacios") or [])
+    rechazados = list(reg.get("rechazados") or [])
+    ct = datos.get("contratos")  # obligatorio: usado abajo y en mapa
     acciones = construir_acciones(datos)
     bloqueantes = [a for a in acciones if a["tipo"] == "BLOQUEANTE"]
     n_bloqueantes = len(bloqueantes)
@@ -605,28 +659,28 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append(
         "  Omega no calcula. Si C/L/K/Tru aparecen, salieron del ciclo (CA/FO)."
     )
+    lineas.extend(_resumen_citaciones(evals))
     lineas.append("")
 
     if not evals:
         lineas.append(
-            "  {0} Sin ciclos en evaluations.json — nada que cuantificar aquí.".format(
+            "  {0} Sin ciclos en evaluaciones.json — nada que cuantificar aquí.".format(
                 ICON_PEND
             )
         )
         lineas.append(
-            "  Los tests pytest miden forma; la valuación de contenido "
-            "aparece cuando un ciclo real deposita resultado."
+            "  pytest mide forma; la valuación de contenido aparece cuando "
+            "un ciclo real deposita resultado."
         )
         lineas.append("")
     else:
-        # Resumen tabular
         rows = []
         for j, r in enumerate(evals, 1):
             body = _cuerpo_resultado(r) if isinstance(r, dict) else {}
             fac = _factores_de(r) if isinstance(r, dict) else {}
             rows.append([
                 str(j),
-                _fmt(_pick(body, "estado") or _pick(r, "estado")),
+                _fmt(_pick(body, "estado") or _pick(r if isinstance(r, dict) else {}, "estado")),
                 _fmt(fac.get("C")),
                 _fmt(fac.get("L")),
                 _fmt(fac.get("K")),
@@ -644,24 +698,20 @@ def presentar(datos: Dict[str, Any]) -> str:
         )
         lineas.append("")
 
-        # Detalle: todos (límite 8) + último siempre expandido
         lineas.append("  Detalle por ciclo:")
-        mostrar = evals[:8]
-        for j, r in enumerate(mostrar, 1):
-            dest = j == len(evals) or (j == len(mostrar) and len(evals) <= 8)
-            # destacar el último de la lista completa
+        limite = 8
+        for j, r in enumerate(evals[:limite], 1):
             is_last = j == n_ev
             lineas.extend(
                 _lineas_valuacion_ciclo(j, n_ev, r, destacar=is_last)
             )
             lineas.append("")
-        if n_ev > 8:
+        if n_ev > limite:
             lineas.append(
-                "  {0} … y {1} ciclos más (ver evaluations.json)".format(
-                    ICON_DOT, n_ev - 8
+                "  {0} … y {1} ciclos más (ver evaluaciones.json)".format(
+                    ICON_DOT, n_ev - limite
                 )
             )
-            # último siempre
             lineas.append("  Último ciclo (completo):")
             lineas.extend(
                 _lineas_valuacion_ciclo(n_ev, n_ev, evals[-1], destacar=True)
@@ -675,15 +725,18 @@ def presentar(datos: Dict[str, Any]) -> str:
     for rol in todos_roles:
         mods = roles.get(rol) or []
         if mods:
-            rows_m.append([rol, "CARGADO", str(len(mods)), ", ".join(mods)])
+            rows_m.append([str(rol), "CARGADO", str(len(mods)), ", ".join(str(m) for m in mods)])
         else:
-            rows_m.append([rol, "VACÍO", "0", "(sin módulo)"])
+            rows_m.append([str(rol), "VACÍO", "0", "(sin módulo)"])
 
     lineas.append("{0}  MÓDULOS Y ROLES".format(ICON_MOD))
-    lineas.extend(
-        "  " + l
-        for l in _tabla(["ROL", "ESTADO", "N", "MÓDULOS"], rows_m, [4, 9, 3, 36])
-    )
+    if rows_m:
+        lineas.extend(
+            "  " + l
+            for l in _tabla(["ROL", "ESTADO", "N", "MÓDULOS"], rows_m, [4, 9, 3, 36])
+        )
+    else:
+        lineas.append("  {0} (sin registro de módulos)".format(ICON_PEND))
     lineas.append("")
 
     # ----- Intervención -----
@@ -697,14 +750,17 @@ def presentar(datos: Dict[str, Any]) -> str:
     else:
         for i, a in enumerate(acciones, 1):
             tipo = a["tipo"]
-            ic = ICON_FAIL if tipo in ("BLOQUEANTE", "CONTRATO", "RECHAZADO") else (
-                ICON_PEND if tipo == "DATOS" else ICON_WARN
-            )
+            if tipo in ("BLOQUEANTE", "CONTRATO", "RECHAZADO"):
+                ic = ICON_FAIL
+            elif tipo == "DATOS":
+                ic = ICON_PEND
+            else:
+                ic = ICON_WARN
             lineas.append("  {0} {1}. [{2}] {3}".format(ic, i, tipo, a["item"]))
             lineas.append("     Detalle   : {0}".format(a["detalle"]))
             lineas.append("     Impacto   : {0}".format(a["impacto"]))
             lineas.append("     Acción    : {0}".format(a["accion"]))
-            if a["errores"]:
+            if a.get("errores"):
                 lineas.append("     Evidencia :")
                 for e in a["errores"][:3]:
                     lineas.append("       {0} {1}".format(ICON_DOT, e))
@@ -717,7 +773,7 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("")
 
     const = datos.get("constantes") or {}
-    lineas.append("  {0} Constantes (CT)".format(ICON_OK))
+    lineas.append("  {0} Constantes (CT)".format(ICON_OK if const else ICON_PEND))
     lineas.append(
         "      ALPHA = {0}   BETA = {1}".format(
             const.get("ALPHA"), const.get("BETA")
@@ -727,8 +783,10 @@ def presentar(datos: Dict[str, Any]) -> str:
 
     lineas.append("  {0} Axiomas (AX)".format(ICON_OK if coherente else ICON_FAIL))
     lineas.append("      declaraciones = {0}".format(ia.get("declaraciones", "?")))
-    lineas.append("      choques       = {0}".format(len(ia.get("choques", []))))
-    lineas.append("      errores       = {0}".format(len(ia.get("errores", []))))
+    lineas.append("      choques       = {0}".format(len(ia.get("choques") or [])))
+    lineas.append("      errores       = {0}".format(len(ia.get("errores") or [])))
+    if ia.get("por_tipo"):
+        lineas.append("      por_tipo      = {0}".format(ia.get("por_tipo")))
     lineas.append("")
 
     fo = datos.get("informe_formulas")
@@ -758,8 +816,9 @@ def presentar(datos: Dict[str, Any]) -> str:
         ok_ca = bool(ca.get("coherente", True))
         lineas.append("  {0} Calculator (CA)".format(ICON_OK if ok_ca else ICON_FAIL))
         lineas.append(
-            "      coherente = {0}  factores_api = {1}".format(
-                ca.get("coherente"), ca.get("factores_api") or ca.get("archivos")
+            "      coherente = {0}  detalle = {1}".format(
+                ca.get("coherente"),
+                ca.get("factores_api") or ca.get("archivos") or ca.get("errores") or "—",
             )
         )
     else:
@@ -789,9 +848,9 @@ def presentar(datos: Dict[str, Any]) -> str:
     tests = datos.get("tests")
     if tests:
         ok_t = tests.get("fallidos", 1) == 0
-        lineas.append("  {0} Tests (pytest — forma)".format(
-            ICON_OK if ok_t else ICON_FAIL
-        ))
+        lineas.append(
+            "  {0} Tests (pytest — forma)".format(ICON_OK if ok_t else ICON_FAIL)
+        )
         lineas.append(
             "      total={0}  pasados={1}  fallidos={2}  tasa={3}%".format(
                 tests.get("total"),
@@ -801,7 +860,7 @@ def presentar(datos: Dict[str, Any]) -> str:
             )
         )
         lineas.append(
-            "      nota: pytest no es Tru; cuantificación de contenido = ciclos arriba"
+            "      nota: pytest no es Tru; cuantificación de contenido = tabla de ciclos"
         )
     else:
         lineas.append("  {0} Tests — resultados no entregados".format(ICON_PEND))
@@ -813,9 +872,15 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("{0}  INVENTARIO RÁPIDO".format(ICON_MOD))
     lineas.append("=" * 80)
     lineas.append("Presente:")
+    hay_presente = False
     for rol, mods in sorted(roles.items()):
         if mods:
-            lineas.append("  {0} {1}: {2}".format(ICON_OK, rol, ", ".join(mods)))
+            hay_presente = True
+            lineas.append(
+                "  {0} {1}: {2}".format(ICON_OK, rol, ", ".join(str(m) for m in mods))
+            )
+    if not hay_presente:
+        lineas.append("  {0} (ninguno cargado en registro)".format(ICON_PEND))
     lineas.append("Ausente:")
     if vacios:
         for rol in vacios:
@@ -825,10 +890,12 @@ def presentar(datos: Dict[str, Any]) -> str:
     lineas.append("Rechazado:")
     if rechazados:
         for r in rechazados:
+            if not isinstance(r, dict):
+                continue
             lineas.append(
                 "  {0} {1} → {2}".format(
                     ICON_REJ,
-                    Path(r.get("ruta", "?")).parent.name,
+                    Path(str(r.get("ruta", "?"))).parent.name,
                     r.get("razon", "?"),
                 )
             )
@@ -942,7 +1009,7 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         except Exception:  # noqa: BLE001
             pass
 
-        # Camino de valuación: SOLO evaluations.json (pytest / procesos reales)
+        # Valuación: SOLO evaluaciones.json
         datos["resultados_evaluacion"] = []
         eval_path = DIAGNOSTICS_DIR / "evaluaciones.json"
         if eval_path.exists():
@@ -1008,11 +1075,26 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         try:
             cont_ca = eng.registro.primero("CA") if hasattr(eng, "registro") else None
             if cont_ca is not None:
-                fn = cont_ca.fn("verificar")
-                if callable(fn):
-                    out = fn()
-                    if isinstance(out, dict):
-                        datos["informe_calculator"] = out
+                for cap in ("verificar", "barrer", "inventario"):
+                    fn = cont_ca.fn(cap)
+                    if callable(fn):
+                        out = fn()
+                        if isinstance(out, dict):
+                            datos["informe_calculator"] = out
+                            break
+        except Exception:  # noqa: BLE001
+            pass
+
+        try:
+            cont_cit = eng.registro.primero("CIT") if hasattr(eng, "registro") else None
+            if cont_cit is not None:
+                for cap in ("verificar", "barrer", "inventario"):
+                    fn = cont_cit.fn(cap)
+                    if callable(fn):
+                        out = fn()
+                        if isinstance(out, dict):
+                            datos["informe_citacion"] = out
+                            break
         except Exception:  # noqa: BLE001
             pass
 
