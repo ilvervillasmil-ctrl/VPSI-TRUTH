@@ -799,7 +799,7 @@
           "limpiar_ciclo",
           "evaluar"
         ],
-        "registro_n": 0,
+        "registro_n": 1,
         "no_hace": [
           "calcular_C",
           "calcular_L",
@@ -1637,8 +1637,68 @@
         "realidad_MC.py"
       ]
     },
-    "resultados_evaluacion": [],
-    "resultados_evaluacion_n": 0
+    "resultados_evaluacion": [
+      {
+        "secuencia": 1,
+        "engine_version": "11.1",
+        "invocador_id": "omega_report",
+        "entrada": {
+          "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+          "tiene_C": false,
+          "tiene_L": false,
+          "tiene_K": false,
+          "pedir_anuncio": true
+        },
+        "resultado": {
+          "estado": "PARCIAL",
+          "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+          "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+          "factores": {
+            "C": null,
+            "L": null,
+            "K": null
+          },
+          "fallos": [],
+          "engine_version": "11.1",
+          "contexto_cx": {
+            "permite_k": true,
+            "pedir_anuncio": true,
+            "tipos_peticion": [
+              "dame_cadena_completa",
+              "dame_normas"
+            ]
+          },
+          "citacion": {
+            "estado": "OK",
+            "ok": true,
+            "n_citas": 1,
+            "n_anuncios": 1,
+            "anuncios": [
+              {
+                "titulo": "[citacion] CIT-CICLO",
+                "tipo": "citacion",
+                "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
+                "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
+                "evidencia_ref": "ciclo:omega_report:v11.1",
+                "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+                "contexto_ciclo": "PARCIAL"
+              }
+            ],
+            "tipos_peticion": [
+              "dame_cadena_completa",
+              "dame_normas",
+              "auto_auditoria"
+            ],
+            "evidencia_ref": "ciclo:omega_report:v11.1",
+            "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+            "errores": [],
+            "engine_version": "11.1",
+            "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
+          }
+        }
+      }
+    ],
+    "resultados_evaluacion_n": 1
   },
   "contratos": {
     "tipo": "auditoria_estructural_contratos",
@@ -2574,9 +2634,29 @@
     "origen": "ci_auditoria_contratos",
     "n": 0,
     "path": "evaluaciones.json",
-    "invocador_id": "ci_auditoria",
-    "nota": "Sin humo en auditoría. n puede ser 0 si no hubo ciclo real en este proceso; pytest aporta valuación en su propio camino."
+    "invocador_id": "ci_auditoria"
   },
+  "auditoria_vpsi": {
+    "estado": "PARCIAL",
+    "C": null,
+    "L": null,
+    "K": null,
+    "tru_ri": null,
+    "tru_total": null,
+    "alpha": null,
+    "beta": null,
+    "taxonomia": null,
+    "citas": [
+      "[citacion] CIT-CICLO"
+    ],
+    "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+    "permite_k": true,
+    "origen": "omega_report:PETICION_AUDITORIA_VPSI",
+    "secuencia": 1,
+    "n_citas": 1,
+    "n_anuncios": 1
+  },
+  "ultimo_test": {},
   "informe_mecanica": {
     "contenedor": "correlacion_mecanica",
     "estado": "APROBADO",
@@ -3298,26 +3378,6 @@
     ],
     "archivos_extra": [],
     "nota": "archivos_extra son candidatos a nuevos factores; añadir convención o API antes de usarlos en calcular()"
-  },
-  "informe_citacion": {
-    "coherente": true,
-    "choques": [],
-    "errores": [],
-    "funciones": [
-      "anunciar",
-      "anunciar_todo",
-      "citar",
-      "registrar",
-      "resolver_enunciado",
-      "inventario",
-      "barrer",
-      "verificar",
-      "limpiar_ciclo",
-      "evaluar"
-    ],
-    "registro_n": 0,
-    "version": "1.1.0",
-    "nota": "centinela CIT; sin juicio de verdad; anunciar acepta paquete de ciclo"
   },
   "tests": {
     "total": 134,

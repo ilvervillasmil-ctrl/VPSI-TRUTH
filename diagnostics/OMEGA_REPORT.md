@@ -1,28 +1,71 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.7.1)
-Generado: 2026-08-03 03:59:13 UTC    Commit: 0e418e2d21bc
-Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · C/L/K solo si el ciclo los trajo
+VPSI-TRUTH (Versión 9.8)
+Generado: 2026-08-03 04:16:18 UTC    Commit: 97eb385c9a94
+Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
+Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
+
+══════════════════════════════════════════════════════════════════════════════
+  AUDITORÍA DEL VPSI  ·  el repositorio como objeto
+  Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores del ciclo
+══════════════════════════════════════════════════════════════════════════════
+  Estado     : ⚠️ PARCIAL
+  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
+  permite_k  : True
+
+  📐  CÁLCULO  (fórmula canónica VPSI)
+  ┌─────────────────────────────────────────────────────────┐
+  │  C          =  —                                       │
+  │  L          =  —                                       │
+  │  K          =  —                                       │
+  │─────────────────────────────────────────────────────────│
+  │  Tru_Ri     =  C · L · K                              │
+  │             =  —                                       │
+  │─────────────────────────────────────────────────────────│
+  │  Tru_total  =  (Tru_Ri · α) + β                       │
+  │             =  —                                       │
+  └─────────────────────────────────────────────────────────┘
+
+  Taxonomía  : none
+  📎 Citas (teoremas / axiomas / normas):
+       1. [citacion] CIT-CICLO
+  CIT resumen: n_citas=1  n_anuncios=1
+  Origen     : omega_report:PETICION_AUDITORIA_VPSI
+  Secuencia  : 1
+══════════════════════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════════════════════
+  ÚLTIMO TEST EVALUADO
+  Último ciclo real depositado (tests / uso) · mismos campos
+══════════════════════════════════════════════════════════════════════════════
+  Estado     : ⚠️ —
+  Razón      : sin evaluaciones.json o lista vacía
+
+  📐  CÁLCULO  (fórmula canónica VPSI)
+  ┌─────────────────────────────────────────────────────────┐
+  │  C          =  —                                       │
+  │  L          =  —                                       │
+  │  K          =  —                                       │
+  │─────────────────────────────────────────────────────────│
+  │  Tru_Ri     =  C · L · K                              │
+  │             =  —                                       │
+  │─────────────────────────────────────────────────────────│
+  │  Tru_total  =  (Tru_Ri · α) + β                       │
+  │             =  —                                       │
+  └─────────────────────────────────────────────────────────┘
+
+  Taxonomía  : none
+  📎 Citas      : — (sin ids/anuncios en el ciclo)
+══════════════════════════════════════════════════════════════════════════════
 
 ESTADO GLOBAL
-  ✅ Engine          : OPERATIVO
-  ✅ Axiomas         : coherente
-  📦 Contenedores    : 14
-  ✅ Roles vacíos    : 0
-  ✅ Rechazados      : 0
-  ⚠️ Acciones abiertas: 1
-  ✅ Salud           : OPERATIVO — listo para avanzar
-
-================================================================================
-📐  VALUACIÓN (C · L · K → Tru) — solo evidencia depositada
-================================================================================
-  origen evidencia : ci_auditoria_contratos   n_ciclos=0
-  Omega no calcula. Si C/L/K/Tru aparecen, salieron del ciclo (CA/FO).
-  ⚪ Citación: ningún ciclo trajo bloque citacion
-
-  ⚪ Sin ciclos en evaluaciones.json — nada que cuantificar aquí.
-  pytest mide forma; la valuación de contenido aparece cuando un ciclo real deposita resultado.
+  ✅ Engine       : OPERATIVO
+  ✅ Axiomas      : coherente
+  📦 Contenedores : 14
+  ✅ Roles vacíos : 0
+  ✅ Rechazados   : 0
+  ✅ Salud        : OPERATIVO — listo para avanzar
 
 📦  MÓDULOS Y ROLES
   +------+-----------+-----+--------------------------------------+
@@ -45,13 +88,13 @@ ESTADO GLOBAL
   +------+-----------+-----+--------------------------------------+
 
 ================================================================================
-⚠️  MAPA DE INTERVENCIÓN (por prioridad)
+⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ⚪ 1. [DATOS] resultados_evaluacion
-     Detalle   : Sin ciclos en evaluaciones.json (normal si CI va sin humo y los tests no depositaron en ese artefacto)
-     Impacto   : Omega no puede mostrar C/L/K/Tru de ciclos
-     Acción    : Que los tests reales escriban evidencia o que un proceso legítimo deposite evaluaciones.json tras evaluar()
+  ⚪ 1. [DATOS] auditoria_vpsi
+     Detalle   : Sin valuación de auto-auditoría del repo en el paquete
+     Impacto   : La caja 1 no puede mostrar C/L/K/Tru
+     Acción    : Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -67,20 +110,19 @@ ESTADO GLOBAL
       por_tipo      = {'axioma': 159, 'lema': 39, 'teorema': 115, 'corolario': 91, 'definicion': 14}
 
   ✅ Fórmulas (FO)
-      coherente = True   faltas = []
+      coherente = True
 
   ✅ Mecánica (MC)
       coherente = True
 
   ✅ Calculator (CA)
-      coherente = True  detalle = ['C', 'K', 'L']
+      coherente = True
 
   ✅ Contratos (CI)
       coherente=True  validos=14  caps_ok=65  caps_fallo=0
 
   ✅ Tests (pytest — forma)
       total=134  pasados=133  fallidos=0  tasa=99.25%
-      nota: pytest no es Tru; cuantificación de contenido = tabla de ciclos
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
@@ -91,17 +133,11 @@ ESTADO GLOBAL
   pares novedosos    : 4972
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
   dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
-  roles vacíos       : []
   U1                 : NO_STAGNANT
-  por_tipo_theta     : {'axioma': 159, 'teorema': 115}
-  --- capa canónica (paper TR1) ---
-  |Θ|_can           : 24 / 24
-  novedosos_can     : 102  (paper: 153)
-  |Im| ? |Θ| can    : GENERATIVO
-  ids_faltantes     : []
-  ids_sin_dominio   : []
-  dominios_can      : ['EPI', 'INF', 'LOG', 'MET', 'ONT', 'SEM', 'TMP']
-  nota               : Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).
+  --- capa canónica ---
+  |Θ|_can            : 24 / 24
+  novedosos_can      : 102
+  |Im| ? |Θ| can     : GENERATIVO
 
 ================================================================================
 📦  INVENTARIO RÁPIDO
@@ -127,21 +163,15 @@ Rechazado:
   ✅ (ninguno)
 
 ================================================================================
-ℹ️  INVENTARIO ENGINE (solo lectura)
-================================================================================
-  estado=OPERATIVO  n_eval_proceso_omega=0  (valuación mostrada = artefacto CI/tests, no este proceso)
-
-================================================================================
 ✅  CIERRE
 ================================================================================
-  Versión Omega      : 9.7.1
+  Versión Omega      : 9.8
   Salud              : ✅ OPERATIVO — listo para avanzar
   Acciones abiertas  : 1
   Bloqueantes        : 0
-  Ciclos valuados    : 0
-  Este reporte no recalculó C, L, K ni Tru.
-  Este reporte no ejecutó humo ni evaluar().
-  Los números salen del sistema (CA/FO) vía evidencia depositada.
+  Caja 1             : Auditoría del VPSI (sistema)
+  Caja 2             : Último test evaluado
+  Omega no inventa C/L/K/Tru; los lanza el ciclo del sistema.
 ================================================================================
 
 JSON: /home/runner/work/VPSI-TRUTH/VPSI-TRUTH/diagnostics/omega_report_data.json
