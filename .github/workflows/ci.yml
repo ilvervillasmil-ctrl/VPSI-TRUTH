@@ -268,6 +268,7 @@ jobs:
 
       # ==========================================================
       # PRUEBAS (única fuente de ciclos de valuación en CI)
+      # Los tests depositan evidencia con diagnostics.evidencia
       # ==========================================================
       - name: Run tests
         run: |
@@ -279,6 +280,7 @@ jobs:
 
       # ==========================================================
       # AUDITORÍA ESTRUCTURAL DE CONTRATOS (sin humo de ejecución)
+      # Fusión de evidencia: no pisa lo que depositaron los tests
       # ==========================================================
       - name: Auditoría estructural de contratos
         run: |
@@ -313,7 +315,7 @@ jobs:
 
           informe = {
               "tipo": "auditoria_estructural_contratos",
-              "version": "1.2",
+              "version": "1.3",
               "coherente": True,
               "errores": [],
               "avisos": [],
@@ -333,7 +335,8 @@ jobs:
               "nota": (
                   "Sin humo: no se invocan capacidades. "
                   "Solo arranque, callable y cobertura de claves. "
-                  "Valuación C/L/K/Tru = tests reales / uso real."
+                  "Valuación C/L/K/Tru = tests reales / uso real. "
+                  "evaluaciones.json se fusiona por origen (no se pisa)."
               ),
           }
 
@@ -540,36 +543,64 @@ jobs:
 
               informe["roles"][rol] = entry
 
-          # Evidencia de evaluación: solo lo que este Engine acumule.
-          # Sin evaluar() inventado aquí. Los tests son la valuación real.
+          # ----- Evidencia de evaluación (FUSIÓN, no pisa) -----
+          # Este paso corre DESPUÉS de "Run tests". write_text pisaba
+          # lo que los tests depositaron. depositar() conserva otros orígenes.
           evals = []
           if hasattr(eng, "get_resultados_evaluacion"):
               evals = list(eng.get_resultados_evaluacion() or [])
           elif hasattr(eng, "resultados_evaluacion"):
               evals = list(eng.resultados_evaluacion or [])
 
-          evaluaciones_doc = {
-              "tipo": "evidencia_evaluacion",
-              "version": "1.1",
-              "origen": "ci_auditoria_contratos",
-              "invocador_id": getattr(eng, "invocador_id", "ci_auditoria"),
-              "estado_engine": getattr(eng, "estado", None),
-              "n": len(evals),
-              "resultados": evals,
-              "nota": (
-                  "Sin humo en auditoría. n puede ser 0 si no hubo ciclo real "
-                  "en este proceso; pytest aporta valuación en su propio camino."
-              ),
-          }
-          Path("diagnostics/evaluaciones.json").write_text(
-              json.dumps(evaluaciones_doc, indent=2, ensure_ascii=False, default=str),
-              encoding="utf-8",
-          )
-          informe["resultados_evaluacion_n"] = len(evals)
-          informe["evidencia_evaluacion"] = {
-              "path": "diagnostics/evaluaciones.json",
-              "n": len(evals),
-          }
+          try:
+              from diagnostics import evidencia as EV
+              doc = EV.depositar(
+                  evals,
+                  origen="ci_auditoria_contratos",
+                  invocador_id=getattr(eng, "invocador_id", "ci_auditoria"),
+                  estado_engine=getattr(eng, "estado", None),
+              )
+              informe["resultados_evaluacion_n"] = len(evals)
+              informe["evidencia_evaluacion"] = {
+                  "path": "diagnostics/evaluaciones.json",
+                  "n": doc.get("n", 0),
+                  "propios": len(evals),
+                  "origenes": doc.get("origenes") or [],
+                  "modo": "fusion",
+              }
+          except Exception as e:
+              # Fallback solo si el depositario no está: no tumbar la auditoría
+              # de contratos por un fallo de evidencia.
+              avisar(
+                  "integridad",
+                  "depositario de evidencia no disponible; write_text de respaldo",
+                  error=str(e),
+              )
+              evaluaciones_doc = {
+                  "tipo": "evidencia_evaluacion",
+                  "version": "1.1",
+                  "origen": "ci_auditoria_contratos",
+                  "invocador_id": getattr(eng, "invocador_id", "ci_auditoria"),
+                  "estado_engine": getattr(eng, "estado", None),
+                  "n": len(evals),
+                  "resultados": evals,
+                  "nota": (
+                      "Fallback write_text: diagnostics.evidencia no cargó. "
+                      "n puede ser 0 si no hubo ciclo real en este proceso."
+                  ),
+              }
+              Path("diagnostics/evaluaciones.json").write_text(
+                  json.dumps(
+                      evaluaciones_doc, indent=2, ensure_ascii=False, default=str
+                  ),
+                  encoding="utf-8",
+              )
+              informe["resultados_evaluacion_n"] = len(evals)
+              informe["evidencia_evaluacion"] = {
+                  "path": "diagnostics/evaluaciones.json",
+                  "n": len(evals),
+                  "modo": "fallback_write_text",
+              }
 
           total_caps = caps_verificadas + caps_fallidas
           pct = (
@@ -598,13 +629,13 @@ jobs:
           )
 
           print("=" * 60)
-          print("AUDITORÍA ESTRUCTURAL DE CONTRATOS v1.2 (sin humo)")
+          print("AUDITORÍA ESTRUCTURAL DE CONTRATOS v1.3 (sin humo + fusión)")
           print("=" * 60)
           print("coherente:", informe["coherente"])
-          print(
-              "evaluaciones.json n:",
-              informe.get("evidencia_evaluacion", {}).get("n", 0),
-          )
+          ev = informe.get("evidencia_evaluacion") or {}
+          print("evaluaciones.json n:", ev.get("n", 0))
+          print("  modo:", ev.get("modo", "?"))
+          print("  origenes:", ev.get("origenes", []))
           for k, v in informe["resumen"].items():
               print("  {0}: {1}".format(k, v))
           for e in informe["errores"]:
