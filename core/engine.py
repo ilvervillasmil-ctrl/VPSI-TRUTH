@@ -1,24 +1,24 @@
 """
 VPSI-TRUTH --- core/engine.py
-
-Engine central (orquestador por contrato).
+Versión 11 — orquestador por contrato.
 
 Principio
   - Conoce la arquitectura (módulos, roles, contratos, capacidades).
   - Actúa solo por lo que cada CONTENEDOR declara.
   - No inventa operaciones ni interpreta resultados.
   - No sustituye la lógica interna de un módulo.
+  - No re-enuncia teoremas (TR1/T15 viven en AX; aquí solo se invoca oficio).
   - CT: ancla ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
   - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
   - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
-  - MC: coherencia de orden en compuerta; el orden fino vive en MC, no aquí.
-  - Sin O usable → K indefinido (Def-5.3.1).
+  - MC: coherencia de orden en compuerta; el orden fino vive en MC.
+  - Sin O usable → K indefinido (Def-5.3.1). Nunca bool(UNDEFINED).
 
-Esquema del ciclo de evaluación (correlacionado con Λ_V, sin incrustar teorema):
-  Sustrato (arranque) → Marco (CX) → Factores (CA) → Fórmula (FO)
-  → Cierre auditable (CIT si pedir_anuncio) → Evidencia (_emit).
+Esquema del ciclo (correlacionado con Λ_V, sin incrustar teorema):
+  Sustrato → Marco (CX) → Factores (CA) → Fórmula (FO)
+  → Cierre (CIT si pedir_anuncio) → Evidencia.
 
-Estilo: plugin-host + service layer; fail-closed; oficios canónicos, no ifs por nombre de módulo.
+Estilo: plugin-host + service layer; fail-closed; oficios canónicos.
 """
 
 from __future__ import annotations
@@ -57,6 +57,30 @@ def es_undefined(v: Any) -> bool:
     return v is UNDEFINED or isinstance(v, _Undefined)
 
 
+def _o_ausente(o: Any) -> bool:
+    """True si no hay O usable. Nunca evalúa bool(UNDEFINED)."""
+    if o is None:
+        return True
+    if es_undefined(o):
+        return True
+    if isinstance(o, str) and not str(o).strip():
+        return True
+    return False
+
+
+def _truthy_pedido(v: Any) -> bool:
+    """Pedido de anuncio sin bool(UNDEFINED)."""
+    if v is None or es_undefined(v):
+        return False
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    if isinstance(v, str):
+        return v.strip().lower() in ("1", "true", "si", "sí", "yes", "on")
+    return bool(v)
+
+
 # ===============================================================
 # EXCEPCIONES
 # ===============================================================
@@ -86,7 +110,6 @@ ROLES: Tuple[str, ...] = (
 OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
 
 
-# Oficio canónico → claves que un INIT puede haber declarado
 ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "barrer": ("barrer", "verificar", "evaluar"),
     "verificar": ("verificar", "barrer", "evaluar"),
@@ -132,7 +155,6 @@ class Contenedor:
         self.capacidades: Dict[str, Any] = dict(raw) if isinstance(raw, dict) else {}
 
     def fn(self, nombre: str) -> Any:
-        """Clave exacta del contrato. Nunca inventa nombres."""
         ref = self.capacidades.get(nombre)
         if ref is None:
             return None
@@ -146,7 +168,6 @@ class Contenedor:
         return callable(self.fn(nombre))
 
     def fn_oficio(self, nombre: str) -> Any:
-        """Oficio canónico → primera callable según alias del INIT."""
         for clave in ALIAS_CAPACIDAD.get(nombre, (nombre,)):
             f = self.fn(clave)
             if callable(f):
@@ -216,12 +237,14 @@ class Registro:
 # ===============================================================
 class Engine:
     """
-    Orquestador.
+    Orquestador v11.
 
-    Fases de arranque (sustrato): descubrir → dependencias → compuertas.
-    Fases de evaluar (ciclo): marco CX → factores CA → fórmula FO
-                              → cierre CIT → evidencia.
+    Arranque: descubrir → dependencias → compuertas.
+    Ciclo: marco CX → factores CA → fórmula FO → cierre CIT → evidencia.
+    TR1/T15: solo vía oficio AX.generatividad (no embebidos aquí).
     """
+
+    VERSION = "11"
 
     def __init__(
         self,
@@ -260,7 +283,7 @@ class Engine:
             self.estado = "OPERATIVO"
 
     # -----------------------------------------------------------
-    # Sustrato: descubrimiento
+    # Sustrato
     # -----------------------------------------------------------
     def _descubrir(self) -> None:
         if not self.raiz.exists():
@@ -274,7 +297,6 @@ class Engine:
                 rel = path.relative_to(self.raiz)
             except ValueError:
                 continue
-            # Solo packages de primer nivel: modules/<nombre>/__init__.py
             if len(rel.parts) != 2:
                 continue
             try:
@@ -362,7 +384,7 @@ class Engine:
                 )
 
     # -----------------------------------------------------------
-    # Ejecución de capacidad (fail-closed)
+    # Ejecución fail-closed
     # -----------------------------------------------------------
     def _ejecutar_capacidad(
         self,
@@ -411,7 +433,6 @@ class Engine:
         try:
             return fn(*args, **kwargs)
         except TypeError:
-            # Algunos INIT aceptan 0 args (inventario/barrer); reintento seguro
             try:
                 return fn()
             except Exception as e:
@@ -514,7 +535,7 @@ class Engine:
             )
 
     # -----------------------------------------------------------
-    # API de oficio por rol
+    # API de oficio
     # -----------------------------------------------------------
     def ejecutar_capacidad(
         self, rol: str, capacidad: str, *args: Any, **kwargs: Any
@@ -543,8 +564,11 @@ class Engine:
         resultado: Dict[str, Any],
         peticion: Dict[str, Any],
     ) -> Dict[str, Any]:
+        cx = resultado.get("contexto_cx") or {}
         registro = {
             "secuencia": len(self.resultados_evaluacion) + 1,
+            "engine_version": self.VERSION,
+            "invocador_id": self.invocador_id,
             "entrada": {
                 "contexto": (
                     peticion.get("contexto")
@@ -554,10 +578,9 @@ class Engine:
                 "tiene_C": "C" in peticion and peticion.get("C") is not None,
                 "tiene_L": "L" in peticion and peticion.get("L") is not None,
                 "tiene_K": "K" in peticion and peticion.get("K") is not None,
-                "pedir_anuncio": bool(
+                "pedir_anuncio": _truthy_pedido(
                     peticion.get("pedir_anuncio")
-                    or (resultado.get("contexto_cx") or {}).get("pedir_anuncio")
-                ),
+                ) or _truthy_pedido(cx.get("pedir_anuncio")),
             },
             "resultado": dict(resultado),
         }
@@ -565,10 +588,16 @@ class Engine:
         return resultado
 
     # -----------------------------------------------------------
-    # Ciclo de evaluación
+    # Ciclo
     # -----------------------------------------------------------
+    def _peticion_con_meta(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        """Copia petición e inyecta meta de acto (no inventa O de contenido)."""
+        p = dict(peticion or {})
+        p.setdefault("invocador_id", self.invocador_id)
+        p.setdefault("engine_version", self.VERSION)
+        return p
+
     def _marco_cx(self, peticion: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Fase marco: CX clasifica O / permite_k / pedir_anuncio."""
         cont = self.registro.primero("CX")
         if cont is None:
             return None
@@ -584,22 +613,25 @@ class Engine:
         peticion: Dict[str, Any],
         cx: Optional[Dict[str, Any]],
     ) -> Any:
-        """O efectivo: petición explícita o marco CX (sin inventar)."""
-        o = (
-            peticion.get("contexto")
-            or peticion.get("O_context")
-            or peticion.get("Octx")
-        )
-        if o:
-            return o
+        """O de contenido: solo valores usables; nunca UNDEFINED como O."""
+        for key in ("contexto", "O_context", "Octx"):
+            o = peticion.get(key)
+            if not _o_ausente(o):
+                return o
+
         if not cx:
             return None
+
         o_cx = cx.get("O_context")
-        if o_cx is not None and not es_undefined(o_cx):
+        if not _o_ausente(o_cx):
             return o_cx
+
         reg = cx.get("registro") or {}
         if isinstance(reg, dict):
-            return reg.get("enunciado_O") or reg.get("O_id")
+            for key in ("enunciado_O", "O_id"):
+                v = reg.get(key)
+                if not _o_ausente(v):
+                    return v
         return None
 
     def _cierre_cit(
@@ -608,16 +640,16 @@ class Engine:
         cx: Optional[Dict[str, Any]],
         resultado_parcial: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
-        """Fase cierre auditable: solo si el marco pide anuncio y CIT tiene oficio."""
-        pedir = bool(peticion.get("pedir_anuncio"))
+        pedir = _truthy_pedido(peticion.get("pedir_anuncio"))
         tipos: List[str] = list(peticion.get("tipos_peticion") or [])
+
         if cx:
-            pedir = pedir or bool(cx.get("pedir_anuncio"))
+            pedir = pedir or _truthy_pedido(cx.get("pedir_anuncio"))
             if not tipos:
                 tipos = list(cx.get("tipos_peticion") or [])
             reg = cx.get("registro") or {}
             if isinstance(reg, dict):
-                pedir = pedir or bool(reg.get("pedir_anuncio"))
+                pedir = pedir or _truthy_pedido(reg.get("pedir_anuncio"))
                 if not tipos:
                     tipos = list(reg.get("tipos_peticion") or [])
 
@@ -643,6 +675,7 @@ class Engine:
             "resultado": resultado_parcial,
             "tipos_peticion": tipos,
             "invocador_id": self.invocador_id,
+            "engine_version": self.VERSION,
         }
         out = self._ejecutar_oficio(cont, "anunciar", paquete)
         if es_undefined(out):
@@ -661,17 +694,10 @@ class Engine:
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         """
         Orquesta un ciclo. No interpreta Tru. No inventa O ni factores.
-
-        Orden de fases (esquema, no teorema embebido):
-          1. Marco CX (si existe)
-          2. Guardas de O / permite_k
-          3. Factores CA + entrada explícita
-          4. Fórmula FO
-          5. Cierre CIT si pedir_anuncio
-          6. Evidencia
+        No embebe TR1.
         """
         self.fallos = []
-        peticion = dict(peticion or {})
+        peticion = self._peticion_con_meta(peticion)
 
         if self.estado != "OPERATIVO":
             return self._emit({
@@ -679,14 +705,15 @@ class Engine:
                 "razon": "Engine no operativo",
                 "errores_arranque": list(self.errores_arranque),
                 "fallos": list(self.fallos),
+                "engine_version": self.VERSION,
             }, peticion)
 
-        # --- 1. Marco CX ---
+        # 1. Marco CX
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        # --- 2. Sin O usable → UNDEFINED (Def-5.3.1); compatible con tests ---
-        if not o_ctx:
+        # 2. Sin O usable → UNDEFINED (Def-5.3.1)
+        if _o_ausente(o_ctx):
             body: Dict[str, Any] = {
                 "estado": "UNDEFINED",
                 "razon": "K indefinido: falta O_context (Corolario Def-5.3.1)",
@@ -694,6 +721,7 @@ class Engine:
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
                 "fallos": list(self.fallos),
+                "engine_version": self.VERSION,
             }
             if cx is not None:
                 body["contexto_cx"] = {
@@ -703,17 +731,12 @@ class Engine:
                     "modo_entrada": cx.get("modo_entrada"),
                     "coherente": cx.get("coherente"),
                 }
-            # CIT puede anunciar límite aunque no haya Tru
             cit = self._cierre_cit(peticion, cx, body)
             if cit is not None:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # Si CX niega permite_k de forma explícita y no hay factores en petición,
-        # aún permitimos el camino clásico cuando C,L,K vienen en la petición
-        # (tests de contrato / humo CI). CX informa; no censura entrada explícita.
-
-        # --- 3. Factores ---
+        # 3. Factores
         C = L = K = None
         ca = self.registro.primero("CA")
         if ca is not None and ca.tiene("calcular"):
@@ -736,6 +759,7 @@ class Engine:
                 "razon": "C, L o K inválidos: {0}".format(e),
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
+                "engine_version": self.VERSION,
             }
             if cx is not None:
                 body["contexto_cx"] = {
@@ -758,6 +782,7 @@ class Engine:
                     "K": str(K) if K is not None else None,
                 },
                 "fallos": list(self.fallos),
+                "engine_version": self.VERSION,
             }
             if cx is not None:
                 body["contexto_cx"] = {
@@ -770,7 +795,7 @@ class Engine:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # --- 4. Fórmula FO ---
+        # 4. Fórmula FO
         try:
             tru_ri_fn, tru_total_fn = self.get_formulas()
             constantes = self.get_constantes()
@@ -782,6 +807,7 @@ class Engine:
                 "razon": "cálculo Tru: {0}: {1}".format(type(e).__name__, e),
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
+                "engine_version": self.VERSION,
             }
             if cx is not None:
                 body["contexto_cx"] = {"permite_k": cx.get("permite_k")}
@@ -798,6 +824,7 @@ class Engine:
             "R_i_equals_R": False,
             "fuentes_usadas": ["X", "O_context"],
             "fallos": list(self.fallos),
+            "engine_version": self.VERSION,
         }
         if cx is not None:
             body["contexto_cx"] = {
@@ -809,17 +836,17 @@ class Engine:
                 "coherente": cx.get("coherente"),
             }
 
-        # --- 5. Cierre CIT ---
+        # 5. Cierre CIT
         cit = self._cierre_cit(peticion, cx, body)
         if cit is not None:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
 
-        # --- 6. Evidencia ---
+        # 6. Evidencia
         return self._emit(body, peticion)
 
     # -----------------------------------------------------------
-    # Introspección
+    # Introspección (lectura; generatividad solo vía AX)
     # -----------------------------------------------------------
     def censar(self) -> Dict[str, Any]:
         return self.registro.resumen()
@@ -835,6 +862,8 @@ class Engine:
                     contenido[cont.nombre] = out
         return {
             "estado": self.estado,
+            "engine_version": self.VERSION,
+            "invocador_id": self.invocador_id,
             "errores_arranque": list(self.errores_arranque),
             "registro": self.registro.resumen(),
             "contenido": contenido,
@@ -845,6 +874,10 @@ class Engine:
         }
 
     def censar_generatividad(self) -> Dict[str, Any]:
+        """
+        Solo orquesta: llama AX.generatividad si el contrato lo expone.
+        No calcula TR1 aquí; no inventa candidatos.
+        """
         out = self.ejecutar_capacidad("AX", "generatividad")
         try:
             resumen = self.censar()
@@ -858,15 +891,20 @@ class Engine:
             return {
                 "estado": "UNDEFINED",
                 "razon": "AX.generatividad no disponible o falló",
+                "engine_version": self.VERSION,
                 "roles_vacios": roles_vacios,
                 "rechazados": rechazados,
                 "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
-                "nota": "Sin medición TR1; residual de roles usado como proxy U1.",
+                "nota": (
+                    "Sin medición TR1 desde AX; residual de roles como proxy U1. "
+                    "TR1 vive en AX, no en Engine."
+                ),
             }
 
         resultado = dict(out)
         resultado["roles_vacios"] = roles_vacios
         resultado["rechazados_n"] = len(rechazados)
+        resultado["engine_version"] = self.VERSION
         if roles_vacios or resultado.get("pares_novedosos", 0) > 0:
             resultado["u1_estado"] = "NO_STAGNANT"
         else:
@@ -884,6 +922,7 @@ __all__ = [
     "ALIAS_CAPACIDAD",
     "UNDEFINED",
     "es_undefined",
+    "_o_ausente",
     "ArranqueError",
     "EvaluacionError",
     "DominioError",
