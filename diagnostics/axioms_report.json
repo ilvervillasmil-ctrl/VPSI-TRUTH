@@ -2,7 +2,7 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 394,
+  "declaraciones": 411,
   "cuerpos": [
     "VPSI_AX",
     "contexto_AX",
@@ -12,14 +12,15 @@
     "realidad_AX",
     "self",
     "sentido_estructural_AX",
-    "sm_af_AX"
+    "sm_af_AX",
+    "sm_mapa_AX"
   ],
   "por_tipo": {
-    "axioma": 141,
-    "lema": 41,
-    "teorema": 103,
-    "corolario": 95,
-    "definicion": 14
+    "axioma": 144,
+    "lema": 44,
+    "teorema": 107,
+    "corolario": 99,
+    "definicion": 17
   },
   "ids_dominio_k_o": [
     "A1",
@@ -207,6 +208,7 @@
     "SE-T3",
     "SE-T4",
     "SM-A1",
+    "SM-A12",
     "SM-A2",
     "SM-A3",
     "SM-A4",
@@ -214,6 +216,7 @@
     "SM-A8",
     "SM-C1",
     "SM-C10",
+    "SM-C12",
     "SM-C3",
     "SM-C7",
     "SM-D1",
@@ -223,6 +226,7 @@
     "SM-D6",
     "SM-L2",
     "SM-L4",
+    "SM-L9",
     "SM-T1",
     "SM-T2",
     "SM-T4",

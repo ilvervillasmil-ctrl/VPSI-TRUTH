@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-03 21:19:59 UTC    Commit: 06b33b88f3dd
+Generado: 2026-08-03 21:56:08 UTC    Commit: b590cb47d893
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
@@ -114,10 +114,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 394
+      declaraciones = 411
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 141, 'lema': 41, 'teorema': 103, 'corolario': 95, 'definicion': 14}
+      por_tipo      = {'axioma': 144, 'lema': 44, 'teorema': 107, 'corolario': 99, 'definicion': 17}
 
   ✅ Fórmulas (FO)
       coherente = True
@@ -137,12 +137,12 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 244
-  pares totales      : 29646
-  pares compatibles  : 9158
-  pares novedosos    : 5276
+  |Θ| (AX)           : 251
+  pares totales      : 31375
+  pares compatibles  : 9159
+  pares novedosos    : 5277
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
-  dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'correlacion', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
+  dominios           : ['K', 'Tru_Ri', 'admisibilidad_medida', 'ancla_error', 'auditoria', 'axiomas', 'cache', 'citacion', 'composicion', 'constantes', 'contexto', 'correlacion', 'criterio_error', 'engine', 'entendimiento_operativo', 'entrenamiento', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'invarianza_significado', 'logica', 'maquina_sin_R', 'meta', 'ontologia', 'prioridad_mapa', 'probabilidad_subordinada', 'realidad', 'seleccion_correlacion', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
   U1                 : NO_STAGNANT
   --- capa canónica ---
   |Θ|_can            : 24 / 24
