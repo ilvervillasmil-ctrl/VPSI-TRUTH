@@ -8,107 +8,227 @@
     "coherente": true,
     "choques": [],
     "errores": [],
-    "declaraciones": 397,
+    "declaraciones": 418,
     "cuerpos": [
       "VPSI",
       "contexto_AX",
       "correlacion",
+      "indefinido_AX",
       "peticion_anuncio_AX",
       "realidad_AX",
       "self",
       "sentido_estructural_AX"
     ],
     "por_tipo": {
-      "axioma": 154,
-      "lema": 35,
-      "teorema": 114,
-      "corolario": 85,
-      "definicion": 9
-    }
+      "axioma": 159,
+      "lema": 39,
+      "teorema": 115,
+      "corolario": 91,
+      "definicion": 14
+    },
+    "ids_dominio_k_o": [
+      "A1",
+      "A10",
+      "A11",
+      "A2",
+      "A3",
+      "A4",
+      "A5",
+      "A6",
+      "A7",
+      "A8",
+      "A9",
+      "B-Canonical",
+      "CX-A1",
+      "CX-A10",
+      "CX-A11",
+      "CX-A12",
+      "CX-A13",
+      "CX-A14",
+      "CX-A15",
+      "CX-A16",
+      "CX-A17",
+      "CX-A18",
+      "CX-A19",
+      "CX-A2",
+      "CX-A20",
+      "CX-A21",
+      "CX-A22",
+      "CX-A23",
+      "CX-A24",
+      "CX-A25",
+      "CX-A26",
+      "CX-A27",
+      "CX-A3",
+      "CX-A4",
+      "CX-A5",
+      "CX-A6",
+      "CX-A7",
+      "CX-A8",
+      "CX-A9",
+      "CX-C1",
+      "CX-C10",
+      "CX-C11",
+      "CX-C12",
+      "CX-C13",
+      "CX-C14",
+      "CX-C15",
+      "CX-C16",
+      "CX-C17",
+      "CX-C18",
+      "CX-C2",
+      "CX-C3",
+      "CX-C4",
+      "CX-C5",
+      "CX-C6",
+      "CX-C7",
+      "CX-C8",
+      "CX-C9",
+      "CX-D16",
+      "CX-D17",
+      "CX-D18",
+      "CX-D19",
+      "CX-D20",
+      "CX-D21",
+      "CX-L1",
+      "CX-L10",
+      "CX-L11",
+      "CX-L2",
+      "CX-L3",
+      "CX-L4",
+      "CX-L5",
+      "CX-L6",
+      "CX-L7",
+      "CX-L8",
+      "CX-L9",
+      "CX-T1",
+      "CX-T10",
+      "CX-T11",
+      "CX-T12",
+      "CX-T13",
+      "CX-T14",
+      "CX-T15",
+      "CX-T16",
+      "CX-T17",
+      "CX-T2",
+      "CX-T3",
+      "CX-T4",
+      "CX-T5",
+      "CX-T6",
+      "CX-T7",
+      "CX-T8",
+      "CX-T9",
+      "Def-5.3.1",
+      "E1",
+      "E2",
+      "E3",
+      "I",
+      "IND-A1",
+      "IND-A2",
+      "IND-A3",
+      "IND-A4",
+      "IND-A5",
+      "IND-C1",
+      "IND-C2",
+      "IND-C3",
+      "IND-C4",
+      "IND-C5",
+      "IND-C6",
+      "IND-D1",
+      "IND-D2",
+      "IND-D3",
+      "IND-D4",
+      "IND-D5",
+      "IND-L1",
+      "IND-L2",
+      "IND-L3",
+      "IND-L4",
+      "IND-T1",
+      "IV",
+      "M.1",
+      "PA-A2",
+      "PA-D1",
+      "PA-D3",
+      "PA-T1",
+      "PA-T3",
+      "RE-A0",
+      "RE-A1",
+      "RE-A10",
+      "RE-A2",
+      "RE-A3",
+      "RE-A4",
+      "RE-A5",
+      "RE-A6",
+      "RE-A7",
+      "RE-A8",
+      "RE-A9",
+      "RE-C1",
+      "RE-C3",
+      "RE-C6",
+      "RE-C8",
+      "RE-L1",
+      "RE-L2",
+      "RE-L4",
+      "RE-L5",
+      "RE-T1",
+      "RE-T10",
+      "RE-T11",
+      "RE-T12",
+      "RE-T13",
+      "RE-T2",
+      "RE-T3",
+      "RE-T4",
+      "RE-T5",
+      "RE-T7",
+      "RE-T8",
+      "RE-T9",
+      "SE-A0",
+      "SE-A1",
+      "SE-A3",
+      "SE-A5",
+      "SE-A6",
+      "SE-C2",
+      "SE-C3",
+      "SE-C4",
+      "SE-D1",
+      "SE-D4",
+      "SE-D5",
+      "SE-L2",
+      "SE-T1",
+      "SE-T3",
+      "SE-T4",
+      "T1",
+      "T10",
+      "T11",
+      "T13",
+      "T14",
+      "T15",
+      "T4",
+      "T5",
+      "T6",
+      "T7",
+      "TA3",
+      "TA4",
+      "TT.11.5",
+      "TT.13.1",
+      "TT.6.1",
+      "TT.7.4",
+      "VIII",
+      "X",
+      "beta-Godel",
+      "beta-Private-1",
+      "beta-Private-2",
+      "beta-Private-3",
+      "beta-Private-4"
+    ]
   },
   "errores_arranque": [],
-  "resultados_evaluacion": [
-    {
-      "secuencia": 1,
-      "entrada": {
-        "contexto": null,
-        "tiene_C": false,
-        "tiene_L": false,
-        "tiene_K": false
-      },
-      "resultado": {
-        "estado": "UNDEFINED",
-        "razon": "K indefinido: falta O_context (Corolario Def-5.3.1)",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": "UNDEFINED"
-        },
-        "tru_ri": "UNDEFINED",
-        "tru_total": "UNDEFINED",
-        "fallos": []
-      }
-    },
-    {
-      "secuencia": 2,
-      "entrada": {
-        "contexto": "ci_auditoria_humo",
-        "tiene_C": true,
-        "tiene_L": true,
-        "tiene_K": true
-      },
-      "resultado": {
-        "estado": "OK",
-        "contexto": "ci_auditoria_humo",
-        "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1"
-        },
-        "tru_ri": "1",
-        "tru_total": "1",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
-        "fallos": []
-      }
-    },
-    {
-      "secuencia": 3,
-      "entrada": {
-        "contexto": "ci_auditoria_humo",
-        "tiene_C": true,
-        "tiene_L": true,
-        "tiene_K": true
-      },
-      "resultado": {
-        "estado": "OK",
-        "contexto": "ci_auditoria_humo",
-        "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1"
-        },
-        "tru_ri": "1",
-        "tru_total": "1",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
-        "fallos": []
-      }
-    }
-  ],
+  "resultados_evaluacion": [],
   "fallos_engine": [],
   "inventario_engine": {
     "estado": "OPERATIVO",
+    "engine_version": "11.1",
+    "invocador_id": "omega_report",
     "errores_arranque": [],
     "registro": {
       "roles": {
@@ -161,12 +281,13 @@
         {
           "nombre": "axiomas",
           "rol": "AX",
-          "version": "9.4",
+          "version": "9.5",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/axiomas/__init__.py",
-          "descripcion": "Contenedor de axiomas. Rol AX. Define y vigila axiomas, lemas, teoremas y corolarios. No calcula Tru_total. Mide generatividad TR1 sobre su propio cuerpo.",
+          "descripcion": "Contenedor de axiomas. Rol AX. Define y vigila axiomas, lemas, teoremas y corolarios. No calcula Tru_total. No clasifica O de entrada (CX). Mide generatividad TR1 sobre su propio cuerpo. Expone ids de dominio K/O ya cargados en el grafo.",
           "capacidades": {
             "verificar": "barrer",
+            "barrer": "barrer",
             "inventario": "inventario",
             "axiomas": "axiomas",
             "generatividad": "generatividad"
@@ -204,20 +325,21 @@
         {
           "nombre": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/citacion/__init__.py",
-          "descripcion": "Citar y anunciar la cadena norma–evidencia–O de un ciclo de evaluación. No calcula. No juzga personas. No inventa factores. Expone id, enunciado, descripción y referencias que otros módulos ya emitieron bajo orquestación de Engine. Capacidad de anuncio total; la presentación puede filtrar.",
+          "descripcion": "Citar y anunciar la cadena norma–evidencia–O del ciclo. Autoridad total de anuncio sobre lo aportado en el paquete. No calcula Tru. No fija O. No juzga personas. Engine entrega el paquete; CIT documenta el porqué.",
           "capacidades": {
-            "citar": "citar",
-            "registrar": "registrar",
             "anunciar": "anunciar",
             "anunciar_todo": "anunciar_todo",
+            "citar": "citar",
+            "registrar": "registrar",
             "resolver_enunciado": "resolver_enunciado",
             "inventario": "inventario",
             "barrer": "barrer",
             "verificar": "verificar",
-            "limpiar_ciclo": "limpiar_ciclo"
+            "limpiar_ciclo": "limpiar_ciclo",
+            "evaluar": "anunciar"
           }
         },
         {
@@ -376,7 +498,7 @@
     "contenido": {
       "axiomas": {
         "contenedor": "axiomas",
-        "version": "9.4",
+        "version": "9.5",
         "tipos": [
           "axioma",
           "lema",
@@ -384,18 +506,19 @@
           "corolario",
           "definicion"
         ],
-        "declaraciones": 397,
+        "declaraciones": 418,
         "por_tipo": {
-          "axioma": 154,
-          "lema": 35,
-          "teorema": 114,
-          "corolario": 85,
-          "definicion": 9
+          "axioma": 159,
+          "lema": 39,
+          "teorema": 115,
+          "corolario": 91,
+          "definicion": 14
         },
         "cuerpos": [
           "VPSI",
           "contexto_AX",
           "correlacion",
+          "indefinido_AX",
           "peticion_anuncio_AX",
           "realidad_AX",
           "self",
@@ -405,7 +528,203 @@
         "vigila": [
           "contradiccion_directa",
           "contradiccion_de_cota"
-        ]
+        ],
+        "ids_dominio_k_o": [
+          "A1",
+          "A10",
+          "A11",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9",
+          "B-Canonical",
+          "CX-A1",
+          "CX-A10",
+          "CX-A11",
+          "CX-A12",
+          "CX-A13",
+          "CX-A14",
+          "CX-A15",
+          "CX-A16",
+          "CX-A17",
+          "CX-A18",
+          "CX-A19",
+          "CX-A2",
+          "CX-A20",
+          "CX-A21",
+          "CX-A22",
+          "CX-A23",
+          "CX-A24",
+          "CX-A25",
+          "CX-A26",
+          "CX-A27",
+          "CX-A3",
+          "CX-A4",
+          "CX-A5",
+          "CX-A6",
+          "CX-A7",
+          "CX-A8",
+          "CX-A9",
+          "CX-C1",
+          "CX-C10",
+          "CX-C11",
+          "CX-C12",
+          "CX-C13",
+          "CX-C14",
+          "CX-C15",
+          "CX-C16",
+          "CX-C17",
+          "CX-C18",
+          "CX-C2",
+          "CX-C3",
+          "CX-C4",
+          "CX-C5",
+          "CX-C6",
+          "CX-C7",
+          "CX-C8",
+          "CX-C9",
+          "CX-D16",
+          "CX-D17",
+          "CX-D18",
+          "CX-D19",
+          "CX-D20",
+          "CX-D21",
+          "CX-L1",
+          "CX-L10",
+          "CX-L11",
+          "CX-L2",
+          "CX-L3",
+          "CX-L4",
+          "CX-L5",
+          "CX-L6",
+          "CX-L7",
+          "CX-L8",
+          "CX-L9",
+          "CX-T1",
+          "CX-T10",
+          "CX-T11",
+          "CX-T12",
+          "CX-T13",
+          "CX-T14",
+          "CX-T15",
+          "CX-T16",
+          "CX-T17",
+          "CX-T2",
+          "CX-T3",
+          "CX-T4",
+          "CX-T5",
+          "CX-T6",
+          "CX-T7",
+          "CX-T8",
+          "CX-T9",
+          "Def-5.3.1",
+          "E1",
+          "E2",
+          "E3",
+          "I",
+          "IND-A1",
+          "IND-A2",
+          "IND-A3",
+          "IND-A4",
+          "IND-A5",
+          "IND-C1",
+          "IND-C2",
+          "IND-C3",
+          "IND-C4",
+          "IND-C5",
+          "IND-C6",
+          "IND-D1",
+          "IND-D2",
+          "IND-D3",
+          "IND-D4",
+          "IND-D5",
+          "IND-L1",
+          "IND-L2",
+          "IND-L3",
+          "IND-L4",
+          "IND-T1",
+          "IV",
+          "M.1",
+          "PA-A2",
+          "PA-D1",
+          "PA-D3",
+          "PA-T1",
+          "PA-T3",
+          "RE-A0",
+          "RE-A1",
+          "RE-A10",
+          "RE-A2",
+          "RE-A3",
+          "RE-A4",
+          "RE-A5",
+          "RE-A6",
+          "RE-A7",
+          "RE-A8",
+          "RE-A9",
+          "RE-C1",
+          "RE-C3",
+          "RE-C6",
+          "RE-C8",
+          "RE-L1",
+          "RE-L2",
+          "RE-L4",
+          "RE-L5",
+          "RE-T1",
+          "RE-T10",
+          "RE-T11",
+          "RE-T12",
+          "RE-T13",
+          "RE-T2",
+          "RE-T3",
+          "RE-T4",
+          "RE-T5",
+          "RE-T7",
+          "RE-T8",
+          "RE-T9",
+          "SE-A0",
+          "SE-A1",
+          "SE-A3",
+          "SE-A5",
+          "SE-A6",
+          "SE-C2",
+          "SE-C3",
+          "SE-C4",
+          "SE-D1",
+          "SE-D4",
+          "SE-D5",
+          "SE-L2",
+          "SE-T1",
+          "SE-T3",
+          "SE-T4",
+          "T1",
+          "T10",
+          "T11",
+          "T13",
+          "T14",
+          "T15",
+          "T4",
+          "T5",
+          "T6",
+          "T7",
+          "TA3",
+          "TA4",
+          "TT.11.5",
+          "TT.13.1",
+          "TT.6.1",
+          "TT.7.4",
+          "VIII",
+          "X",
+          "beta-Godel",
+          "beta-Private-1",
+          "beta-Private-2",
+          "beta-Private-3",
+          "beta-Private-4"
+        ],
+        "nota": "Def-5.3.1 y dominio O viven en los cuerpos cargados; este módulo los vigila y expone, no los clasifica en entrada."
       },
       "cache": {
         "contenedor": "cache",
@@ -439,7 +758,7 @@
       "citacion": {
         "contenedor": "citacion",
         "rol": "CIT",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "tipos_cita": [
           "ax",
           "mc",
@@ -469,15 +788,16 @@
           "meta"
         ],
         "capacidades": [
-          "citar",
-          "registrar",
           "anunciar",
           "anunciar_todo",
+          "citar",
+          "registrar",
           "resolver_enunciado",
           "inventario",
           "barrer",
           "verificar",
-          "limpiar_ciclo"
+          "limpiar_ciclo",
+          "evaluar"
         ],
         "registro_n": 0,
         "no_hace": [
@@ -491,8 +811,10 @@
           "orquestar_modulos",
           "aprobar_material_realidad"
         ],
+        "agencia": "Total para citar lo presente en el paquete del ciclo. Nula sobre valores numéricos de C/L/K/Tru.",
+        "autoridad": "Única autoridad: forma y exposición de la cadena. Si no hay base, anuncia límite de precisión; no rellena factores.",
         "anuncio_capacidad": "total",
-        "autoridad": "Única autoridad: citar y anunciar según lo que cada módulo/instrumento aportó en el ciclo orquestado por Engine. Cero autoridad sobre el valor numérico del cálculo. Si no hay base suficiente, anuncia límite de precisión; no rellena."
+        "oficio_ciclo": "anunciar(paquete) con resultado+contexto_cx → cadena completa"
       },
       "constante": {
         "ALPHA": "26/27",
@@ -505,13 +827,14 @@
         "version": "1.3",
         "rol": "CX",
         "reglas_internas": [
+          "auto_auditoria",
           "declaracion_O",
           "entrada_natural",
           "peticion_anuncio",
           "secuencia_conversacion"
         ],
-        "total_reglas": 4,
-        "reglas_con_alerta_centinela": 2,
+        "total_reglas": 5,
+        "reglas_con_alerta_centinela": 3,
         "modos_entrada": [
           "conversacion",
           "afirmacion",
@@ -959,23 +1282,219 @@
       "coherente": true,
       "choques": [],
       "errores": [],
-      "declaraciones": 397,
+      "declaraciones": 418,
       "cuerpos": [
         "VPSI",
         "contexto_AX",
         "correlacion",
+        "indefinido_AX",
         "peticion_anuncio_AX",
         "realidad_AX",
         "self",
         "sentido_estructural_AX"
       ],
       "por_tipo": {
-        "axioma": 154,
-        "lema": 35,
-        "teorema": 114,
-        "corolario": 85,
-        "definicion": 9
-      }
+        "axioma": 159,
+        "lema": 39,
+        "teorema": 115,
+        "corolario": 91,
+        "definicion": 14
+      },
+      "ids_dominio_k_o": [
+        "A1",
+        "A10",
+        "A11",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "A7",
+        "A8",
+        "A9",
+        "B-Canonical",
+        "CX-A1",
+        "CX-A10",
+        "CX-A11",
+        "CX-A12",
+        "CX-A13",
+        "CX-A14",
+        "CX-A15",
+        "CX-A16",
+        "CX-A17",
+        "CX-A18",
+        "CX-A19",
+        "CX-A2",
+        "CX-A20",
+        "CX-A21",
+        "CX-A22",
+        "CX-A23",
+        "CX-A24",
+        "CX-A25",
+        "CX-A26",
+        "CX-A27",
+        "CX-A3",
+        "CX-A4",
+        "CX-A5",
+        "CX-A6",
+        "CX-A7",
+        "CX-A8",
+        "CX-A9",
+        "CX-C1",
+        "CX-C10",
+        "CX-C11",
+        "CX-C12",
+        "CX-C13",
+        "CX-C14",
+        "CX-C15",
+        "CX-C16",
+        "CX-C17",
+        "CX-C18",
+        "CX-C2",
+        "CX-C3",
+        "CX-C4",
+        "CX-C5",
+        "CX-C6",
+        "CX-C7",
+        "CX-C8",
+        "CX-C9",
+        "CX-D16",
+        "CX-D17",
+        "CX-D18",
+        "CX-D19",
+        "CX-D20",
+        "CX-D21",
+        "CX-L1",
+        "CX-L10",
+        "CX-L11",
+        "CX-L2",
+        "CX-L3",
+        "CX-L4",
+        "CX-L5",
+        "CX-L6",
+        "CX-L7",
+        "CX-L8",
+        "CX-L9",
+        "CX-T1",
+        "CX-T10",
+        "CX-T11",
+        "CX-T12",
+        "CX-T13",
+        "CX-T14",
+        "CX-T15",
+        "CX-T16",
+        "CX-T17",
+        "CX-T2",
+        "CX-T3",
+        "CX-T4",
+        "CX-T5",
+        "CX-T6",
+        "CX-T7",
+        "CX-T8",
+        "CX-T9",
+        "Def-5.3.1",
+        "E1",
+        "E2",
+        "E3",
+        "I",
+        "IND-A1",
+        "IND-A2",
+        "IND-A3",
+        "IND-A4",
+        "IND-A5",
+        "IND-C1",
+        "IND-C2",
+        "IND-C3",
+        "IND-C4",
+        "IND-C5",
+        "IND-C6",
+        "IND-D1",
+        "IND-D2",
+        "IND-D3",
+        "IND-D4",
+        "IND-D5",
+        "IND-L1",
+        "IND-L2",
+        "IND-L3",
+        "IND-L4",
+        "IND-T1",
+        "IV",
+        "M.1",
+        "PA-A2",
+        "PA-D1",
+        "PA-D3",
+        "PA-T1",
+        "PA-T3",
+        "RE-A0",
+        "RE-A1",
+        "RE-A10",
+        "RE-A2",
+        "RE-A3",
+        "RE-A4",
+        "RE-A5",
+        "RE-A6",
+        "RE-A7",
+        "RE-A8",
+        "RE-A9",
+        "RE-C1",
+        "RE-C3",
+        "RE-C6",
+        "RE-C8",
+        "RE-L1",
+        "RE-L2",
+        "RE-L4",
+        "RE-L5",
+        "RE-T1",
+        "RE-T10",
+        "RE-T11",
+        "RE-T12",
+        "RE-T13",
+        "RE-T2",
+        "RE-T3",
+        "RE-T4",
+        "RE-T5",
+        "RE-T7",
+        "RE-T8",
+        "RE-T9",
+        "SE-A0",
+        "SE-A1",
+        "SE-A3",
+        "SE-A5",
+        "SE-A6",
+        "SE-C2",
+        "SE-C3",
+        "SE-C4",
+        "SE-D1",
+        "SE-D4",
+        "SE-D5",
+        "SE-L2",
+        "SE-T1",
+        "SE-T3",
+        "SE-T4",
+        "T1",
+        "T10",
+        "T11",
+        "T13",
+        "T14",
+        "T15",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "TA3",
+        "TA4",
+        "TT.11.5",
+        "TT.13.1",
+        "TT.6.1",
+        "TT.7.4",
+        "VIII",
+        "X",
+        "beta-Godel",
+        "beta-Private-1",
+        "beta-Private-2",
+        "beta-Private-3",
+        "beta-Private-4"
+      ]
     },
     "informe_mecanica": {
       "contenedor": "correlacion_mecanica",
@@ -1123,7 +1642,7 @@
   },
   "contratos": {
     "tipo": "auditoria_estructural_contratos",
-    "version": "1.1",
+    "version": "1.2",
     "coherente": true,
     "errores": [],
     "avisos": [],
@@ -1132,10 +1651,8 @@
       "invariantes": [],
       "registro": [],
       "resolucion": [],
-      "ejecucion": [],
       "cobertura": [],
       "determinismo": [],
-      "idempotencia": [],
       "integridad": []
     },
     "roles": {
@@ -1181,13 +1698,6 @@
             "fn_name": "inventario"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "constante"
-          }
-        ],
         "nombre": "constante",
         "version": "1.0"
       },
@@ -1200,6 +1710,7 @@
         "n_modulos": 1,
         "claves_contrato": [
           "verificar",
+          "barrer",
           "inventario",
           "axiomas",
           "generatividad"
@@ -1216,7 +1727,16 @@
             "callable": true,
             "modulo": "axiomas",
             "rol": "AX",
-            "version": "9.4",
+            "version": "9.5",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "barrer",
+            "callable": true,
+            "modulo": "axiomas",
+            "rol": "AX",
+            "version": "9.5",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -1225,7 +1745,7 @@
             "callable": true,
             "modulo": "axiomas",
             "rol": "AX",
-            "version": "9.4",
+            "version": "9.5",
             "ok": true,
             "fn_name": "inventario"
           },
@@ -1234,7 +1754,7 @@
             "callable": true,
             "modulo": "axiomas",
             "rol": "AX",
-            "version": "9.4",
+            "version": "9.5",
             "ok": true,
             "fn_name": "axiomas"
           },
@@ -1243,35 +1763,13 @@
             "callable": true,
             "modulo": "axiomas",
             "rol": "AX",
-            "version": "9.4",
+            "version": "9.5",
             "ok": true,
             "fn_name": "generatividad"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "axiomas"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "axiomas"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "axiomas"
-          },
-          {
-            "clave": "generatividad",
-            "ok": true,
-            "modulo": "axiomas"
-          }
-        ],
         "nombre": "axiomas",
-        "version": "9.4"
+        "version": "9.5"
       },
       "FO": {
         "modulos": [
@@ -1323,28 +1821,6 @@
             "version": "1.0",
             "ok": true,
             "fn_name": "inventario"
-          }
-        ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "formulas"
-          },
-          {
-            "clave": "evaluar",
-            "ok": true,
-            "modulo": "formulas"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "formulas"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "formulas"
           }
         ],
         "nombre": "formulas",
@@ -1407,28 +1883,6 @@
             "fn_name": "inventario"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "correlacion_mecanica"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "correlacion_mecanica"
-          },
-          {
-            "clave": "evaluar",
-            "ok": true,
-            "modulo": "correlacion_mecanica"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "correlacion_mecanica"
-          }
-        ],
         "nombre": "correlacion_mecanica",
         "version": "1.0"
       },
@@ -1482,18 +1936,6 @@
             "version": "0.1-fase",
             "ok": true,
             "fn_name": "oscilar"
-          }
-        ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "self"
-          },
-          {
-            "clave": "barrer",
-            "ok": true,
-            "modulo": "self"
           }
         ],
         "nombre": "self",
@@ -1571,23 +2013,6 @@
             "fn_name": "inventario"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "diagnostico"
-          },
-          {
-            "clave": "barrer",
-            "ok": true,
-            "modulo": "diagnostico"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "diagnostico"
-          }
-        ],
         "nombre": "diagnostico",
         "version": "1.0"
       },
@@ -1603,7 +2028,9 @@
           "verificar",
           "inventario"
         ],
-        "esperado": [],
+        "esperado": [
+          "calcular"
+        ],
         "resolucion": [
           {
             "clave": "calcular",
@@ -1631,18 +2058,6 @@
             "version": "1.1",
             "ok": true,
             "fn_name": "inventario"
-          }
-        ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "calculator"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "calculator"
           }
         ],
         "nombre": "calculator",
@@ -1705,28 +2120,6 @@
             "fn_name": "axiomas"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "contexto"
-          },
-          {
-            "clave": "evaluar",
-            "ok": true,
-            "modulo": "contexto"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "contexto"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "contexto"
-          }
-        ],
         "nombre": "contexto",
         "version": "1.3"
       },
@@ -1772,18 +2165,6 @@
             "fn_name": "registrar_resultado_dominio"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "realidad"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "realidad"
-          }
-        ],
         "nombre": "realidad",
         "version": "1.1"
       },
@@ -1817,18 +2198,6 @@
             "version": "1.0.0",
             "ok": true,
             "fn_name": "axiomas"
-          }
-        ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "verificacion"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "verificacion"
           }
         ],
         "nombre": "verificacion",
@@ -1884,23 +2253,6 @@
             "version": "1.0",
             "ok": true,
             "fn_name": "axiomas"
-          }
-        ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "taxonomia"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "taxonomia"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "taxonomia"
           }
         ],
         "nombre": "taxonomia",
@@ -1978,23 +2330,6 @@
             "fn_name": "inventario"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "cache"
-          },
-          {
-            "clave": "barrer",
-            "ok": true,
-            "modulo": "cache"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "cache"
-          }
-        ],
         "nombre": "cache",
         "version": "0.1-fase"
       },
@@ -2006,42 +2341,29 @@
         "presente": true,
         "n_modulos": 1,
         "claves_contrato": [
-          "citar",
-          "registrar",
           "anunciar",
           "anunciar_todo",
+          "citar",
+          "registrar",
           "resolver_enunciado",
           "inventario",
           "barrer",
           "verificar",
-          "limpiar_ciclo"
+          "limpiar_ciclo",
+          "evaluar"
         ],
-        "esperado": [],
+        "esperado": [
+          "anunciar",
+          "inventario",
+          "verificar"
+        ],
         "resolucion": [
-          {
-            "clave": "citar",
-            "callable": true,
-            "modulo": "citacion",
-            "rol": "CIT",
-            "version": "1.0.0",
-            "ok": true,
-            "fn_name": "citar"
-          },
-          {
-            "clave": "registrar",
-            "callable": true,
-            "modulo": "citacion",
-            "rol": "CIT",
-            "version": "1.0.0",
-            "ok": true,
-            "fn_name": "registrar"
-          },
           {
             "clave": "anunciar",
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "anunciar"
           },
@@ -2050,16 +2372,34 @@
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "anunciar_todo"
+          },
+          {
+            "clave": "citar",
+            "callable": true,
+            "modulo": "citacion",
+            "rol": "CIT",
+            "version": "1.1.0",
+            "ok": true,
+            "fn_name": "citar"
+          },
+          {
+            "clave": "registrar",
+            "callable": true,
+            "modulo": "citacion",
+            "rol": "CIT",
+            "version": "1.1.0",
+            "ok": true,
+            "fn_name": "registrar"
           },
           {
             "clave": "resolver_enunciado",
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "resolver_enunciado"
           },
@@ -2068,7 +2408,7 @@
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "inventario"
           },
@@ -2077,7 +2417,7 @@
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -2086,7 +2426,7 @@
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "verificar"
           },
@@ -2095,30 +2435,22 @@
             "callable": true,
             "modulo": "citacion",
             "rol": "CIT",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "ok": true,
             "fn_name": "limpiar_ciclo"
-          }
-        ],
-        "ejecucion": [
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "citacion"
           },
           {
-            "clave": "barrer",
+            "clave": "evaluar",
+            "callable": true,
+            "modulo": "citacion",
+            "rol": "CIT",
+            "version": "1.1.0",
             "ok": true,
-            "modulo": "citacion"
-          },
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "citacion"
+            "fn_name": "anunciar"
           }
         ],
         "nombre": "citacion",
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
       "UI": {
         "modulos": [
@@ -2207,33 +2539,6 @@
             "fn_name": "axiomas"
           }
         ],
-        "ejecucion": [
-          {
-            "clave": "verificar",
-            "ok": true,
-            "modulo": "interfaz"
-          },
-          {
-            "clave": "barrer",
-            "ok": true,
-            "modulo": "interfaz"
-          },
-          {
-            "clave": "componer",
-            "ok": true,
-            "modulo": "interfaz"
-          },
-          {
-            "clave": "inventario",
-            "ok": true,
-            "modulo": "interfaz"
-          },
-          {
-            "clave": "axiomas",
-            "ok": true,
-            "modulo": "interfaz"
-          }
-        ],
         "nombre": "interfaz",
         "version": "1.0"
       }
@@ -2244,29 +2549,30 @@
       "roles_obligatorios": 5,
       "contratos_validos": 14,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 63,
+      "capacidades_verificadas": 65,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
-      "resultados_evaluacion_n": 3,
+      "resultados_evaluacion_n": 0,
       "rechazados_n": 0,
       "errores_n": 0,
       "avisos_n": 0
     },
-    "resultados_evaluacion_n": 3,
+    "resultados_evaluacion_n": 0,
     "evidencia_arranque": {
       "estado": "OPERATIVO",
       "invocador_id": "ci_auditoria",
       "errores_arranque": [],
       "determinismo_censar": "OK"
     },
+    "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real.",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 3
+      "n": 0
     }
   },
   "evidencia_evaluacion": {
     "origen": "ci_auditoria_contratos",
-    "n": 3,
+    "n": 0,
     "path": "evaluaciones.json",
     "invocador_id": "ci_auditoria"
   },
@@ -2462,12 +2768,13 @@
       {
         "nombre": "axiomas",
         "rol": "AX",
-        "version": "9.4",
+        "version": "9.5",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/axiomas/__init__.py",
-        "descripcion": "Contenedor de axiomas. Rol AX. Define y vigila axiomas, lemas, teoremas y corolarios. No calcula Tru_total. Mide generatividad TR1 sobre su propio cuerpo.",
+        "descripcion": "Contenedor de axiomas. Rol AX. Define y vigila axiomas, lemas, teoremas y corolarios. No calcula Tru_total. No clasifica O de entrada (CX). Mide generatividad TR1 sobre su propio cuerpo. Expone ids de dominio K/O ya cargados en el grafo.",
         "capacidades": {
           "verificar": "barrer",
+          "barrer": "barrer",
           "inventario": "inventario",
           "axiomas": "axiomas",
           "generatividad": "generatividad"
@@ -2505,20 +2812,21 @@
       {
         "nombre": "citacion",
         "rol": "CIT",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/citacion/__init__.py",
-        "descripcion": "Citar y anunciar la cadena norma–evidencia–O de un ciclo de evaluación. No calcula. No juzga personas. No inventa factores. Expone id, enunciado, descripción y referencias que otros módulos ya emitieron bajo orquestación de Engine. Capacidad de anuncio total; la presentación puede filtrar.",
+        "descripcion": "Citar y anunciar la cadena norma–evidencia–O del ciclo. Autoridad total de anuncio sobre lo aportado en el paquete. No calcula Tru. No fija O. No juzga personas. Engine entrega el paquete; CIT documenta el porqué.",
         "capacidades": {
-          "citar": "citar",
-          "registrar": "registrar",
           "anunciar": "anunciar",
           "anunciar_todo": "anunciar_todo",
+          "citar": "citar",
+          "registrar": "registrar",
           "resolver_enunciado": "resolver_enunciado",
           "inventario": "inventario",
           "barrer": "barrer",
           "verificar": "verificar",
-          "limpiar_ciclo": "limpiar_ciclo"
+          "limpiar_ciclo": "limpiar_ciclo",
+          "evaluar": "anunciar"
         }
       },
       {
@@ -2686,10 +2994,10 @@
   },
   "generatividad": {
     "contenedor": "axiomas",
-    "theta_n": 268,
-    "pares_totales": 35778,
-    "pares_compatibles": 9819,
-    "pares_novedosos": 4535,
+    "theta_n": 274,
+    "pares_totales": 37401,
+    "pares_compatibles": 10388,
+    "pares_novedosos": 4972,
     "im_vs_theta": "GENERATIVO",
     "dominios": [
       "auditoria",
@@ -2711,13 +3019,14 @@
       "self",
       "semantica",
       "taxonomia",
-      "temporal"
+      "temporal",
+      "verificacion"
     ],
     "u1_proxy": "NO_STAGNANT",
     "errores_recoleccion": 0,
     "por_tipo_theta": {
-      "axioma": 154,
-      "teorema": 114
+      "axioma": 159,
+      "teorema": 115
     },
     "canonica": {
       "theta_n": 24,
@@ -2768,9 +3077,205 @@
         "nota": "|Im(⊕)|=153 > 24=|Θ| en enumeración del texto"
       }
     },
-    "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Saber ≠ creer: comparar canonica con 24/153.",
+    "ids_dominio_k_o": [
+      "A1",
+      "A10",
+      "A11",
+      "A2",
+      "A3",
+      "A4",
+      "A5",
+      "A6",
+      "A7",
+      "A8",
+      "A9",
+      "B-Canonical",
+      "CX-A1",
+      "CX-A10",
+      "CX-A11",
+      "CX-A12",
+      "CX-A13",
+      "CX-A14",
+      "CX-A15",
+      "CX-A16",
+      "CX-A17",
+      "CX-A18",
+      "CX-A19",
+      "CX-A2",
+      "CX-A20",
+      "CX-A21",
+      "CX-A22",
+      "CX-A23",
+      "CX-A24",
+      "CX-A25",
+      "CX-A26",
+      "CX-A27",
+      "CX-A3",
+      "CX-A4",
+      "CX-A5",
+      "CX-A6",
+      "CX-A7",
+      "CX-A8",
+      "CX-A9",
+      "CX-C1",
+      "CX-C10",
+      "CX-C11",
+      "CX-C12",
+      "CX-C13",
+      "CX-C14",
+      "CX-C15",
+      "CX-C16",
+      "CX-C17",
+      "CX-C18",
+      "CX-C2",
+      "CX-C3",
+      "CX-C4",
+      "CX-C5",
+      "CX-C6",
+      "CX-C7",
+      "CX-C8",
+      "CX-C9",
+      "CX-D16",
+      "CX-D17",
+      "CX-D18",
+      "CX-D19",
+      "CX-D20",
+      "CX-D21",
+      "CX-L1",
+      "CX-L10",
+      "CX-L11",
+      "CX-L2",
+      "CX-L3",
+      "CX-L4",
+      "CX-L5",
+      "CX-L6",
+      "CX-L7",
+      "CX-L8",
+      "CX-L9",
+      "CX-T1",
+      "CX-T10",
+      "CX-T11",
+      "CX-T12",
+      "CX-T13",
+      "CX-T14",
+      "CX-T15",
+      "CX-T16",
+      "CX-T17",
+      "CX-T2",
+      "CX-T3",
+      "CX-T4",
+      "CX-T5",
+      "CX-T6",
+      "CX-T7",
+      "CX-T8",
+      "CX-T9",
+      "Def-5.3.1",
+      "E1",
+      "E2",
+      "E3",
+      "I",
+      "IND-A1",
+      "IND-A2",
+      "IND-A3",
+      "IND-A4",
+      "IND-A5",
+      "IND-C1",
+      "IND-C2",
+      "IND-C3",
+      "IND-C4",
+      "IND-C5",
+      "IND-C6",
+      "IND-D1",
+      "IND-D2",
+      "IND-D3",
+      "IND-D4",
+      "IND-D5",
+      "IND-L1",
+      "IND-L2",
+      "IND-L3",
+      "IND-L4",
+      "IND-T1",
+      "IV",
+      "M.1",
+      "PA-A2",
+      "PA-D1",
+      "PA-D3",
+      "PA-T1",
+      "PA-T3",
+      "RE-A0",
+      "RE-A1",
+      "RE-A10",
+      "RE-A2",
+      "RE-A3",
+      "RE-A4",
+      "RE-A5",
+      "RE-A6",
+      "RE-A7",
+      "RE-A8",
+      "RE-A9",
+      "RE-C1",
+      "RE-C3",
+      "RE-C6",
+      "RE-C8",
+      "RE-L1",
+      "RE-L2",
+      "RE-L4",
+      "RE-L5",
+      "RE-T1",
+      "RE-T10",
+      "RE-T11",
+      "RE-T12",
+      "RE-T13",
+      "RE-T2",
+      "RE-T3",
+      "RE-T4",
+      "RE-T5",
+      "RE-T7",
+      "RE-T8",
+      "RE-T9",
+      "SE-A0",
+      "SE-A1",
+      "SE-A3",
+      "SE-A5",
+      "SE-A6",
+      "SE-C2",
+      "SE-C3",
+      "SE-C4",
+      "SE-D1",
+      "SE-D4",
+      "SE-D5",
+      "SE-L2",
+      "SE-T1",
+      "SE-T3",
+      "SE-T4",
+      "T1",
+      "T10",
+      "T11",
+      "T13",
+      "T14",
+      "T15",
+      "T4",
+      "T5",
+      "T6",
+      "T7",
+      "TA3",
+      "TA4",
+      "TT.11.5",
+      "TT.13.1",
+      "TT.6.1",
+      "TT.7.4",
+      "VIII",
+      "X",
+      "beta-Godel",
+      "beta-Private-1",
+      "beta-Private-2",
+      "beta-Private-3",
+      "beta-Private-4"
+    ],
+    "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).",
     "roles_vacios": [],
     "rechazados_n": 0,
+    "engine_version": "11.1",
     "u1_estado": "NO_STAGNANT",
     "estado": "OK"
   },

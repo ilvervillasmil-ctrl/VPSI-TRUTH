@@ -1,6 +1,6 @@
 {
   "tipo": "auditoria_estructural_contratos",
-  "version": "1.1",
+  "version": "1.2",
   "coherente": true,
   "errores": [],
   "avisos": [],
@@ -9,10 +9,8 @@
     "invariantes": [],
     "registro": [],
     "resolucion": [],
-    "ejecucion": [],
     "cobertura": [],
     "determinismo": [],
-    "idempotencia": [],
     "integridad": []
   },
   "roles": {
@@ -58,13 +56,6 @@
           "fn_name": "inventario"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "constante"
-        }
-      ],
       "nombre": "constante",
       "version": "1.0"
     },
@@ -77,6 +68,7 @@
       "n_modulos": 1,
       "claves_contrato": [
         "verificar",
+        "barrer",
         "inventario",
         "axiomas",
         "generatividad"
@@ -93,7 +85,16 @@
           "callable": true,
           "modulo": "axiomas",
           "rol": "AX",
-          "version": "9.4",
+          "version": "9.5",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "barrer",
+          "callable": true,
+          "modulo": "axiomas",
+          "rol": "AX",
+          "version": "9.5",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -102,7 +103,7 @@
           "callable": true,
           "modulo": "axiomas",
           "rol": "AX",
-          "version": "9.4",
+          "version": "9.5",
           "ok": true,
           "fn_name": "inventario"
         },
@@ -111,7 +112,7 @@
           "callable": true,
           "modulo": "axiomas",
           "rol": "AX",
-          "version": "9.4",
+          "version": "9.5",
           "ok": true,
           "fn_name": "axiomas"
         },
@@ -120,35 +121,13 @@
           "callable": true,
           "modulo": "axiomas",
           "rol": "AX",
-          "version": "9.4",
+          "version": "9.5",
           "ok": true,
           "fn_name": "generatividad"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "axiomas"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "axiomas"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "axiomas"
-        },
-        {
-          "clave": "generatividad",
-          "ok": true,
-          "modulo": "axiomas"
-        }
-      ],
       "nombre": "axiomas",
-      "version": "9.4"
+      "version": "9.5"
     },
     "FO": {
       "modulos": [
@@ -200,28 +179,6 @@
           "version": "1.0",
           "ok": true,
           "fn_name": "inventario"
-        }
-      ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "formulas"
-        },
-        {
-          "clave": "evaluar",
-          "ok": true,
-          "modulo": "formulas"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "formulas"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "formulas"
         }
       ],
       "nombre": "formulas",
@@ -284,28 +241,6 @@
           "fn_name": "inventario"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "correlacion_mecanica"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "correlacion_mecanica"
-        },
-        {
-          "clave": "evaluar",
-          "ok": true,
-          "modulo": "correlacion_mecanica"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "correlacion_mecanica"
-        }
-      ],
       "nombre": "correlacion_mecanica",
       "version": "1.0"
     },
@@ -359,18 +294,6 @@
           "version": "0.1-fase",
           "ok": true,
           "fn_name": "oscilar"
-        }
-      ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "self"
-        },
-        {
-          "clave": "barrer",
-          "ok": true,
-          "modulo": "self"
         }
       ],
       "nombre": "self",
@@ -448,23 +371,6 @@
           "fn_name": "inventario"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "diagnostico"
-        },
-        {
-          "clave": "barrer",
-          "ok": true,
-          "modulo": "diagnostico"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "diagnostico"
-        }
-      ],
       "nombre": "diagnostico",
       "version": "1.0"
     },
@@ -480,7 +386,9 @@
         "verificar",
         "inventario"
       ],
-      "esperado": [],
+      "esperado": [
+        "calcular"
+      ],
       "resolucion": [
         {
           "clave": "calcular",
@@ -508,18 +416,6 @@
           "version": "1.1",
           "ok": true,
           "fn_name": "inventario"
-        }
-      ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "calculator"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "calculator"
         }
       ],
       "nombre": "calculator",
@@ -582,28 +478,6 @@
           "fn_name": "axiomas"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "contexto"
-        },
-        {
-          "clave": "evaluar",
-          "ok": true,
-          "modulo": "contexto"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "contexto"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "contexto"
-        }
-      ],
       "nombre": "contexto",
       "version": "1.3"
     },
@@ -649,18 +523,6 @@
           "fn_name": "registrar_resultado_dominio"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "realidad"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "realidad"
-        }
-      ],
       "nombre": "realidad",
       "version": "1.1"
     },
@@ -694,18 +556,6 @@
           "version": "1.0.0",
           "ok": true,
           "fn_name": "axiomas"
-        }
-      ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "verificacion"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "verificacion"
         }
       ],
       "nombre": "verificacion",
@@ -761,23 +611,6 @@
           "version": "1.0",
           "ok": true,
           "fn_name": "axiomas"
-        }
-      ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "taxonomia"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "taxonomia"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "taxonomia"
         }
       ],
       "nombre": "taxonomia",
@@ -855,23 +688,6 @@
           "fn_name": "inventario"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "cache"
-        },
-        {
-          "clave": "barrer",
-          "ok": true,
-          "modulo": "cache"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "cache"
-        }
-      ],
       "nombre": "cache",
       "version": "0.1-fase"
     },
@@ -883,42 +699,29 @@
       "presente": true,
       "n_modulos": 1,
       "claves_contrato": [
-        "citar",
-        "registrar",
         "anunciar",
         "anunciar_todo",
+        "citar",
+        "registrar",
         "resolver_enunciado",
         "inventario",
         "barrer",
         "verificar",
-        "limpiar_ciclo"
+        "limpiar_ciclo",
+        "evaluar"
       ],
-      "esperado": [],
+      "esperado": [
+        "anunciar",
+        "inventario",
+        "verificar"
+      ],
       "resolucion": [
-        {
-          "clave": "citar",
-          "callable": true,
-          "modulo": "citacion",
-          "rol": "CIT",
-          "version": "1.0.0",
-          "ok": true,
-          "fn_name": "citar"
-        },
-        {
-          "clave": "registrar",
-          "callable": true,
-          "modulo": "citacion",
-          "rol": "CIT",
-          "version": "1.0.0",
-          "ok": true,
-          "fn_name": "registrar"
-        },
         {
           "clave": "anunciar",
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "anunciar"
         },
@@ -927,16 +730,34 @@
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "anunciar_todo"
+        },
+        {
+          "clave": "citar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.1.0",
+          "ok": true,
+          "fn_name": "citar"
+        },
+        {
+          "clave": "registrar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.1.0",
+          "ok": true,
+          "fn_name": "registrar"
         },
         {
           "clave": "resolver_enunciado",
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "resolver_enunciado"
         },
@@ -945,7 +766,7 @@
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "inventario"
         },
@@ -954,7 +775,7 @@
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -963,7 +784,7 @@
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "verificar"
         },
@@ -972,30 +793,22 @@
           "callable": true,
           "modulo": "citacion",
           "rol": "CIT",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "ok": true,
           "fn_name": "limpiar_ciclo"
-        }
-      ],
-      "ejecucion": [
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "citacion"
         },
         {
-          "clave": "barrer",
+          "clave": "evaluar",
+          "callable": true,
+          "modulo": "citacion",
+          "rol": "CIT",
+          "version": "1.1.0",
           "ok": true,
-          "modulo": "citacion"
-        },
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "citacion"
+          "fn_name": "anunciar"
         }
       ],
       "nombre": "citacion",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     "UI": {
       "modulos": [
@@ -1084,33 +897,6 @@
           "fn_name": "axiomas"
         }
       ],
-      "ejecucion": [
-        {
-          "clave": "verificar",
-          "ok": true,
-          "modulo": "interfaz"
-        },
-        {
-          "clave": "barrer",
-          "ok": true,
-          "modulo": "interfaz"
-        },
-        {
-          "clave": "componer",
-          "ok": true,
-          "modulo": "interfaz"
-        },
-        {
-          "clave": "inventario",
-          "ok": true,
-          "modulo": "interfaz"
-        },
-        {
-          "clave": "axiomas",
-          "ok": true,
-          "modulo": "interfaz"
-        }
-      ],
       "nombre": "interfaz",
       "version": "1.0"
     }
@@ -1121,23 +907,24 @@
     "roles_obligatorios": 5,
     "contratos_validos": 14,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 63,
+    "capacidades_verificadas": 65,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
-    "resultados_evaluacion_n": 3,
+    "resultados_evaluacion_n": 0,
     "rechazados_n": 0,
     "errores_n": 0,
     "avisos_n": 0
   },
-  "resultados_evaluacion_n": 3,
+  "resultados_evaluacion_n": 0,
   "evidencia_arranque": {
     "estado": "OPERATIVO",
     "invocador_id": "ci_auditoria",
     "errores_arranque": [],
     "determinismo_censar": "OK"
   },
+  "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real.",
   "evidencia_evaluacion": {
     "path": "diagnostics/evaluaciones.json",
-    "n": 3
+    "n": 0
   }
 }

@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.6)
-Generado: 2026-08-03 00:02:36 UTC    Commit: a52fdc60c0a3
+Generado: 2026-08-03 03:37:14 UTC    Commit: 194f839f11ff
 Modo: SOLO PRESENTACIÓN · sin humo · sin recálculo · prioriza intervención
 ================================================================================
 
@@ -11,7 +11,7 @@ ESTADO GLOBAL
   📦 Contenedores    : 14
   ✅ Roles vacíos    : 0
   ✅ Rechazados      : 0
-  ✅ Acciones abiertas: 0
+  ⚠️ Acciones abiertas: 1
   ✅ Salud           : OPERATIVO — listo para avanzar
 
 📦  MÓDULOS Y ROLES
@@ -38,7 +38,10 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN (ordenado por prioridad)
 ================================================================================
 
-  ✅ No hay acciones pendientes. Sistema limpio.
+  ⚪ 1. [DATOS] resultados_evaluacion
+     Detalle   : Sin diagnostics/evaluaciones.json o lista vacía (la auditoría aún no depositó evidencia)
+     Impacto   : No se puede auditar el camino de evaluación desde Omega
+     Acción    : Ejecutar auditoría de contratos antes de Omega; debe escribir diagnostics/evaluaciones.json
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -48,10 +51,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 397
+      declaraciones = 418
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 154, 'lema': 35, 'teorema': 114, 'corolario': 85, 'definicion': 9}
+      por_tipo      = {'axioma': 159, 'lema': 39, 'teorema': 115, 'corolario': 91, 'definicion': 14}
 
   ✅ Fórmulas (FO)
       coherente = True   faltas = []
@@ -60,13 +63,9 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=14  caps_ok=63  caps_fallo=0
+      coherente=True  validos=14  caps_ok=65  caps_fallo=0
 
-  ✅ Camino de evaluación
-      n = 3   origen = ci_auditoria_contratos
-    · seq 1/3  estado=UNDEFINED  Tru_Ri=UNDEFINED  Tru_total=UNDEFINED
-    ✅ seq 2/3  estado=OK  Tru_Ri=1  Tru_total=1
-    ✅ seq 3/3  estado=OK  Tru_Ri=1  Tru_total=1
+  ⚪ Camino de evaluación — sin evidencia en evaluaciones.json
 
   ✅ Tests
       total=134  pasados=133  fallidos=0  tasa=99.25%
@@ -74,15 +73,15 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 268
-  pares totales      : 35778
-  pares compatibles  : 9819
-  pares novedosos    : 4535
+  |Θ| (AX)           : 274
+  pares totales      : 37401
+  pares compatibles  : 10388
+  pares novedosos    : 4972
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
-  dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal']
+  dominios           : ['auditoria', 'axiomas', 'cache', 'citacion', 'constantes', 'contexto', 'engine', 'epistemologia', 'evaluacion', 'formulas', 'inferencia_causal', 'informacion', 'logica', 'meta', 'ontologia', 'realidad', 'self', 'semantica', 'taxonomia', 'temporal', 'verificacion']
   roles vacíos       : []
   U1                 : NO_STAGNANT
-  por_tipo_theta     : {'axioma': 154, 'teorema': 114}
+  por_tipo_theta     : {'axioma': 159, 'teorema': 115}
   --- capa canónica (paper TR1) ---
   |Θ|_can           : 24 / 24
   novedosos_can     : 102  (paper: 153)
@@ -90,7 +89,7 @@ ESTADO GLOBAL
   ids_faltantes     : []
   ids_sin_dominio   : []
   dominios_can      : ['EPI', 'INF', 'LOG', 'MET', 'ONT', 'SEM', 'TMP']
-  nota               : Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Saber ≠ creer: comparar canonica con 24/153.
+  nota               : Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).
 
 ================================================================================
 📦  INVENTARIO RÁPIDO
@@ -125,7 +124,7 @@ Rechazado:
 ================================================================================
   Versión Omega      : 9.6
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 0
+  Acciones abiertas  : 1
   Bloqueantes        : 0
   Este reporte no recalculó nada.
   Este reporte no ejecutó humo ni evaluar().
