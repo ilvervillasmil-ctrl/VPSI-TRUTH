@@ -2574,7 +2574,8 @@
     "origen": "ci_auditoria_contratos",
     "n": 0,
     "path": "evaluaciones.json",
-    "invocador_id": "ci_auditoria"
+    "invocador_id": "ci_auditoria",
+    "nota": "Sin humo en auditoría. n puede ser 0 si no hubo ciclo real en este proceso; pytest aporta valuación en su propio camino."
   },
   "informe_mecanica": {
     "contenedor": "correlacion_mecanica",
@@ -3297,6 +3298,26 @@
     ],
     "archivos_extra": [],
     "nota": "archivos_extra son candidatos a nuevos factores; añadir convención o API antes de usarlos en calcular()"
+  },
+  "informe_citacion": {
+    "coherente": true,
+    "choques": [],
+    "errores": [],
+    "funciones": [
+      "anunciar",
+      "anunciar_todo",
+      "citar",
+      "registrar",
+      "resolver_enunciado",
+      "inventario",
+      "barrer",
+      "verificar",
+      "limpiar_ciclo",
+      "evaluar"
+    ],
+    "registro_n": 0,
+    "version": "1.1.0",
+    "nota": "centinela CIT; sin juicio de verdad; anunciar acepta paquete de ciclo"
   },
   "tests": {
     "total": 134,
