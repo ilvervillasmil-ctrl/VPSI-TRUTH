@@ -1,5 +1,5 @@
 """
-VPSI-TRUTH / VPSI
+VPSI-TRUTH / VPSI_AX.py
 
 Contenedor de axiomas. Rol AX.
 
