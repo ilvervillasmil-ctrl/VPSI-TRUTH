@@ -1221,11 +1221,12 @@
           "auto_auditoria",
           "declaracion_O",
           "entrada_natural",
+          "nucleo_sm_CX",
           "peticion_anuncio",
           "secuencia_conversacion"
         ],
-        "total_reglas": 5,
-        "reglas_con_alerta_centinela": 3,
+        "total_reglas": 6,
+        "reglas_con_alerta_centinela": 4,
         "modos_entrada": [
           "conversacion",
           "afirmacion",
