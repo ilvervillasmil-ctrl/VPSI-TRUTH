@@ -10,6 +10,7 @@ El init es centinela de calculator/:
   - exige APIs públicas por factor
   - reporta choques / fallos de carga
   - orquesta calcular(peticion) solo sobre lo coherente
+  - si metodo=operacional y faltan conteos, los produce via conteos.py
 """
 
 from __future__ import annotations
@@ -66,6 +67,16 @@ _ARCHIVO_FACTOR = {
     "correlacion_k": "K",
 }
 
+# Claves que la ruta operacional exige
+_CLAVES_CONTEO = (
+    "compromisos",
+    "contradicciones",
+    "posturas",
+    "reversiones",
+    "afirmaciones",
+    "afirmaciones_falsas",
+)
+
 
 # ===============================================================
 # Carga de submódulos (APIs públicas)
@@ -106,6 +117,51 @@ _APIS, _ERRORES_CARGA = _importar_apis()
 
 
 # ===============================================================
+# Conteo (productor operacional)
+# ===============================================================
+def _cargar_conteos():
+    """Carga conteos.py si existe. No tumba el módulo si falta."""
+    try:
+        mod = importlib.import_module("modules.calculator.conteos")
+        extraer = getattr(mod, "extraer_conteos", None)
+        inyectar = getattr(mod, "inyectar_en_peticion", None)
+        verificar = getattr(mod, "verificar_conteos", None)
+        if callable(extraer) and callable(inyectar):
+            return {
+                "extraer_conteos": extraer,
+                "inyectar_en_peticion": inyectar,
+                "verificar_conteos": verificar if callable(verificar) else None,
+            }
+    except Exception:
+        pass
+    return None
+
+
+_CONTEOS = _cargar_conteos()
+
+
+def _faltan_conteos(peticion: Dict[str, Any]) -> bool:
+    """True si falta alguna clave que la ruta operacional necesita."""
+    for k in _CLAVES_CONTEO:
+        if k not in peticion or peticion[k] is None:
+            return True
+    return False
+
+
+def _asegurar_conteos(peticion: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Si metodo=operacional y faltan conteos, los produce con conteos.py.
+    Si conteos.py no está cargado, deja la petición igual (CA devolverá None).
+    """
+    if _CONTEOS is None:
+        return peticion
+    if not _faltan_conteos(peticion):
+        return peticion
+    inyectar = _CONTEOS["inyectar_en_peticion"]
+    return inyectar(peticion)
+
+
+# ===============================================================
 # Centinela de carpeta
 # ===============================================================
 def _listar_py() -> List[Path]:
@@ -123,13 +179,13 @@ def barrer() -> Dict[str, Any]:
     - Archivos presentes
     - APIs de factores canónicos resolubles
     - Choque: dos stems mapeados al mismo factor sin regla
+    - Presencia de conteos.py (productor operacional)
     No calcula Tru. No exige que C/L/K salgan numéricos sin petición.
     """
     errores: List[Dict[str, str]] = list(_ERRORES_CARGA)
     choques: List[str] = []
     archivos = [p.name for p in _listar_py()]
 
-    # Factores cubiertos por API
     factores_ok = sorted(_APIS.keys())
     for factor in _FACTORES_CANONICOS:
         if factor not in _APIS:
@@ -140,7 +196,6 @@ def barrer() -> Dict[str, Any]:
                 ),
             })
 
-    # Convención stem → factor: detectar colisión de stems distintos al mismo factor
     por_factor: Dict[str, List[str]] = {}
     for stem, factor in _ARCHIVO_FACTOR.items():
         path = _DIR / "{0}.py".format(stem)
@@ -154,12 +209,13 @@ def barrer() -> Dict[str, Any]:
                 )
             )
 
-    # Archivos huérfanos de convención (aviso, no tumba si no rompen API)
-    stems_conocidos = set(_ARCHIVO_FACTOR.keys())
+    stems_conocidos = set(_ARCHIVO_FACTOR.keys()) | {"conteos"}
     extra = [
         p.stem for p in _listar_py()
         if p.stem not in stems_conocidos
     ]
+
+    conteos_ok = _CONTEOS is not None
 
     limpio = not errores and not choques
     return {
@@ -171,9 +227,10 @@ def barrer() -> Dict[str, Any]:
         "archivos": archivos,
         "factores_api": factores_ok,
         "archivos_extra": extra,
+        "conteos_disponible": conteos_ok,
         "nota": (
-            "archivos_extra son candidatos a nuevos factores; "
-            "añadir convención o API antes de usarlos en calcular()"
+            "conteos.py produce k/m, r/p, f/c para la ruta operacional; "
+            "archivos_extra son candidatos a nuevos factores"
         ),
     }
 
@@ -182,14 +239,16 @@ def inventario(peticion: Any = None) -> Dict[str, Any]:
     b = barrer()
     return {
         "contenedor": "calculator",
-        "version": "1.1",
+        "version": "1.2",
         "rol": "CA",
         "archivos": b.get("archivos"),
         "factores_api": b.get("factores_api"),
+        "conteos_disponible": b.get("conteos_disponible"),
         "coherente": b.get("coherente"),
         "funcion": (
             "Calcula C, L, K. No calcula Tru. "
-            "K ausente sin contexto/O (Def-5.3.1)."
+            "K ausente sin contexto/O (Def-5.3.1). "
+            "Si metodo=operacional y faltan conteos, los produce conteos.py."
         ),
     }
 
@@ -200,12 +259,22 @@ def inventario(peticion: Any = None) -> Dict[str, Any]:
 def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Orquesta C, L, K vía APIs públicas de los submódulos.
+
+    Si metodo=operacional (default) y faltan las claves de conteo,
+    intenta producirlas con conteos.py antes de llamar a los factores.
+
     Devuelve Fraction | None por factor.
     None = dato no disponible (legítimo), no es fallo del contenedor.
     """
     peticion = dict(peticion or {})
     metodo = str(peticion.get("metodo") or "operacional")
     errores: List[str] = []
+    meta_conteos = None
+
+    # ----- producir conteos si hace falta (solo operacional) -----
+    if metodo == "operacional":
+        peticion = _asegurar_conteos(peticion)
+        meta_conteos = peticion.get("_conteos_meta")
 
     C = L = K = None
 
@@ -313,7 +382,16 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         except Exception:
             pass
 
-    return {"C": C, "L": L, "K": K, "errores": errores}
+    salida: Dict[str, Any] = {
+        "C": C,
+        "L": L,
+        "K": K,
+        "errores": errores,
+        "metodo": metodo,
+    }
+    if meta_conteos is not None:
+        salida["conteos"] = meta_conteos
+    return salida
 
 
 def verificar_salida(salida: Any) -> bool:
@@ -332,12 +410,13 @@ def verificar_salida(salida: Any) -> bool:
 CONTENEDOR = {
     "nombre": "calculator",
     "rol": "CA",
-    "version": "1.1",
+    "version": "1.2",
     "requiere": [],
     "descripcion": (
         "Calcula C, L, K. None = dato no disponible. "
         "Sin contexto/O, K queda None (Def-5.3.1). "
         "No calcula Tru_total (FO). "
+        "Si metodo=operacional y faltan conteos, los produce conteos.py. "
         "verificar = centinela de carpeta; calcular = oficio de factores."
     ),
     "capacidades": {
@@ -346,6 +425,11 @@ CONTENEDOR = {
         "inventario": inventario,
     },
 }
+
+# Exponer oficio de conteos solo si el archivo cargó
+if _CONTEOS is not None:
+    CONTENEDOR["capacidades"]["extraer_conteos"] = _CONTEOS["extraer_conteos"]
+    CONTENEDOR["capacidades"]["inyectar_conteos"] = _CONTEOS["inyectar_en_peticion"]
 
 
 __all__ = [
