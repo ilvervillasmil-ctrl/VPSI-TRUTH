@@ -1,24 +1,29 @@
 """
 VPSI-TRUTH --- core/engine.py
-Versión 11 — orquestador por contrato.
+Versión 11.1 — orquestador por contrato.
 
-Principio
+Principio (no cambia)
   - Conoce la arquitectura (módulos, roles, contratos, capacidades).
   - Actúa solo por lo que cada CONTENEDOR declara.
   - No inventa operaciones ni interpreta resultados.
   - No sustituye la lógica interna de un módulo.
-  - No re-enuncia teoremas (TR1/T15 viven en AX; aquí solo se invoca oficio).
+  - No re-enuncia teoremas (IND-T1 / Def-5.3.1 / TR1 viven en AX).
   - CT: ancla ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
   - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
   - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
-  - MC: coherencia de orden en compuerta; el orden fino vive en MC.
-  - Sin O usable → K indefinido (Def-5.3.1). Nunca bool(UNDEFINED).
+  - MC: coherencia de orden en compuerta.
 
-Esquema del ciclo (correlacionado con Λ_V, sin incrustar teorema):
+Lo que 11.1 corrige (sin “imponer” teoría al orquestador)
+  - O de contenido solo si viene en la petición o si CX declara
+    permite_k is True y aporta O estable. Si no, no hay dominio.
+  - Sin O usable → resultado de ciclo UNDEFINED (no crash, no OK).
+  - Nunca bool(UNDEFINED). Nunca fabricar K=0 ni O fantasma.
+  - Eso es cumplir el contrato de CX + el grafo que AX ya carga;
+    no es interpretar el meta-teorema dentro de Engine.
+
+Esquema del ciclo:
   Sustrato → Marco (CX) → Factores (CA) → Fórmula (FO)
   → Cierre (CIT si pedir_anuncio) → Evidencia.
-
-Estilo: plugin-host + service layer; fail-closed; oficios canónicos.
 """
 
 from __future__ import annotations
@@ -58,13 +63,21 @@ def es_undefined(v: Any) -> bool:
 
 
 def _o_ausente(o: Any) -> bool:
-    """True si no hay O usable. Nunca evalúa bool(UNDEFINED)."""
+    """
+    True si no hay O usable como dominio de contenido.
+    Nunca evalúa bool(UNDEFINED).
+    Rótulos de estado ("undefined", "indefinido") no son dominio.
+    """
     if o is None:
         return True
     if es_undefined(o):
         return True
-    if isinstance(o, str) and not str(o).strip():
-        return True
+    if isinstance(o, str):
+        s = o.strip()
+        if not s:
+            return True
+        if s.lower() in ("undefined", "indefinido", "∅", "none", "null"):
+            return True
     return False
 
 
@@ -237,14 +250,13 @@ class Registro:
 # ===============================================================
 class Engine:
     """
-    Orquestador v11.
+    Orquestador v11.1
 
-    Arranque: descubrir → dependencias → compuertas.
-    Ciclo: marco CX → factores CA → fórmula FO → cierre CIT → evidencia.
-    TR1/T15: solo vía oficio AX.generatividad (no embebidos aquí).
+    No interpreta IND-T1 ni Def-5.3.1.
+    Solo: contratos, oficios, permite_k de CX, no fabricar O/K.
     """
 
-    VERSION = "11"
+    VERSION = "11.1"
 
     def __init__(
         self,
@@ -591,7 +603,7 @@ class Engine:
     # Ciclo
     # -----------------------------------------------------------
     def _peticion_con_meta(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        """Copia petición e inyecta meta de acto (no inventa O de contenido)."""
+        """Meta de acto (invocador, versión). No es O de contenido."""
         p = dict(peticion or {})
         p.setdefault("invocador_id", self.invocador_id)
         p.setdefault("engine_version", self.VERSION)
@@ -613,8 +625,19 @@ class Engine:
         peticion: Dict[str, Any],
         cx: Optional[Dict[str, Any]],
     ) -> Any:
-        """O de contenido: solo valores usables; nunca UNDEFINED como O."""
-        for key in ("contexto", "O_context", "Octx"):
+        """
+        Dominio O para reclamar K / Tru de contenido.
+
+        Regla de orquestación (contrato, no teorema embebido):
+          1) O explícito en la petición.
+          2) Si no, solo lo que CX autorice con permite_k is True
+             y O/registro estable.
+          3) C, L, K, invocador_id, engine_version NUNCA son O.
+
+        Si CX no autoriza K, no hay dominio evaluable → el ciclo
+        reporta UNDEFINED (resultado), no inventa camino OK.
+        """
+        for key in ("contexto", "O_context", "Octx", "enunciado_O", "O_id"):
             o = peticion.get(key)
             if not _o_ausente(o):
                 return o
@@ -622,16 +645,23 @@ class Engine:
         if not cx:
             return None
 
-        o_cx = cx.get("O_context")
-        if not _o_ausente(o_cx):
-            return o_cx
+        # Contrato CX: sin permite_k no hay dominio de contenido
+        if cx.get("permite_k") is not True:
+            return None
 
         reg = cx.get("registro") or {}
         if isinstance(reg, dict):
+            if reg.get("estado") and reg.get("estado") != "estable":
+                return None
             for key in ("enunciado_O", "O_id"):
                 v = reg.get(key)
                 if not _o_ausente(v):
                     return v
+
+        o_cx = cx.get("O_context")
+        if not _o_ausente(o_cx):
+            return o_cx
+
         return None
 
     def _cierre_cit(
@@ -693,8 +723,8 @@ class Engine:
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Orquesta un ciclo. No interpreta Tru. No inventa O ni factores.
-        No embebe TR1.
+        Orquesta un ciclo.
+        No interpreta Tru. No inventa O ni factores. No embebe teoremas.
         """
         self.fallos = []
         peticion = self._peticion_con_meta(peticion)
@@ -708,18 +738,46 @@ class Engine:
                 "engine_version": self.VERSION,
             }, peticion)
 
-        # 1. Marco CX
+        # 1. Marco CX (clasifica; no calcula Tru)
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        # 2. Sin O usable → UNDEFINED (Def-5.3.1)
+        # 2. Sin O usable → resultado UNDEFINED (ciclo completo, no crash)
         if _o_ausente(o_ctx):
+            ids_cx = []
+            if cx is not None:
+                ids_cx = list(cx.get("ids_cx_relevantes") or [])
             body: Dict[str, Any] = {
                 "estado": "UNDEFINED",
-                "razon": "K indefinido: falta O_context (Corolario Def-5.3.1)",
+                "razon": (
+                    "Sin O_context usable: K de contenido no reclamable "
+                    "(contrato CX permite_k / Def-5.3.1 en grafo AX)"
+                ),
                 "factores": {"C": None, "L": None, "K": "UNDEFINED"},
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
+                "valuacion": {
+                    "capa_objeto": "indefinido",
+                    "capa_meta": "anuncio_de_indefinido",
+                    "es_error_sistema": False,
+                    "ids": [
+                        "Def-5.3.1",
+                        "IND-D1",
+                        "IND-A1",
+                        "IND-A2",
+                        "IND-A4",
+                        "IND-A5",
+                        "IND-L1",
+                        "IND-T1",
+                        "IND-C2",
+                        "IND-C3",
+                    ] + ids_cx,
+                    "nota": (
+                        "Resultado de ciclo, no rechazo de arranque. "
+                        "Engine permanece OPERATIVO. "
+                        "No se fabrica O ni K=0."
+                    ),
+                },
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
@@ -730,13 +788,14 @@ class Engine:
                     "tipos_peticion": cx.get("tipos_peticion"),
                     "modo_entrada": cx.get("modo_entrada"),
                     "coherente": cx.get("coherente"),
+                    "ids_cx_relevantes": cx.get("ids_cx_relevantes"),
                 }
             cit = self._cierre_cit(peticion, cx, body)
             if cit is not None:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # 3. Factores
+        # 3. Factores (CA y/o petición explícita)
         C = L = K = None
         ca = self.registro.primero("CA")
         if ca is not None and ca.tiene("calcular"):
@@ -846,7 +905,7 @@ class Engine:
         return self._emit(body, peticion)
 
     # -----------------------------------------------------------
-    # Introspección (lectura; generatividad solo vía AX)
+    # Introspección
     # -----------------------------------------------------------
     def censar(self) -> Dict[str, Any]:
         return self.registro.resumen()
@@ -874,10 +933,7 @@ class Engine:
         }
 
     def censar_generatividad(self) -> Dict[str, Any]:
-        """
-        Solo orquesta: llama AX.generatividad si el contrato lo expone.
-        No calcula TR1 aquí; no inventa candidatos.
-        """
+        """Solo oficio AX.generatividad si el contrato lo expone."""
         out = self.ejecutar_capacidad("AX", "generatividad")
         try:
             resumen = self.censar()
