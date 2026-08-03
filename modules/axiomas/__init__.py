@@ -1,19 +1,28 @@
 """
 VPSI-TRUTH — modules/axiomas/__init__.py
 
-Contenedor de axiomas. Rol AX.
+Contenedor de axiomas. Rol AX. v9.5
 
 Qué es:
   Vigila declaraciones (axioma | lema | teorema | corolario | definicion).
   No pertenece a ninguna teoría. No calcula Tru_total.
+  No clasifica entrada (eso es CX). No orquesta (eso es Engine).
 
 Qué vigila:
   - contradiccion_directa
   - contradiccion_de_cota
   Si hay choque o error de carga → coherente=False.
 
-Capacidades de contrato:
-  verificar, inventario, axiomas, generatividad (TR1/U1).
+Qué expone:
+  - verificar / barrer: coherencia del cuerpo
+  - axiomas / declaraciones: lista si coherente (fail-closed)
+  - generatividad: TR1/U1 sobre Θ (capa operativa + canónica paper)
+  - inventario: mapa del módulo
+
+Def-5.3.1 / dominio O:
+  Vive en las declaraciones de los cuerpos (p.ej. contexto_AX, VPSI).
+  Este INIT no re-enuncia el teorema: lo carga, lo vigila y lo expone.
+  CX aplica la clasificación de entrada; AX es el juez del grafo.
 """
 
 from __future__ import annotations
@@ -23,7 +32,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-# DiagnosticoGlobal es opcional: no debe tumbar el arranque de AX
 try:
     from core.diagnostico import DiagnosticoGlobal  # type: ignore
 except Exception:  # noqa: BLE001
@@ -55,9 +63,15 @@ TRADUCCION_CLAVES = {
 
 _DIR = Path(__file__).parent
 
+# Dominios donde suele vivir la exigencia de O / K (exposición, no cálculo)
+DOMINIOS_K_O = frozenset({
+    "contexto", "ontologia", "epistemologia", "verificacion",
+    "dominio", "k", "o_context", "correlacion",
+})
+
 
 # ===============================================================
-# Carga desde archivos planos / VPSI.py
+# Carga
 # ===============================================================
 def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
     if archivo.name.startswith("_"):
@@ -78,6 +92,14 @@ def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
             declaraciones = mod.declaraciones()
         except Exception:  # noqa: BLE001
             declaraciones = []
+
+    # Alias frecuentes en archivos de cuerpo
+    if declaraciones is None:
+        for attr in ("CUERPO", "declaraciones_lista"):
+            val = getattr(mod, attr, None)
+            if isinstance(val, list):
+                declaraciones = val
+                break
 
     return declaraciones if isinstance(declaraciones, list) else []
 
@@ -155,7 +177,7 @@ def ref(d: Dict) -> str:
 
 
 # ===============================================================
-# Recolección unificada (usada por barrer / inventario / generatividad)
+# Recolección
 # ===============================================================
 def recolectar(
     declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
@@ -205,6 +227,47 @@ def recolectar(
                     errores.append({"modulo": nombre, "error": str(e)})
 
     return decls, errores
+
+
+def por_dominio(
+    dominio: str,
+    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
+) -> List[Dict]:
+    """
+    Filtro de lectura: declaraciones cuyo gobierna toca un dominio.
+    No interpreta; no calcula Tru. Útil para CX/CIT al citar.
+    """
+    dom = str(dominio).lower().strip()
+    decls, _ = recolectar(declaraciones_externas)
+    out = []
+    for d in decls:
+        gobs = [str(g).lower().strip() for g in (d.get("gobierna") or [])]
+        if dom in gobs or any(dom in g for g in gobs):
+            out.append(d)
+    return out
+
+
+def ids_dominio_k_o(
+    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
+) -> List[str]:
+    """
+    Ids que gobiernan dominios relacionados con K/O/contexto.
+    Exposición del grafo ya cargado (p.ej. Def-5.3.1 si está en el cuerpo).
+    """
+    decls, _ = recolectar(declaraciones_externas)
+    ids: List[str] = []
+    for d in decls:
+        gobs = {str(g).lower().strip() for g in (d.get("gobierna") or [])}
+        if gobs & DOMINIOS_K_O:
+            ids.append(d["id"])
+        # también por enunciado/objeto si el id es canónico de dominio
+        blob = (
+            f"{d.get('sujeto','')} {d.get('objeto','')} {d.get('enunciado','')}"
+        ).lower()
+        if any(x in blob for x in ("def-5.3.1", "o_context", "dominio o", "permite_k")):
+            if d["id"] not in ids:
+                ids.append(d["id"])
+    return sorted(set(ids))
 
 
 # ===============================================================
@@ -275,9 +338,7 @@ def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
 # Capacidades de contrato
 # ===============================================================
 def barrer(declaraciones_externas: Optional[Dict[str, List[Dict]]] = None) -> Dict:
-    """
-    Capacidad principal: coherencia axiomática del cuerpo.
-    """
+    """Capacidad principal: coherencia axiomática del cuerpo."""
     decls, errores = recolectar(declaraciones_externas)
     choques = contradiccion_directa(decls) + contradiccion_de_cota(decls)
 
@@ -303,6 +364,9 @@ def barrer(declaraciones_externas: Optional[Dict[str, List[Dict]]] = None) -> Di
         "declaraciones": len(decls),
         "cuerpos": cuerpos,
         "por_tipo": por_tipo,
+        "ids_dominio_k_o": ids_dominio_k_o(declaraciones_externas)
+        if not (choques or errores)
+        else [],
     }
 
 
@@ -313,10 +377,7 @@ def verificar_salida(salida: Dict) -> bool:
 def declaraciones(
     declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
 ) -> List[Dict]:
-    """
-    Capacidad 'axiomas': lista normalizada si el cuerpo es coherente.
-    Si no es coherente → lista vacía (fail-closed de exposición).
-    """
+    """Lista normalizada si el cuerpo es coherente; si no → []."""
     resultado = barrer(declaraciones_externas)
     if not resultado["coherente"]:
         return []
@@ -335,65 +396,21 @@ def inventario(peticion=None) -> Dict:
     decls, errores = recolectar()
     return {
         "contenedor": "axiomas",
-        "version": "9.4",
+        "version": "9.5",
         "tipos": list(TIPOS),
         "declaraciones": len(decls),
         "por_tipo": {t: sum(1 for d in decls if d["tipo"] == t) for t in TIPOS},
         "cuerpos": sorted({d["cuerpo"] for d in decls}),
         "errores": errores,
         "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
-    }
-
-
-def generatividad() -> Dict:
-    """
-    TR1 sobre el cuerpo de declaraciones AX.
-    Dominio D_i = set(gobierna).
-    Compatible si D_i ∩ D_j ≠ ∅.
-    Novedoso si D_i ∪ D_j ⊃ D_i y ⊃ D_j.
-    U1 proxy: novedad > 0 ⇒ NO_STAGNANT.
-    """
-    decls, errores = recolectar()
-    theta = [
-        d for d in decls
-        if d.get("tipo") in ("teorema", "axioma") and d.get("gobierna")
-    ]
-    n = len(theta)
-    pares_tot = n * (n - 1) // 2 if n >= 2 else 0
-    compatibles = 0
-    novedosos = 0
-    dominios = sorted({g for d in theta for g in (d.get("gobierna") or [])})
-
-    for i in range(n):
-        Di = set(theta[i].get("gobierna") or [])
-        for j in range(i + 1, n):
-            Dj = set(theta[j].get("gobierna") or [])
-            if not (Di & Dj):
-                continue
-            compatibles += 1
-            union = Di | Dj
-            if union > Di and union > Dj:
-                novedosos += 1
-
-    return {
-        "contenedor": "axiomas",
-        "theta_n": n,
-        "pares_totales": pares_tot,
-        "pares_compatibles": compatibles,
-        "pares_novedosos": novedosos,
-        "im_vs_theta": "GENERATIVO" if novedosos > n else "ESTANCADO",
-        "u1_proxy": "NO_STAGNANT" if novedosos > 0 else "REVISAR",
-        "dominios": dominios,
-        "errores_recoleccion": len(errores),
-        "por_tipo_theta": {
-            t: sum(1 for d in theta if d["tipo"] == t)
-            for t in ("axioma", "teorema")
-        },
+        "ids_dominio_k_o": ids_dominio_k_o(),
         "nota": (
-            "Medición estructural TR1 sobre declaraciones AX. "
-            "Sin interpretación. Tru_total lo calculan CA/FO."
+            "Def-5.3.1 y dominio O viven en los cuerpos cargados; "
+            "este módulo los vigila y expone, no los clasifica en entrada."
         ),
     }
+
+
 # --- ids canónicos del paper (TR1, |Θ|=24) ---
 THETA_CANONICO = frozenset({
     "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
@@ -401,7 +418,6 @@ THETA_CANONICO = frozenset({
     "U0", "U1", "M1", "M.1", "B-Canonical", "TT.6.1", "TR1",
 })
 
-# aliases frecuentes en gobierna → dominio canónico del paper
 DOMINIO_CANONICO = {
     "ontologia": "ONT",
     "ont": "ONT",
@@ -417,11 +433,12 @@ DOMINIO_CANONICO = {
     "tmp": "TMP",
     "meta": "MET",
     "met": "MET",
-    "constantes": "MET",          # ancla estructural → MET en el paper
+    "constantes": "MET",
     "self": "EPI",
     "inferencia_causal": "INF",
     "verificacion": "EPI",
     "ver": "VER",
+    "contexto": "SEM",
 }
 
 
@@ -434,7 +451,6 @@ def _dominios_canonicos(gobierna) -> set:
 
 
 def _medir_pares(theta: list) -> dict:
-    """theta: lista de dicts con clave 'dominios' (set)."""
     n = len(theta)
     pares_tot = n * (n - 1) // 2 if n >= 2 else 0
     compatibles = 0
@@ -468,11 +484,10 @@ def generatividad() -> dict:
     1) operativa  — todo axioma/teorema con gobierna (grafo del repo)
     2) canonica   — solo los 24 ids del paper + dominios normalizados
 
-    U1 proxy: novedad canónica > 0 o residual de arquitectura (lo añade Engine).
+    No inventa candidatos. No calcula Tru. Una sola definición (sin duplicar).
     """
     decls, errores = recolectar()
 
-    # ----- capa operativa -----
     oper = []
     for d in decls:
         if d.get("tipo") not in ("teorema", "axioma"):
@@ -488,12 +503,10 @@ def generatividad() -> dict:
     m_op = _medir_pares(oper)
     dominios_op = sorted({g for n in oper for g in n["dominios"]})
 
-    # ----- capa canónica (paper) -----
     por_id = {}
     for d in decls:
         i = str(d.get("id", ""))
         if i in THETA_CANONICO:
-            # si hay duplicados de id, se queda el que tenga más gobierna
             cand = {
                 "id": i,
                 "tipo": d.get("tipo"),
@@ -507,11 +520,8 @@ def generatividad() -> dict:
     m_can = _medir_pares(can)
     dominios_can = sorted({g for n in can for g in n["dominios"]})
     faltan = sorted(THETA_CANONICO - set(por_id.keys()))
-    sin_dominio = sorted(
-        i for i, n in por_id.items() if not n["dominios"]
-    )
+    sin_dominio = sorted(i for i, n in por_id.items() if not n["dominios"])
 
-    # veredicto U1 sobre la capa que importa al paper
     u1_proxy = (
         "NO_STAGNANT"
         if m_can.get("pares_novedosos", 0) > 0 or m_op.get("pares_novedosos", 0) > 0
@@ -520,7 +530,6 @@ def generatividad() -> dict:
 
     return {
         "contenedor": "axiomas",
-        # compat con Omega Report actual (capa operativa)
         "theta_n": m_op["theta_n"],
         "pares_totales": m_op["pares_totales"],
         "pares_compatibles": m_op["pares_compatibles"],
@@ -533,7 +542,6 @@ def generatividad() -> dict:
             "axioma": sum(1 for n in oper if n["tipo"] == "axioma"),
             "teorema": sum(1 for n in oper if n["tipo"] == "teorema"),
         },
-        # precisión TR1 paper
         "canonica": {
             **m_can,
             "ids_presentes": sorted(por_id.keys()),
@@ -546,28 +554,33 @@ def generatividad() -> dict:
                 "nota": "|Im(⊕)|=153 > 24=|Θ| en enumeración del texto",
             },
         },
+        "ids_dominio_k_o": ids_dominio_k_o(),
         "nota": (
             "Capa operativa = grafo del repo. "
             "Capa canonica = solo ids TR1 del paper. "
-            "Saber ≠ creer: comparar canonica con 24/153."
+            "Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí)."
         ),
     }
 
+
 # ===============================================================
-# Contrato (AL FINAL: todas las funciones ya existen)
+# Contrato
 # ===============================================================
 CONTENEDOR = {
     "nombre": "axiomas",
     "rol": "AX",
-    "version": "9.4",
+    "version": "9.5",
     "requiere": [],
     "descripcion": (
         "Contenedor de axiomas. Rol AX. "
         "Define y vigila axiomas, lemas, teoremas y corolarios. "
-        "No calcula Tru_total. Mide generatividad TR1 sobre su propio cuerpo."
+        "No calcula Tru_total. No clasifica O de entrada (CX). "
+        "Mide generatividad TR1 sobre su propio cuerpo. "
+        "Expone ids de dominio K/O ya cargados en el grafo."
     ),
     "capacidades": {
         "verificar": barrer,
+        "barrer": barrer,
         "inventario": inventario,
         "axiomas": axiomas,
         "generatividad": generatividad,
@@ -587,6 +600,8 @@ __all__ = [
     "clave",
     "ref",
     "recolectar",
+    "por_dominio",
+    "ids_dominio_k_o",
     "declaraciones",
     "axiomas",
     "contradiccion_directa",
