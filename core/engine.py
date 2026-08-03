@@ -1,17 +1,24 @@
 """
 VPSI-TRUTH --- core/engine.py
 
-Engine central.
+Engine central (orquestador por contrato).
 
-Principio:
+Principio
   - Conoce la arquitectura (módulos, roles, contratos, capacidades).
   - Actúa solo por lo que cada CONTENEDOR declara.
-  - No inventa operaciones.
-  - No interpreta resultados de los módulos.
+  - No inventa operaciones ni interpreta resultados.
   - No sustituye la lógica interna de un módulo.
-  - CT es ancla de constantes (ALPHA/BETA), no un calculador.
-  - CA calcula C/L/K; FO aplica Tru_Ri / Tru_total.
-  - Sin O_context → K indefinido (Def-5.3.1).
+  - CT: ancla ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
+  - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
+  - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
+  - MC: coherencia de orden en compuerta; el orden fino vive en MC, no aquí.
+  - Sin O usable → K indefinido (Def-5.3.1).
+
+Esquema del ciclo de evaluación (correlacionado con Λ_V, sin incrustar teorema):
+  Sustrato (arranque) → Marco (CX) → Factores (CA) → Fórmula (FO)
+  → Cierre auditable (CIT si pedir_anuncio) → Evidencia (_emit).
+
+Estilo: plugin-host + service layer; fail-closed; oficios canónicos, no ifs por nombre de módulo.
 """
 
 from __future__ import annotations
@@ -19,9 +26,9 @@ from __future__ import annotations
 import importlib.util
 import sys
 import traceback
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from fractions import Fraction
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 
 # ===============================================================
@@ -72,29 +79,39 @@ class ContratoError(Exception):
 # ===============================================================
 # ROLES
 # ===============================================================
-ROLES = ("CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "RE", "VX", "TX", "CH", "CIT", "UI")
-OBLIGATORIOS = ("CT", "AX", "FO", "MC", "SF")
+ROLES: Tuple[str, ...] = (
+    "CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX",
+    "RE", "VX", "TX", "CH", "CIT", "UI",
+)
+OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
 
 
-# ===============================================================
-# CONTENEDOR
-# ===============================================================
-
-ALIAS_CAPACIDAD = {
+# Oficio canónico → claves que un INIT puede haber declarado
+ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "barrer": ("barrer", "verificar", "evaluar"),
     "verificar": ("verificar", "barrer", "evaluar"),
-    "evaluar": ("evaluar", "verificar", "barrer"),
-    "resolver": ("resolver", "verificar", "evaluar"),
+    "evaluar": ("evaluar", "verificar", "barrer", "resolver"),
+    "resolver": ("resolver", "evaluar", "verificar"),
     "componer": ("componer", "verificar"),
     "inventario": ("inventario",),
     "calcular": ("calcular",),
     "generatividad": ("generatividad",),
     "censo": ("censo", "verificar", "barrer"),
     "reportar": ("reportar",),
+    "anunciar": ("anunciar", "registrar", "evaluar", "verificar"),
+    "registrar": ("registrar", "anunciar", "evaluar"),
 }
 
 
+# ===============================================================
+# CONTENEDOR
+# ===============================================================
 class Contenedor:
+    __slots__ = (
+        "nombre", "rol", "version", "modulo", "ruta",
+        "requiere", "descripcion", "capacidades",
+    )
+
     def __init__(
         self,
         nombre: str,
@@ -103,7 +120,7 @@ class Contenedor:
         modulo: Any,
         ruta: Path,
         meta: Dict,
-    ):
+    ) -> None:
         self.nombre = nombre
         self.rol = rol
         self.version = version
@@ -112,11 +129,9 @@ class Contenedor:
         self.requiere: List[str] = list(meta.get("requiere") or [])
         self.descripcion: str = str(meta.get("descripcion") or "")
         raw = meta.get("capacidades") or {}
-        if not isinstance(raw, dict):
-            raw = {}
-        self.capacidades: Dict[str, Any] = dict(raw)
+        self.capacidades: Dict[str, Any] = dict(raw) if isinstance(raw, dict) else {}
 
-    def fn(self, nombre: str):
+    def fn(self, nombre: str) -> Any:
         """Clave exacta del contrato. Nunca inventa nombres."""
         ref = self.capacidades.get(nombre)
         if ref is None:
@@ -130,8 +145,8 @@ class Contenedor:
     def tiene(self, nombre: str) -> bool:
         return callable(self.fn(nombre))
 
-    def fn_oficio(self, nombre: str):
-        """Oficio canónico → función según claves que el INIT declaró."""
+    def fn_oficio(self, nombre: str) -> Any:
+        """Oficio canónico → primera callable según alias del INIT."""
         for clave in ALIAS_CAPACIDAD.get(nombre, (nombre,)):
             f = self.fn(clave)
             if callable(f):
@@ -141,8 +156,8 @@ class Contenedor:
     def tiene_oficio(self, nombre: str) -> bool:
         return callable(self.fn_oficio(nombre))
 
-    def como_dict(self) -> Dict:
-        caps = {}
+    def como_dict(self) -> Dict[str, Any]:
+        caps: Dict[str, str] = {}
         for k, v in self.capacidades.items():
             if callable(v):
                 caps[k] = getattr(v, "__name__", "callable")
@@ -163,10 +178,10 @@ class Contenedor:
 # REGISTRO
 # ===============================================================
 class Registro:
-    def __init__(self):
+    def __init__(self) -> None:
         self.contenedores: Dict[str, Contenedor] = {}
         self.por_rol: Dict[str, List[Contenedor]] = {r: [] for r in ROLES}
-        self.rechazados: List[Dict] = []
+        self.rechazados: List[Dict[str, Any]] = []
 
     def registrar(self, cont: Contenedor) -> None:
         if cont.nombre in self.contenedores:
@@ -183,7 +198,10 @@ class Registro:
         lista = self.por_rol.get(rol) or []
         return lista[0] if lista else None
 
-    def resumen(self) -> Dict:
+    def total(self) -> int:
+        return len(self.contenedores)
+
+    def resumen(self) -> Dict[str, Any]:
         return {
             "roles": {r: [c.nombre for c in self.por_rol[r]] for r in ROLES},
             "roles_vacios": [r for r in ROLES if not self.por_rol[r]],
@@ -197,25 +215,33 @@ class Registro:
 # ENGINE
 # ===============================================================
 class Engine:
+    """
+    Orquestador.
+
+    Fases de arranque (sustrato): descubrir → dependencias → compuertas.
+    Fases de evaluar (ciclo): marco CX → factores CA → fórmula FO
+                              → cierre CIT → evidencia.
+    """
+
     def __init__(
         self,
         raiz_modulos: str | Path,
         invocador_id: str = "core",
         verificar_axiomas: bool = True,
         strict: bool = True,
-    ):
+    ) -> None:
         self.raiz = Path(raiz_modulos).resolve()
         self.invocador_id = invocador_id
         self.verificar_axiomas = verificar_axiomas
         self.strict = strict
 
         self.registro = Registro()
-        self.informe_axiomas: Optional[Dict] = None
-        self.informe_mecanica: Optional[Dict] = None
+        self.informe_axiomas: Optional[Dict[str, Any]] = None
+        self.informe_mecanica: Optional[Dict[str, Any]] = None
         self.estado = "NO_INICIADO"
         self.errores_arranque: List[str] = []
-        self.fallos: List[Dict] = []
-        self.resultados_evaluacion: List[Dict] = []
+        self.fallos: List[Dict[str, Any]] = []
+        self.resultados_evaluacion: List[Dict[str, Any]] = []
 
         self._descubrir()
         self._resolver_dependencias()
@@ -234,38 +260,36 @@ class Engine:
             self.estado = "OPERATIVO"
 
     # -----------------------------------------------------------
-    # Descubrimiento
+    # Sustrato: descubrimiento
     # -----------------------------------------------------------
     def _descubrir(self) -> None:
         if not self.raiz.exists():
-            self.errores_arranque.append(f"Raíz de módulos no existe: {self.raiz}")
+            self.errores_arranque.append(
+                "Raíz de módulos no existe: {0}".format(self.raiz)
+            )
             return
 
         for path in sorted(self.raiz.rglob("__init__.py")):
-            # solo paquetes de primer nivel bajo modules/
-            if path.parent == self.raiz:
+            try:
+                rel = path.relative_to(self.raiz)
+            except ValueError:
                 continue
-            # modules/nombre/__init__.py
-            if path.parent.parent != self.raiz and self.raiz not in path.parents:
-                continue
-            # evitar subpaquetes profundos no contenedores
-            rel = path.relative_to(self.raiz)
+            # Solo packages de primer nivel: modules/<nombre>/__init__.py
             if len(rel.parts) != 2:
                 continue
-
             try:
                 cont = self._cargar_modulo(path)
-                if cont:
+                if cont is not None:
                     self.registro.registrar(cont)
             except Exception as e:
                 self.registro.rechazados.append({
                     "ruta": str(path),
-                    "razon": f"{type(e).__name__}: {e}",
+                    "razon": "{0}: {1}".format(type(e).__name__, e),
                 })
 
     def _cargar_modulo(self, path: Path) -> Optional[Contenedor]:
         directorio = path.parent
-        nombre_mod = f"vpsi_{directorio.name}"
+        nombre_mod = "vpsi_{0}".format(directorio.name)
         spec = importlib.util.spec_from_file_location(
             nombre_mod,
             path,
@@ -281,7 +305,7 @@ class Engine:
         except Exception as e:
             self.registro.rechazados.append({
                 "ruta": str(path),
-                "razon": f"import: {type(e).__name__}: {e}",
+                "razon": "import: {0}: {1}".format(type(e).__name__, e),
             })
             return None
 
@@ -307,7 +331,7 @@ class Engine:
         if rol not in ROLES:
             self.registro.rechazados.append({
                 "ruta": str(path),
-                "razon": f"rol desconocido: {rol}",
+                "razon": "rol desconocido: {0}".format(rol),
             })
             return None
 
@@ -320,29 +344,32 @@ class Engine:
             meta=meta,
         )
 
-    # -----------------------------------------------------------
     def _resolver_dependencias(self) -> None:
         for cont in list(self.registro.contenedores.values()):
-            faltan = []
+            faltan: List[str] = []
             for req in cont.requiere:
                 if req in ROLES:
                     if not self.registro.por_rol.get(req):
-                        faltan.append(f"rol:{req}")
+                        faltan.append("rol:{0}".format(req))
                 else:
                     if req not in self.registro.contenedores:
-                        faltan.append(f"modulo:{req}")
+                        faltan.append("modulo:{0}".format(req))
             if faltan:
                 self.errores_arranque.append(
-                    f"{cont.nombre} ({cont.rol}) requiere {faltan} y no están disponibles"
+                    "{0} ({1}) requiere {2} y no están disponibles".format(
+                        cont.nombre, cont.rol, faltan
+                    )
                 )
 
+    # -----------------------------------------------------------
+    # Ejecución de capacidad (fail-closed)
     # -----------------------------------------------------------
     def _ejecutar_capacidad(
         self,
         cont: Contenedor,
         capacidad: str,
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> Any:
         fn = cont.fn(capacidad)
         if not callable(fn):
@@ -360,51 +387,98 @@ class Engine:
                 "contenedor": cont.nombre,
                 "rol": cont.rol,
                 "capacidad": capacidad,
-                "razon": f"{type(e).__name__}: {e}",
+                "razon": "{0}: {1}".format(type(e).__name__, e),
+                "traza": traceback.format_exc(limit=3),
+            })
+            return UNDEFINED
+
+    def _ejecutar_oficio(
+        self,
+        cont: Contenedor,
+        oficio: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        fn = cont.fn_oficio(oficio)
+        if not callable(fn):
+            self.fallos.append({
+                "contenedor": cont.nombre,
+                "rol": cont.rol,
+                "oficio": oficio,
+                "razon": "oficio no resoluble en contrato",
+            })
+            return UNDEFINED
+        try:
+            return fn(*args, **kwargs)
+        except TypeError:
+            # Algunos INIT aceptan 0 args (inventario/barrer); reintento seguro
+            try:
+                return fn()
+            except Exception as e:
+                self.fallos.append({
+                    "contenedor": cont.nombre,
+                    "rol": cont.rol,
+                    "oficio": oficio,
+                    "razon": "{0}: {1}".format(type(e).__name__, e),
+                    "traza": traceback.format_exc(limit=3),
+                })
+                return UNDEFINED
+        except Exception as e:
+            self.fallos.append({
+                "contenedor": cont.nombre,
+                "rol": cont.rol,
+                "oficio": oficio,
+                "razon": "{0}: {1}".format(type(e).__name__, e),
                 "traza": traceback.format_exc(limit=3),
             })
             return UNDEFINED
 
     def _ejecutar_compuertas(self) -> None:
-        # Obligatorios presentes
         for rol in OBLIGATORIOS:
             if not self.registro.por_rol.get(rol):
-                self.errores_arranque.append(f"Falta rol obligatorio {rol}")
+                self.errores_arranque.append(
+                    "Falta rol obligatorio {0}".format(rol)
+                )
 
-        # MC
         for cont in self.registro.por_rol.get("MC", []):
             for cap in ("verificar", "barrer", "evaluar"):
                 if cont.tiene(cap):
                     informe = self._ejecutar_capacidad(cont, cap)
                     if es_undefined(informe):
-                        self.errores_arranque.append(f"MC/{cont.nombre}: fallo {cap}")
+                        self.errores_arranque.append(
+                            "MC/{0}: fallo {1}".format(cont.nombre, cap)
+                        )
                     elif isinstance(informe, dict):
                         self.informe_mecanica = informe
                         if not informe.get("coherente", True):
-                            self.errores_arranque.append(f"MC/{cont.nombre}: incoherente")
+                            self.errores_arranque.append(
+                                "MC/{0}: incoherente".format(cont.nombre)
+                            )
                     break
 
-        # AX
         for cont in self.registro.por_rol.get("AX", []):
             for cap in ("verificar", "barrer", "evaluar"):
                 if cont.tiene(cap):
                     informe = self._ejecutar_capacidad(cont, cap)
                     if es_undefined(informe):
-                        self.errores_arranque.append(f"AX/{cont.nombre}: fallo {cap}")
+                        self.errores_arranque.append(
+                            "AX/{0}: fallo {1}".format(cont.nombre, cap)
+                        )
                     elif isinstance(informe, dict):
                         self.informe_axiomas = informe
                         if not informe.get("coherente", True):
-                            self.errores_arranque.append(f"AX/{cont.nombre}: incoherente")
+                            self.errores_arranque.append(
+                                "AX/{0}: incoherente".format(cont.nombre)
+                            )
                     break
 
-        # CT ancla: debe poder leer ALPHA/BETA del módulo
         try:
             self.get_constantes()
         except ArranqueError as e:
             self.errores_arranque.append(str(e))
 
-        # -----------------------------------------------------------
-    # Ancla CT
+    # -----------------------------------------------------------
+    # Anclas CT / FO
     # -----------------------------------------------------------
     def get_constantes(self) -> Dict[str, Fraction]:
         for cont in self.registro.por_rol.get("CT", []):
@@ -416,7 +490,9 @@ class Engine:
             a_fn, b_fn = cont.fn("alpha"), cont.fn("beta")
             if callable(a_fn) and callable(b_fn):
                 return {"ALPHA": a_fn(), "BETA": b_fn()}
-        raise ArranqueError("Constantes ALPHA/BETA no disponibles (ancla CT)")
+        raise ArranqueError(
+            "Constantes ALPHA/BETA no disponibles (ancla CT)"
+        )
 
     def get_formulas(self):
         for cont in self.registro.por_rol.get("FO", []):
@@ -438,65 +514,209 @@ class Engine:
             )
 
     # -----------------------------------------------------------
-    # Evaluación (orquesta; no interpreta)
+    # API de oficio por rol
     # -----------------------------------------------------------
-    def ejecutar_capacidad(self, rol: str, capacidad: str, *args, **kwargs) -> Any:
+    def ejecutar_capacidad(
+        self, rol: str, capacidad: str, *args: Any, **kwargs: Any
+    ) -> Any:
         cont = self.registro.primero(rol)
         if cont is None:
             return UNDEFINED
         return self._ejecutar_capacidad(cont, capacidad, *args, **kwargs)
 
+    def ejecutar_oficio(
+        self, rol: str, oficio: str, *args: Any, **kwargs: Any
+    ) -> Any:
+        cont = self.registro.primero(rol)
+        if cont is None:
+            return UNDEFINED
+        return self._ejecutar_oficio(cont, oficio, *args, **kwargs)
+
+    # -----------------------------------------------------------
+    # Evidencia
+    # -----------------------------------------------------------
     def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
         return list(self.resultados_evaluacion)
 
-    def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        self.fallos = []
-        peticion = dict(peticion or {})
+    def _emit(
+        self,
+        resultado: Dict[str, Any],
+        peticion: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        registro = {
+            "secuencia": len(self.resultados_evaluacion) + 1,
+            "entrada": {
+                "contexto": (
+                    peticion.get("contexto")
+                    or peticion.get("O_context")
+                    or peticion.get("Octx")
+                ),
+                "tiene_C": "C" in peticion and peticion.get("C") is not None,
+                "tiene_L": "L" in peticion and peticion.get("L") is not None,
+                "tiene_K": "K" in peticion and peticion.get("K") is not None,
+                "pedir_anuncio": bool(
+                    peticion.get("pedir_anuncio")
+                    or (resultado.get("contexto_cx") or {}).get("pedir_anuncio")
+                ),
+            },
+            "resultado": dict(resultado),
+        }
+        self.resultados_evaluacion.append(registro)
+        return resultado
 
-        def _emit(resultado: Dict[str, Any]) -> Dict[str, Any]:
-            registro = {
-                "secuencia": len(self.resultados_evaluacion) + 1,
-                "entrada": {
-                    "contexto": (
-                        peticion.get("contexto")
-                        or peticion.get("O_context")
-                        or peticion.get("Octx")
-                    ),
-                    "tiene_C": ("C" in peticion and peticion.get("C") is not None),
-                    "tiene_L": ("L" in peticion and peticion.get("L") is not None),
-                    "tiene_K": ("K" in peticion and peticion.get("K") is not None),
-                },
-                "resultado": dict(resultado),
-            }
-            self.resultados_evaluacion.append(registro)
-            return resultado
+    # -----------------------------------------------------------
+    # Ciclo de evaluación
+    # -----------------------------------------------------------
+    def _marco_cx(self, peticion: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Fase marco: CX clasifica O / permite_k / pedir_anuncio."""
+        cont = self.registro.primero("CX")
+        if cont is None:
+            return None
+        out = self._ejecutar_oficio(cont, "evaluar", peticion)
+        if es_undefined(out) or not isinstance(out, dict):
+            out = self._ejecutar_oficio(cont, "resolver", peticion)
+        if es_undefined(out) or not isinstance(out, dict):
+            return None
+        return out
 
-        if self.estado != "OPERATIVO":
-            return _emit({
-                "estado": "RECHAZADO",
-                "razon": "Engine no operativo",
-                "errores_arranque": list(self.errores_arranque),
-                "fallos": list(self.fallos),
-            })
-
-        o_ctx = (
+    def _o_usable(
+        self,
+        peticion: Dict[str, Any],
+        cx: Optional[Dict[str, Any]],
+    ) -> Any:
+        """O efectivo: petición explícita o marco CX (sin inventar)."""
+        o = (
             peticion.get("contexto")
             or peticion.get("O_context")
             or peticion.get("Octx")
         )
+        if o:
+            return o
+        if not cx:
+            return None
+        o_cx = cx.get("O_context")
+        if o_cx is not None and not es_undefined(o_cx):
+            return o_cx
+        reg = cx.get("registro") or {}
+        if isinstance(reg, dict):
+            return reg.get("enunciado_O") or reg.get("O_id")
+        return None
+
+    def _cierre_cit(
+        self,
+        peticion: Dict[str, Any],
+        cx: Optional[Dict[str, Any]],
+        resultado_parcial: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Fase cierre auditable: solo si el marco pide anuncio y CIT tiene oficio."""
+        pedir = bool(peticion.get("pedir_anuncio"))
+        tipos: List[str] = list(peticion.get("tipos_peticion") or [])
+        if cx:
+            pedir = pedir or bool(cx.get("pedir_anuncio"))
+            if not tipos:
+                tipos = list(cx.get("tipos_peticion") or [])
+            reg = cx.get("registro") or {}
+            if isinstance(reg, dict):
+                pedir = pedir or bool(reg.get("pedir_anuncio"))
+                if not tipos:
+                    tipos = list(reg.get("tipos_peticion") or [])
+
+        if not pedir:
+            return None
+
+        cont = self.registro.primero("CIT")
+        if cont is None:
+            self.fallos.append({
+                "rol": "CIT",
+                "razon": "pedir_anuncio=True pero rol CIT no cargado",
+            })
+            return {
+                "estado": "SIN_OFICIO",
+                "razon": "CIT no disponible",
+                "pedir_anuncio": True,
+                "tipos_peticion": tipos,
+            }
+
+        paquete = {
+            "peticion": peticion,
+            "contexto_cx": cx,
+            "resultado": resultado_parcial,
+            "tipos_peticion": tipos,
+            "invocador_id": self.invocador_id,
+        }
+        out = self._ejecutar_oficio(cont, "anunciar", paquete)
+        if es_undefined(out):
+            out = self._ejecutar_oficio(cont, "evaluar", paquete)
+        if es_undefined(out):
+            return {
+                "estado": "FALLO_OFICIO",
+                "razon": "CIT sin capacidad anunciar/evaluar resoluble",
+                "pedir_anuncio": True,
+                "tipos_peticion": tipos,
+            }
+        if isinstance(out, dict):
+            return out
+        return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
+
+    def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Orquesta un ciclo. No interpreta Tru. No inventa O ni factores.
+
+        Orden de fases (esquema, no teorema embebido):
+          1. Marco CX (si existe)
+          2. Guardas de O / permite_k
+          3. Factores CA + entrada explícita
+          4. Fórmula FO
+          5. Cierre CIT si pedir_anuncio
+          6. Evidencia
+        """
+        self.fallos = []
+        peticion = dict(peticion or {})
+
+        if self.estado != "OPERATIVO":
+            return self._emit({
+                "estado": "RECHAZADO",
+                "razon": "Engine no operativo",
+                "errores_arranque": list(self.errores_arranque),
+                "fallos": list(self.fallos),
+            }, peticion)
+
+        # --- 1. Marco CX ---
+        cx = self._marco_cx(peticion)
+        o_ctx = self._o_usable(peticion, cx)
+
+        # --- 2. Sin O usable → UNDEFINED (Def-5.3.1); compatible con tests ---
         if not o_ctx:
-            return _emit({
+            body: Dict[str, Any] = {
                 "estado": "UNDEFINED",
                 "razon": "K indefinido: falta O_context (Corolario Def-5.3.1)",
                 "factores": {"C": None, "L": None, "K": "UNDEFINED"},
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
                 "fallos": list(self.fallos),
-            })
+            }
+            if cx is not None:
+                body["contexto_cx"] = {
+                    "permite_k": cx.get("permite_k"),
+                    "pedir_anuncio": cx.get("pedir_anuncio"),
+                    "tipos_peticion": cx.get("tipos_peticion"),
+                    "modo_entrada": cx.get("modo_entrada"),
+                    "coherente": cx.get("coherente"),
+                }
+            # CIT puede anunciar límite aunque no haya Tru
+            cit = self._cierre_cit(peticion, cx, body)
+            if cit is not None:
+                body["citacion"] = cit
+            return self._emit(body, peticion)
 
+        # Si CX niega permite_k de forma explícita y no hay factores en petición,
+        # aún permitimos el camino clásico cuando C,L,K vienen en la petición
+        # (tests de contrato / humo CI). CX informa; no censura entrada explícita.
+
+        # --- 3. Factores ---
         C = L = K = None
         ca = self.registro.primero("CA")
-        if ca and ca.tiene("calcular"):
+        if ca is not None and ca.tiene("calcular"):
             calc = self._ejecutar_capacidad(ca, "calcular", peticion)
             if not es_undefined(calc) and isinstance(calc, dict):
                 C = calc.get("C")
@@ -511,15 +731,21 @@ class Engine:
             if "K" in peticion and peticion["K"] is not None:
                 K = Fraction(str(peticion["K"]))
         except Exception as e:
-            return _emit({
+            body = {
                 "estado": "ERROR",
                 "razon": "C, L o K inválidos: {0}".format(e),
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
-            })
+            }
+            if cx is not None:
+                body["contexto_cx"] = {
+                    "permite_k": cx.get("permite_k"),
+                    "pedir_anuncio": cx.get("pedir_anuncio"),
+                }
+            return self._emit(body, peticion)
 
         if C is None or L is None or K is None:
-            return _emit({
+            body = {
                 "estado": "PARCIAL",
                 "razon": (
                     "Faltan factores C/L/K "
@@ -532,22 +758,36 @@ class Engine:
                     "K": str(K) if K is not None else None,
                 },
                 "fallos": list(self.fallos),
-            })
+            }
+            if cx is not None:
+                body["contexto_cx"] = {
+                    "permite_k": cx.get("permite_k"),
+                    "pedir_anuncio": cx.get("pedir_anuncio"),
+                    "tipos_peticion": cx.get("tipos_peticion"),
+                }
+            cit = self._cierre_cit(peticion, cx, body)
+            if cit is not None:
+                body["citacion"] = cit
+            return self._emit(body, peticion)
 
+        # --- 4. Fórmula FO ---
         try:
             tru_ri_fn, tru_total_fn = self.get_formulas()
             constantes = self.get_constantes()
             ri = tru_ri_fn(C, L, K)
             tt = tru_total_fn(C, L, K)
         except Exception as e:
-            return _emit({
+            body = {
                 "estado": "ERROR",
                 "razon": "cálculo Tru: {0}: {1}".format(type(e).__name__, e),
                 "contexto": o_ctx,
                 "fallos": list(self.fallos),
-            })
+            }
+            if cx is not None:
+                body["contexto_cx"] = {"permite_k": cx.get("permite_k")}
+            return self._emit(body, peticion)
 
-        return _emit({
+        body = {
             "estado": "OK",
             "contexto": o_ctx,
             "factores": {"C": str(C), "L": str(L), "K": str(K)},
@@ -558,70 +798,34 @@ class Engine:
             "R_i_equals_R": False,
             "fuentes_usadas": ["X", "O_context"],
             "fallos": list(self.fallos),
-        })
-
-    def censar(self) -> Dict:
-        return self.registro.resumen()
-
-    def inventario(self) -> Dict:
-        contenido = {}
-        for cont in self.registro.contenedores.values():
-            if cont.tiene("inventario"):
-                out = self._ejecutar_capacidad(cont, "inventario")
-                if es_undefined(out):
-                    contenido[cont.nombre] = {"error": "inventario falló"}
-                else:
-                    contenido[cont.nombre] = out
-        return {
-            "estado": self.estado,
-            "errores_arranque": list(self.errores_arranque),
-            "registro": self.registro.resumen(),
-            "contenido": contenido,
-            "informe_axiomas": self.informe_axiomas,
-            "informe_mecanica": self.informe_mecanica,
-            "resultados_evaluacion": list(self.resultados_evaluacion),
-            "resultados_evaluacion_n": len(self.resultados_evaluacion),
         }
-
-    def censar_generatividad(self) -> Dict:
-        out = self.ejecutar_capacidad("AX", "generatividad")
-
-        try:
-            resumen = self.censar() if hasattr(self, "censar") else {}
-        except Exception:
-            resumen = {}
-
-        roles_vacios = list(resumen.get("roles_vacios") or [])
-        rechazados = list(resumen.get("rechazados") or [])
-
-        if es_undefined(out) or not isinstance(out, dict):
-            return {
-                "estado": "UNDEFINED",
-                "razon": "AX.generatividad no disponible o falló",
-                "roles_vacios": roles_vacios,
-                "rechazados": rechazados,
-                "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
-                "nota": "Sin medición TR1; residual de roles usado como proxy U1.",
+        if cx is not None:
+            body["contexto_cx"] = {
+                "permite_k": cx.get("permite_k"),
+                "pedir_anuncio": cx.get("pedir_anuncio"),
+                "tipos_peticion": cx.get("tipos_peticion"),
+                "modo_entrada": cx.get("modo_entrada"),
+                "ids_cx_relevantes": cx.get("ids_cx_relevantes"),
+                "coherente": cx.get("coherente"),
             }
 
-        resultado = dict(out)
-        resultado["roles_vacios"] = roles_vacios
-        resultado["rechazados_n"] = len(rechazados)
-        if roles_vacios or resultado.get("pares_novedosos", 0) > 0:
-            resultado["u1_estado"] = "NO_STAGNANT"
-        else:
-            resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
-        resultado["estado"] = "OK"
-        return resultado
+        # --- 5. Cierre CIT ---
+        cit = self._cierre_cit(peticion, cx, body)
+        if cit is not None:
+            body["citacion"] = cit
+            body["fallos"] = list(self.fallos)
+
+        # --- 6. Evidencia ---
+        return self._emit(body, peticion)
 
     # -----------------------------------------------------------
-    # Introspección (sin actuar de más)
+    # Introspección
     # -----------------------------------------------------------
-    def censar(self) -> Dict:
+    def censar(self) -> Dict[str, Any]:
         return self.registro.resumen()
 
-    def inventario(self) -> Dict:
-        contenido = {}
+    def inventario(self) -> Dict[str, Any]:
+        contenido: Dict[str, Any] = {}
         for cont in self.registro.contenedores.values():
             if cont.tiene("inventario"):
                 out = self._ejecutar_capacidad(cont, "inventario")
@@ -640,14 +844,10 @@ class Engine:
             "resultados_evaluacion_n": len(self.resultados_evaluacion),
         }
 
-    def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
-        return list(self.resultados_evaluacion)
-
-    def censar_generatividad(self) -> Dict:
+    def censar_generatividad(self) -> Dict[str, Any]:
         out = self.ejecutar_capacidad("AX", "generatividad")
-
         try:
-            resumen = self.censar() if hasattr(self, "censar") else {}
+            resumen = self.censar()
         except Exception:
             resumen = {}
 
