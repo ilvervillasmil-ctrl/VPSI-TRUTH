@@ -1,613 +1,701 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-VPSI-TRUTH — modules/axiomas/__init__.py
+MONTE CARLO ADVERSARIAL — nodo-invisible / OmegaEngine
 
-Contenedor de axiomas. Rol AX. v9.5
+Objeto bajo prueba (todo importado del repo, sin oraculo interno):
 
-Qué es:
-  Vigila declaraciones (axioma | lema | teorema | corolario | definicion).
-  No pertenece a ninguna teoría. No calcula Tru_total.
-  No clasifica entrada (eso es CX). No orquesta (eso es Engine).
+    formulas.truth_VPSI.TruthTheorem.compute_total_truth(c, l, k)
+    core.engine.OmegaEngine.apply_vpsi_truth(C, L, K)
+    core.engine.OmegaEngine.compute_coherence(layers_data, C1, C2, theta)
+    formulas.constants.ALPHA / BETA / PHI / LAYER_FRICTION
 
-Qué vigila:
-  - contradiccion_directa
-  - contradiccion_de_cota
-  Si hay choque o error de carga → coherente=False.
+Axiomas verificados (los que el propio repo declara en truth_VPSI.py):
 
-Qué expone:
-  - verificar / barrer: coherencia del cuerpo
-  - axiomas / declaraciones: lista si coherente (fail-closed)
-  - generatividad: TR1/U1 sobre Θ (capa operativa + canónica paper)
-  - inventario: mapa del módulo
+    A2  piso beta        Tru_total nunca por debajo de BETA
+    A3  cota alpha       Tru_total nunca por encima de ALPHA + BETA
+    A4  unidad           ALPHA + BETA == 1
+    A5  interdependencia un factor nulo colapsa Tru_total a BETA
+    A6  cota informac.   ninguna Ri produce mas que R
+    A7  invariancia      misma entrada, misma salida
 
-Def-5.3.1 / dominio O:
-  Vive en las declaraciones de los cuerpos (p.ej. contexto_AX, VPSI).
-  Este INIT no re-enuncia el teorema: lo carga, lo vigila y lo expone.
-  CX aplica la clasificación de entrada; AX es el juez del grafo.
+REGLAS DE CONTEO
+
+    - Solo mide codigo importado. Sin formula de referencia local.
+    - Familia de caso fijo: criterio CERO FALLOS.
+      Familia con muestreo: criterio tasa < umbral.
+    - Familia sin una sola medicion = FAIL: no medir no es aprobar.
+
+Uso:
+    pytest  tests/test_montecarlo_omega.py
+    python  tests/test_montecarlo_omega.py --n 50000 --verbose
 """
 
 from __future__ import annotations
 
-import importlib.util
+import argparse
+import math
+import random
 import sys
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-try:
-    from core.diagnostico import DiagnosticoGlobal  # type: ignore
-except Exception:  # noqa: BLE001
-    DiagnosticoGlobal = None  # type: ignore
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # ===============================================================
-# Constantes
+# SEGMENTO 1 --- PARAMETROS
 # ===============================================================
-OBLIGATORIOS = ("id", "tipo", "sujeto", "relacion", "objeto", "polaridad")
-TIPOS = ("axioma", "lema", "teorema", "corolario", "definicion")
 
-AXIOMA = "axioma"
-LEMA = "lema"
-TEOREMA = "teorema"
-COROLARIO = "corolario"
-DEFINICION = "definicion"
-
-TRADUCCION_CLAVES = {
-    "type": "tipo",
-    "subject": "sujeto",
-    "relation": "relacion",
-    "object": "objeto",
-    "polarity": "polaridad",
-    "statement": "enunciado",
-    "depends_on": "depende_de",
-    "governs": "gobierna",
-    "cota": "cota",
-}
-
-_DIR = Path(__file__).parent
-
-# Dominios donde suele vivir la exigencia de O / K (exposición, no cálculo)
-DOMINIOS_K_O = frozenset({
-    "contexto", "ontologia", "epistemologia", "verificacion",
-    "dominio", "k", "o_context", "correlacion",
-})
-
+N_STOCH = 20_000
+UMBRAL = 0.0          # tolerancia cero: son invariantes, no estadistica
+SEED = 0x0DE_C0_DE
+EPS = 1e-12
 
 # ===============================================================
-# Carga
+# SEGMENTO 2 --- RAIZ E IMPORTS
 # ===============================================================
-def _cargar_declaraciones_desde_archivo(archivo: Path) -> List[Dict]:
-    if archivo.name.startswith("_"):
-        return []
 
-    nombre_mod = f"axiomas_{archivo.stem}"
-    spec = importlib.util.spec_from_file_location(nombre_mod, archivo)
-    if spec is None or spec.loader is None:
-        return []
+MARCAS_RAIZ = ("pyproject.toml", "setup.py", "requirements.txt", ".git",
+               "core", "formulas")
 
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[nombre_mod] = mod
-    spec.loader.exec_module(mod)
 
-    declaraciones = getattr(mod, "DECLARACIONES", None)
-    if declaraciones is None and callable(getattr(mod, "declaraciones", None)):
+def raiz_repo() -> Path:
+    aqui = Path(__file__).resolve()
+    candidata = aqui.parent
+    for base in [aqui.parent] + list(aqui.parents):
+        if (base / "core").is_dir() and (base / "formulas").is_dir():
+            return base
+        if any((base / m).exists() for m in MARCAS_RAIZ):
+            candidata = base
+    return candidata
+
+
+_ERR: List[str] = []
+TruthTheorem = None
+OmegaEngine = None
+PurposeAlignmentError = None
+ALPHA = BETA = PHI = None
+ALPHA_ENGINE = BETA_ENGINE = None
+LAYER_FRICTION: List[float] = []
+NUM_LAYERS = 0
+
+
+def cargar(raiz: Path) -> None:
+    global TruthTheorem, OmegaEngine, PurposeAlignmentError
+    global ALPHA, BETA, PHI, ALPHA_ENGINE, BETA_ENGINE
+    global LAYER_FRICTION, NUM_LAYERS
+
+    if str(raiz) not in sys.path:
+        sys.path.insert(0, str(raiz))
+
+    try:
+        from formulas.constants import (ALPHA as A, BETA as B, PHI as P,
+                                        LAYER_FRICTION as LF, NUM_LAYERS as NL)
+        ALPHA, BETA, PHI = A, B, P
+        LAYER_FRICTION, NUM_LAYERS = list(LF), NL
+    except Exception as e:
+        _ERR.append(f"formulas.constants: {type(e).__name__}: {e}")
+
+    try:
+        from formulas.truth_VPSI import TruthTheorem as T
+        TruthTheorem = T
+    except Exception as e:
+        _ERR.append(f"formulas.truth_VPSI: {type(e).__name__}: {e}")
+
+    try:
+        from core.engine import (OmegaEngine as OE,
+                                 PurposeAlignmentError as PAE,
+                                 ALPHA_VPSI, BETA_VPSI)
+        OmegaEngine, PurposeAlignmentError = OE, PAE
+        ALPHA_ENGINE, BETA_ENGINE = ALPHA_VPSI, BETA_VPSI
+    except Exception as e:
+        _ERR.append(f"core.engine: {type(e).__name__}: {e}")
+
+# ===============================================================
+# SEGMENTO 3 --- REGISTRO
+# ===============================================================
+
+@dataclass
+class Fallo:
+    familia: str
+    axioma: str
+    fuente: str
+    entrada: str
+    observado: str
+    causa: str
+
+
+@dataclass
+class Familia:
+    nombre: str
+    axioma: str
+    fuente: str
+    fija: bool
+    ok: int = 0
+    fallos: int = 0
+    vacios: int = 0
+
+    @property
+    def medidos(self) -> int:
+        return self.ok + self.fallos
+
+    @property
+    def tasa(self) -> float:
+        return self.fallos / self.medidos if self.medidos else 0.0
+
+
+@dataclass
+class Registro:
+    familias: Dict[str, Familia] = field(default_factory=dict)
+    detalle: List[Fallo] = field(default_factory=list)
+    max_detalle: int = 20
+
+    def _f(self, n, ax="", src="", fija=True) -> Familia:
+        if n not in self.familias:
+            self.familias[n] = Familia(n, ax, src, fija)
+        return self.familias[n]
+
+    def ok(self, n, ax="", src="", fija=True):
+        self._f(n, ax, src, fija).ok += 1
+
+    def vacio(self, n, ax="", src="", fija=True):
+        self._f(n, ax, src, fija).vacios += 1
+
+    def fail(self, n, ax, src, entrada, observado, causa, fija=True):
+        self._f(n, ax, src, fija).fallos += 1
+        if len(self.detalle) < self.max_detalle:
+            self.detalle.append(Fallo(n, ax, src, entrada, observado, causa))
+
+# ===============================================================
+# SEGMENTO 4 --- MUESTREO
+# ===============================================================
+
+def factor_en_rango(rng: random.Random) -> float:
+    """C, L, K dentro del dominio declarado [0,1]."""
+    r = rng.random()
+    if r < 0.10:
+        return 0.0
+    if r < 0.20:
+        return 1.0
+    return rng.random()
+
+
+def factor_fuera_de_rango(rng: random.Random) -> float:
+    """Adversarial: el dominio se declara [0,1]; se golpea fuera."""
+    return rng.choice([
+        -rng.random() * 10,
+        1.0 + rng.random() * 10,
+        float("inf") if rng.random() < 0.05 else rng.random() * -1,
+    ])
+
+
+def capas_validas(rng: random.Random, n: int = 7) -> List[Dict[str, float]]:
+    """L6 (indice 6) con phi = 0.0: el motor lo exige."""
+    capas = [{"L": rng.random(), "phi": rng.random() * 0.2}
+             for _ in range(n - 1)]
+    capas.append({"L": rng.random(), "phi": 0.0})
+    return capas
+
+# ===============================================================
+# SEGMENTO 5 --- FAMILIAS DE ATAQUE
+# ===============================================================
+
+def f1_unidad(reg: Registro) -> None:
+    """A4: ALPHA + BETA == 1, y las dos fuentes de ALPHA coinciden."""
+    fam, ax = "F1_unidad", "A4 alpha+beta=1"
+    if ALPHA is None:
+        reg.fail(fam, ax, "formulas.constants", "import",
+                 "constantes no importadas", "sin constantes no hay marco")
+        return
+    src = "formulas.constants"
+
+    if abs((ALPHA + BETA) - 1.0) > EPS:
+        reg.fail(fam, ax, src, "ALPHA + BETA",
+                 f"{ALPHA + BETA!r}", "el invariante de unidad no se cumple")
+    else:
+        reg.ok(fam, ax, src)
+
+    # geometria declarada: 27 celdas, 1 interior, 26 exteriores
+    if abs(ALPHA - 26.0 / 27.0) > EPS or abs(BETA - 1.0 / 27.0) > EPS:
+        reg.fail(fam, ax, src, "derivacion del cubo 3x3x3",
+                 f"ALPHA={ALPHA!r} BETA={BETA!r}",
+                 "no coinciden con 26/27 y 1/27")
+    else:
+        reg.ok(fam, ax, src)
+
+    # dos fuentes: core.engine define las suyas ademas de importarlas
+    if ALPHA_ENGINE is None:
+        reg.vacio(fam, ax, src)
+    elif abs(ALPHA_ENGINE - ALPHA) > EPS or abs(BETA_ENGINE - BETA) > EPS:
+        reg.fail(fam, ax, "core.engine vs formulas.constants",
+                 "ALPHA_VPSI vs ALPHA",
+                 f"engine=({ALPHA_ENGINE!r}, {BETA_ENGINE!r})  "
+                 f"constants=({ALPHA!r}, {BETA!r})",
+                 "dos definiciones de la misma constante y ya divergieron")
+    else:
+        reg.ok(fam, ax, "core.engine + formulas.constants")
+
+
+def f2_cotas_truththeorem(reg: Registro, rng: random.Random, n: int) -> None:
+    """A2 y A3 sobre TruthTheorem, con factores dentro del dominio."""
+    fam, ax = "F2_cotas_TT", "A2 piso / A3 cota"
+    if TruthTheorem is None:
+        reg.fail(fam, ax, "-", "import", "TruthTheorem ausente",
+                 "sin motor de verdad no hay nada que medir")
+        return
+    src = "formulas.truth_VPSI.TruthTheorem"
+    piso, techo = BETA, ALPHA + BETA
+
+    for _ in range(n):
+        c, l, k = (factor_en_rango(rng) for _ in range(3))
         try:
-            declaraciones = mod.declaraciones()
-        except Exception:  # noqa: BLE001
-            declaraciones = []
+            t = TruthTheorem.compute_total_truth(c, l, k)
+        except Exception as e:
+            reg.fail(fam, ax, src, f"C={c} L={l} K={k}",
+                     f"{type(e).__name__}: {e}", "excepcion", fija=False)
+            continue
+        if t < piso - EPS:
+            reg.fail(fam, ax, src, f"C={c!r} L={l!r} K={k!r}",
+                     f"Tru_total={t!r}",
+                     f"por debajo del piso BETA={piso!r}: el axioma 2 "
+                     "prohibe que Tru_total baje de beta", fija=False)
+        elif t > techo + EPS:
+            reg.fail(fam, ax, src, f"C={c!r} L={l!r} K={k!r}",
+                     f"Tru_total={t!r}",
+                     f"por encima de ALPHA+BETA={techo!r}", fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
 
-    # Alias frecuentes en archivos de cuerpo
-    if declaraciones is None:
-        for attr in ("CUERPO", "declaraciones_lista"):
-            val = getattr(mod, attr, None)
-            if isinstance(val, list):
-                declaraciones = val
-                break
 
-    return declaraciones if isinstance(declaraciones, list) else []
+def f3_cotas_engine(reg: Registro, rng: random.Random, n: int) -> None:
+    """
+    A2 y A3 sobre apply_vpsi_truth con factores FUERA del dominio.
+
+    TruthTheorem recorta a [0,1]; el motor no. Si el motor no recorta,
+    un factor fuera de rango rompe el piso y la cota a la vez.
+    """
+    fam, ax = "F3_cotas_engine", "A2 piso / A3 cota"
+    if OmegaEngine is None:
+        reg.fail(fam, ax, "-", "import", "OmegaEngine ausente",
+                 "sin motor no hay nada que medir")
+        return
+    src = "core.engine.OmegaEngine.apply_vpsi_truth"
+    eng = OmegaEngine()
+    piso, techo = BETA, ALPHA + BETA
+
+    for _ in range(n):
+        c, l, k = (factor_fuera_de_rango(rng) if rng.random() < 0.5
+                   else factor_en_rango(rng) for _ in range(3))
+        try:
+            t = eng.apply_vpsi_truth(c, l, k)
+        except Exception as e:
+            reg.fail(fam, ax, src, f"C={c} L={l} K={k}",
+                     f"{type(e).__name__}: {e}", "excepcion", fija=False)
+            continue
+        if isinstance(t, float) and (math.isnan(t) or math.isinf(t)):
+            reg.fail(fam, ax, src, f"C={c!r} L={l!r} K={k!r}",
+                     f"Tru_total={t!r}", "resultado no finito", fija=False)
+        elif t < piso - EPS:
+            reg.fail(fam, ax, src, f"C={c!r} L={l!r} K={k!r}",
+                     f"Tru_total={t!r}",
+                     f"por debajo del piso BETA={piso!r}. El motor no "
+                     "recorta los factores al dominio [0,1] declarado",
+                     fija=False)
+        elif t > techo + EPS:
+            reg.fail(fam, ax, src, f"C={c!r} L={l!r} K={k!r}",
+                     f"Tru_total={t!r}",
+                     f"por encima de ALPHA+BETA={techo!r}. El motor no "
+                     "recorta los factores al dominio [0,1] declarado",
+                     fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
 
 
-def _ruta_vpsi() -> Optional[Path]:
-    candidatos = [
-        _DIR.parent.parent / "VPSI.py",
-        _DIR.parent / "VPSI.py",
-        _DIR / "VPSI.py",
+def f4_paridad(reg: Registro, rng: random.Random, n: int) -> None:
+    """
+    A7: dos implementaciones de la misma formula deben coincidir.
+
+    TruthTheorem.compute_total_truth y OmegaEngine.apply_vpsi_truth
+    computan Tru_total = C*L*K*alpha + beta. Si divergen, hay dos
+    verdades para la misma entrada.
+    """
+    fam, ax = "F4_paridad", "A7 invariancia"
+    if TruthTheorem is None or OmegaEngine is None:
+        reg.fail(fam, ax, "-", "import", "falta una de las dos vias",
+                 "no se puede contrastar")
+        return
+    src = "TruthTheorem vs OmegaEngine"
+    eng = OmegaEngine()
+
+    for _ in range(n):
+        fuera = rng.random() < 0.4
+        c, l, k = ((factor_fuera_de_rango(rng) if fuera
+                    else factor_en_rango(rng)) for _ in range(3))
+        try:
+            a = TruthTheorem.compute_total_truth(c, l, k)
+            b = eng.apply_vpsi_truth(c, l, k)
+        except Exception as e:
+            reg.fail(fam, ax, src, f"C={c} L={l} K={k}",
+                     f"{type(e).__name__}: {e}", "excepcion", fija=False)
+            continue
+        if isinstance(a, float) and isinstance(b, float) \
+                and (math.isnan(a) or math.isnan(b)):
+            reg.vacio(fam, ax, src, fija=False)
+            continue
+        if abs(a - b) > 1e-9:
+            reg.fail(fam, ax, src, f"C={c!r} L={l!r} K={k!r}",
+                     f"TruthTheorem={a!r}  OmegaEngine={b!r}  "
+                     f"delta={abs(a-b)!r}",
+                     "dos implementaciones de la misma formula dan "
+                     "resultados distintos: TruthTheorem recorta al "
+                     "dominio [0,1] y el motor no", fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
+
+
+def f5_multiplicatividad(reg: Registro, rng: random.Random, n: int) -> None:
+    """A5: un factor nulo colapsa Tru_total a BETA. Sin compensacion."""
+    fam, ax = "F5_multiplicativa", "A5 interdependencia"
+    if TruthTheorem is None:
+        reg.fail(fam, ax, "-", "import", "TruthTheorem ausente",
+                 "sin motor no hay nada que medir")
+        return
+    src = "formulas.truth_VPSI.TruthTheorem"
+
+    for _ in range(n):
+        cual = rng.randrange(3)
+        vals = [factor_en_rango(rng) for _ in range(3)]
+        vals[cual] = 0.0
+        try:
+            t = TruthTheorem.compute_total_truth(*vals)
+        except Exception as e:
+            reg.fail(fam, ax, src, str(vals), f"{type(e).__name__}: {e}",
+                     "excepcion", fija=False)
+            continue
+        if abs(t - BETA) > EPS:
+            reg.fail(fam, ax, src,
+                     f"C={vals[0]!r} L={vals[1]!r} K={vals[2]!r} "
+                     f"(factor {'CLK'[cual]} = 0)",
+                     f"Tru_total={t!r}",
+                     f"con un factor nulo Tru_total debe ser exactamente "
+                     f"BETA={BETA!r}: no hay compensacion entre factores",
+                     fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
+
+
+def f6_monotonia(reg: Registro, rng: random.Random, n: int) -> None:
+    """Si C*L*K crece, Tru_total no puede decrecer."""
+    fam, ax = "F6_monotonia", "A5 interdependencia"
+    if TruthTheorem is None:
+        reg.fail(fam, ax, "-", "import", "TruthTheorem ausente",
+                 "sin motor no hay nada que medir")
+        return
+    src = "formulas.truth_VPSI.TruthTheorem"
+
+    for _ in range(n):
+        a = [factor_en_rango(rng) for _ in range(3)]
+        b = [min(1.0, x + rng.random() * (1.0 - x)) for x in a]
+        try:
+            ta = TruthTheorem.compute_total_truth(*a)
+            tb = TruthTheorem.compute_total_truth(*b)
+        except Exception as e:
+            reg.fail(fam, ax, src, f"{a} vs {b}", f"{type(e).__name__}: {e}",
+                     "excepcion", fija=False)
+            continue
+        if tb < ta - EPS:
+            reg.fail(fam, ax, src,
+                     f"a={a!r}  b={b!r} (b >= a componente a componente)",
+                     f"Tru(a)={ta!r}  Tru(b)={tb!r}",
+                     "aumentar un factor redujo Tru_total", fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
+
+
+def f7_puerta_l6(reg: Registro, rng: random.Random) -> None:
+    """El motor exige phi = 0.0 en L6. Debe lanzar si no."""
+    fam, ax = "F7_puerta_L6", "alineacion de proposito"
+    if OmegaEngine is None or PurposeAlignmentError is None:
+        reg.fail(fam, ax, "-", "import", "OmegaEngine ausente",
+                 "sin motor no hay puerta que probar")
+        return
+    src = "core.engine.OmegaEngine.compute_coherence"
+    eng = OmegaEngine()
+
+    # caso valido: no debe lanzar
+    capas = capas_validas(rng)
+    try:
+        eng.compute_coherence(capas)
+        reg.ok(fam, ax, src)
+    except PurposeAlignmentError as e:
+        reg.fail(fam, ax, src, "L6 phi = 0.0", str(e),
+                 "lanzo con L6 correctamente alineada")
+    except Exception as e:
+        reg.fail(fam, ax, src, "L6 phi = 0.0",
+                 f"{type(e).__name__}: {e}", "excepcion inesperada")
+
+    # casos invalidos: debe lanzar
+    for phi_malo in (0.5, 1e-9, -0.1):
+        malas = capas_validas(rng)
+        malas[6]["phi"] = phi_malo
+        try:
+            eng.compute_coherence(malas)
+            reg.fail(fam, ax, src, f"L6 phi = {phi_malo!r}",
+                     "no lanzo",
+                     "L6 con friccion no nula debe abortar el computo")
+        except PurposeAlignmentError:
+            reg.ok(fam, ax, src)
+        except Exception as e:
+            reg.fail(fam, ax, src, f"L6 phi = {phi_malo!r}",
+                     f"{type(e).__name__}: {e}",
+                     "lanzo una excepcion distinta de PurposeAlignmentError")
+
+
+def f8_piso_pipeline(reg: Registro, rng: random.Random) -> None:
+    """
+    A2 a traves del pipeline completo.
+
+    compute_coherence aplica Tru_total y luego escala por PHI/2 y L7.
+    Si el escalado deja el resultado por debajo de BETA, el piso
+    estructural no sobrevive al pipeline.
+    """
+    fam, ax = "F8_piso_pipeline", "A2 piso beta"
+    if OmegaEngine is None:
+        reg.fail(fam, ax, "-", "import", "OmegaEngine ausente",
+                 "sin motor no hay pipeline")
+        return
+    src = "core.engine.OmegaEngine.compute_coherence"
+    eng = OmegaEngine()
+
+    casos = [
+        ("activaciones nulas", 0.0),
+        ("activaciones minimas", 1e-9),
+        ("activaciones bajas", 0.01),
     ]
-    for p in candidatos:
-        if p.exists():
-            return p
-    return None
+    for etiqueta, val in casos:
+        capas = [{"L": val, "phi": p}
+                 for p in (LAYER_FRICTION or [0.1, .02, .05, .03, .01, .01, 0.0])]
+        capas[6]["phi"] = 0.0
+        try:
+            r = eng.compute_coherence(capas)
+        except Exception as e:
+            reg.fail(fam, ax, src, etiqueta, f"{type(e).__name__}: {e}",
+                     "excepcion")
+            continue
+        if r < BETA - EPS:
+            reg.fail(fam, ax, src, f"{etiqueta} (L={val!r} en todas las capas)",
+                     f"compute_coherence={r!r}   BETA={BETA!r}",
+                     "el resultado quedo por debajo del piso estructural. "
+                     "El escalado posterior (PHI/2 y L7) destruye la "
+                     "garantia de que Tru_total >= BETA")
+        else:
+            reg.ok(fam, ax, src)
 
+
+def f9_determinismo(reg: Registro, rng: random.Random, n: int) -> None:
+    """
+    A7: misma entrada, misma salida.
+
+    Se usan instancias NUEVAS en cada pasada: una instancia acumula
+    estado de sesion y la comparacion seria de dos objetos distintos.
+    """
+    fam, ax = "F9_determinismo", "A7 invariancia"
+    if OmegaEngine is None:
+        reg.fail(fam, ax, "-", "import", "OmegaEngine ausente",
+                 "sin motor no hay nada que medir")
+        return
+    src = "core.engine.OmegaEngine.compute_coherence"
+
+    for _ in range(max(1, n // 40)):
+        capas = capas_validas(rng)
+        try:
+            a = OmegaEngine().compute_coherence([dict(c) for c in capas])
+            b = OmegaEngine().compute_coherence([dict(c) for c in capas])
+        except Exception as e:
+            reg.fail(fam, ax, src, str(capas)[:100],
+                     f"{type(e).__name__}: {e}", "excepcion", fija=False)
+            continue
+        if abs(a - b) > EPS:
+            reg.fail(fam, ax, src, str(capas)[:160],
+                     f"1a={a!r}  2a={b!r}  delta={abs(a-b)!r}",
+                     "misma entrada, dos instancias limpias, dos salidas",
+                     fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
+
+
+def f10_dominio_salida(reg: Registro, rng: random.Random, n: int) -> None:
+    """compute_coherence declara devolver float en [0,1]."""
+    fam, ax = "F10_dominio_salida", "A6 cota informacional"
+    if OmegaEngine is None:
+        reg.fail(fam, ax, "-", "import", "OmegaEngine ausente",
+                 "sin motor no hay nada que medir")
+        return
+    src = "core.engine.OmegaEngine.compute_coherence"
+
+    for _ in range(max(1, n // 40)):
+        capas = capas_validas(rng)
+        eng = OmegaEngine()
+        try:
+            r = eng.compute_coherence(capas)
+        except Exception as e:
+            reg.fail(fam, ax, src, str(capas)[:100],
+                     f"{type(e).__name__}: {e}", "excepcion", fija=False)
+            continue
+        if not isinstance(r, float):
+            reg.fail(fam, ax, src, str(capas)[:100],
+                     f"{r!r} ({type(r).__name__})",
+                     "el contrato declara float", fija=False)
+        elif math.isnan(r) or math.isinf(r):
+            reg.fail(fam, ax, src, str(capas)[:100], f"{r!r}",
+                     "resultado no finito", fija=False)
+        elif not (0.0 - EPS <= r <= 1.0 + EPS):
+            reg.fail(fam, ax, src, str(capas)[:100], f"{r!r}",
+                     "fuera de [0,1]", fija=False)
+        else:
+            reg.ok(fam, ax, src, fija=False)
 
 # ===============================================================
-# Normalización
+# SEGMENTO 6 --- INFORME
 # ===============================================================
-def normalizar(decl_original: Dict, cuerpo: str) -> Dict:
-    if not isinstance(decl_original, dict):
-        raise ValueError(f"{cuerpo}: declaración no es dict")
 
-    decl: Dict[str, Any] = {}
-    for clave_orig, valor in decl_original.items():
-        decl[TRADUCCION_CLAVES.get(clave_orig, clave_orig)] = valor
+def informe(reg: Registro, raiz: Path, dt: float, umbral: float,
+            verbose: bool) -> int:
+    print("\n" + "-" * 78)
+    print(f"{'FAMILIA':22s} {'AXIOMA':22s} {'TIPO':6s} {'OK':>7s} "
+          f"{'FALLO':>7s} {'VACIO':>6s}")
+    print("-" * 78)
 
-    for k in OBLIGATORIOS:
-        if k not in decl:
-            raise ValueError(
-                f"{cuerpo}:{decl.get('id', '?')} sin clave obligatoria '{k}'"
-            )
+    fijos = 0
+    peor = 0.0
+    vacias = []
+    for n in sorted(reg.familias):
+        f = reg.familias[n]
+        tipo = "fija" if f.fija else "estoc"
+        print(f"{n:22s} {f.axioma:22s} {tipo:6s} {f.ok:>7,} "
+              f"{f.fallos:>7,} {f.vacios:>6,}")
+        if f.fija:
+            fijos += f.fallos
+        else:
+            peor = max(peor, f.tasa)
+        if f.medidos == 0:
+            vacias.append(n)
+    print("-" * 78)
 
-    tipo = str(decl["tipo"]).lower()
-    tipo = {
-        "axiom": "axioma",
-        "theorem": "teorema",
-        "corollary": "corolario",
-        "lemma": "lema",
-        "definition": "definicion",
-    }.get(tipo, tipo)
+    if reg.detalle:
+        print("\n" + "=" * 78)
+        print(f"DETALLE DE FALLOS (max {reg.max_detalle})")
+        print("=" * 78)
+        for i, f in enumerate(reg.detalle, 1):
+            print(f"\n--- fallo {i} ---")
+            print(f"  familia   : {f.familia}")
+            print(f"  axioma    : {f.axioma}")
+            print(f"  fuente    : {f.fuente}")
+            print(f"  entrada   : {f.entrada}")
+            print(f"  observado : {f.observado}")
+            print(f"  causa     : {f.causa}")
 
-    if tipo not in TIPOS:
-        raise ValueError(
-            f"{cuerpo}:{decl['id']} tipo '{tipo}' no válido. Admitidos: {TIPOS}"
-        )
-    if not isinstance(decl["polaridad"], bool):
-        raise ValueError(f"{cuerpo}:{decl['id']} polaridad debe ser bool")
+    print("\n" + "=" * 78)
+    print("VEREDICTO")
+    print("=" * 78)
+    print(f"  raiz              : {raiz}")
+    print(f"  ALPHA / BETA      : {ALPHA!r} / {BETA!r}")
+    print(f"  tiempo            : {dt:.2f}s")
+    print(f"  fallos en fijas   : {fijos}   (criterio: cero)")
+    print(f"  peor tasa estoc.  : {peor:.8f}   (umbral: {umbral})")
+    if vacias:
+        print(f"\n  SIN MEDICION: {vacias}")
+        print("  No medir no es aprobar.")
 
-    return {
-        "id": str(decl["id"]),
-        "cuerpo": cuerpo,
-        "tipo": tipo,
-        "sujeto": str(decl["sujeto"]),
-        "relacion": str(decl["relacion"]),
-        "objeto": str(decl["objeto"]),
-        "polaridad": bool(decl["polaridad"]),
-        "cota": None if decl.get("cota") is None else str(decl["cota"]),
-        "depende_de": [str(x) for x in decl.get("depende_de", [])],
-        "gobierna": [str(x) for x in decl.get("gobierna", [])],
-        "enunciado": str(decl.get("enunciado", "")),
-    }
+    rc = 0
+    if fijos:
+        print(f"\nFAIL  {fijos} fallo(s) en familias de caso fijo")
+        rc = 1
+    if peor > umbral:
+        print(f"\nFAIL  tasa {peor:.8f} > umbral {umbral}")
+        rc = 1
+    if vacias:
+        print(f"\nFAIL  {len(vacias)} familia(s) sin una sola medicion")
+        rc = 1
+    if rc == 0:
+        print("\nPASS  invariantes sostenidos en todo el muestreo")
+    print("=" * 78)
+    return rc
 
+# ===============================================================
+# SEGMENTO 7 --- MAIN
+# ===============================================================
 
-def clave(d: Dict) -> Tuple[str, str, str]:
-    return (
-        d["sujeto"].lower().strip(),
-        d["relacion"].lower().strip(),
-        d["objeto"].lower().strip(),
+def main(argv: Optional[List[str]] = None) -> int:
+    ap = argparse.ArgumentParser(add_help=True)
+    ap.add_argument("--n", type=int, default=N_STOCH)
+    ap.add_argument("--umbral", type=float, default=UMBRAL)
+    ap.add_argument("--seed", type=int, default=SEED)
+    ap.add_argument("--raiz", type=str, default=None)
+    ap.add_argument("--verbose", action="store_true")
+    args = ap.parse_args(argv if argv is not None else [])
+
+    raiz = Path(args.raiz).resolve() if args.raiz else raiz_repo()
+
+    print("=" * 78)
+    print("MONTE CARLO ADVERSARIAL — nodo-invisible / OmegaEngine")
+    print(f"raiz={raiz}")
+    print(f"N={args.n:,}  umbral={args.umbral}  seed={hex(args.seed)}")
+    print("=" * 78)
+
+    cargar(raiz)
+    if _ERR:
+        print("\nIMPORTS NO RESUELTOS:")
+        for e in _ERR:
+            print(f"  X  {e}")
+    if TruthTheorem is None and OmegaEngine is None:
+        print("\nFAIL  no hay motor importable. Sin sistema bajo prueba "
+              "no hay resultado.")
+        return 1
+    print("\nimports:")
+    print(f"  TruthTheorem : {'ok' if TruthTheorem else 'AUSENTE'}")
+    print(f"  OmegaEngine  : {'ok' if OmegaEngine else 'AUSENTE'}")
+    print(f"  constantes   : ALPHA={ALPHA!r}  BETA={BETA!r}  PHI={PHI!r}")
+
+    rng = random.Random(args.seed)
+    reg = Registro()
+    t0 = time.time()
+
+    n = args.n
+    print("\n[F1]  unidad alpha+beta y fuentes de la constante ...")
+    f1_unidad(reg)
+    print(f"[F2]  cotas de TruthTheorem ({n:,}) ...")
+    f2_cotas_truththeorem(reg, rng, n)
+    print(f"[F3]  cotas de apply_vpsi_truth ({n:,}) ...")
+    f3_cotas_engine(reg, rng, n)
+    print(f"[F4]  paridad entre las dos implementaciones ({n:,}) ...")
+    f4_paridad(reg, rng, n)
+    print(f"[F5]  multiplicatividad ({n:,}) ...")
+    f5_multiplicatividad(reg, rng, n)
+    print(f"[F6]  monotonia ({n:,}) ...")
+    f6_monotonia(reg, rng, n)
+    print("[F7]  puerta L6 ...")
+    f7_puerta_l6(reg, rng)
+    print("[F8]  piso a traves del pipeline ...")
+    f8_piso_pipeline(reg, rng)
+    print(f"[F9]  determinismo ({max(1, n // 40):,}) ...")
+    f9_determinismo(reg, rng, n)
+    print(f"[F10] dominio de salida ({max(1, n // 40):,}) ...")
+    f10_dominio_salida(reg, rng, n)
+
+    return informe(reg, raiz, time.time() - t0, args.umbral, args.verbose)
+
+# ===============================================================
+# SEGMENTO 8 --- ENTRADA PYTEST
+# ===============================================================
+
+def test_montecarlo_omega():
+    """parse_args con lista vacia: pytest deja sus flags en sys.argv."""
+    rc = main([])
+    assert rc == 0, (
+        "Monte Carlo OmegaEngine: invariante roto. Ver detalle arriba."
     )
 
 
-def ref(d: Dict) -> str:
-    return f"{d['cuerpo']}:{d['id']}"
-
-
-# ===============================================================
-# Recolección
-# ===============================================================
-def recolectar(
-    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
-) -> Tuple[List[Dict], List[Dict]]:
-    """
-    Carga y normaliza todas las declaraciones del módulo.
-    Retorna (decls, errores). No lanza: acumula errores de carga.
-    """
-    decls: List[Dict] = []
-    errores: List[Dict] = []
-
-    for archivo in sorted(_DIR.glob("*.py")):
-        if archivo.name == "__init__.py":
-            continue
-        try:
-            for d in _cargar_declaraciones_desde_archivo(archivo):
-                decls.append(normalizar(d, archivo.stem))
-        except Exception as e:  # noqa: BLE001
-            errores.append({
-                "archivo": archivo.name,
-                "error": f"{type(e).__name__}: {e}",
-            })
-
-    vpsi = _ruta_vpsi()
-    if vpsi is not None:
-        try:
-            for d in _cargar_declaraciones_desde_archivo(vpsi):
-                decls.append(normalizar(d, "VPSI"))
-        except Exception as e:  # noqa: BLE001
-            errores.append({
-                "archivo": str(vpsi.name),
-                "error": f"{type(e).__name__}: {e}",
-            })
-
-    if declaraciones_externas:
-        for nombre, lista in declaraciones_externas.items():
-            if not isinstance(lista, list):
-                errores.append({
-                    "modulo": nombre,
-                    "error": "declaraciones externas no es lista",
-                })
-                continue
-            for d in lista:
-                try:
-                    decls.append(normalizar(d, nombre))
-                except ValueError as e:
-                    errores.append({"modulo": nombre, "error": str(e)})
-
-    return decls, errores
-
-
-def por_dominio(
-    dominio: str,
-    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
-) -> List[Dict]:
-    """
-    Filtro de lectura: declaraciones cuyo gobierna toca un dominio.
-    No interpreta; no calcula Tru. Útil para CX/CIT al citar.
-    """
-    dom = str(dominio).lower().strip()
-    decls, _ = recolectar(declaraciones_externas)
-    out = []
-    for d in decls:
-        gobs = [str(g).lower().strip() for g in (d.get("gobierna") or [])]
-        if dom in gobs or any(dom in g for g in gobs):
-            out.append(d)
-    return out
-
-
-def ids_dominio_k_o(
-    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
-) -> List[str]:
-    """
-    Ids que gobiernan dominios relacionados con K/O/contexto.
-    Exposición del grafo ya cargado (p.ej. Def-5.3.1 si está en el cuerpo).
-    """
-    decls, _ = recolectar(declaraciones_externas)
-    ids: List[str] = []
-    for d in decls:
-        gobs = {str(g).lower().strip() for g in (d.get("gobierna") or [])}
-        if gobs & DOMINIOS_K_O:
-            ids.append(d["id"])
-        # también por enunciado/objeto si el id es canónico de dominio
-        blob = (
-            f"{d.get('sujeto','')} {d.get('objeto','')} {d.get('enunciado','')}"
-        ).lower()
-        if any(x in blob for x in ("def-5.3.1", "o_context", "dominio o", "permite_k")):
-            if d["id"] not in ids:
-                ids.append(d["id"])
-    return sorted(set(ids))
-
-
-# ===============================================================
-# Contradicciones
-# ===============================================================
-def contradiccion_directa(decls: List[Dict]) -> List[Dict]:
-    grupos: Dict[Tuple[str, str, str], List[Dict]] = {}
-    for d in decls:
-        grupos.setdefault(clave(d), []).append(d)
-
-    choques: List[Dict] = []
-    for k, grupo in grupos.items():
-        afirman = [d for d in grupo if d["polaridad"]]
-        niegan = [d for d in grupo if not d["polaridad"]]
-        for a in afirman:
-            for n in niegan:
-                choques.append({
-                    "tipo": "contradiccion_directa",
-                    "tripleta": " - ".join(k),
-                    "declaracion_1": {
-                        "id": a["id"],
-                        "ubicacion": ref(a),
-                        "enunciado": a["enunciado"],
-                    },
-                    "declaracion_2": {
-                        "id": n["id"],
-                        "ubicacion": ref(n),
-                        "enunciado": n["enunciado"],
-                    },
-                    "mensaje": (
-                        f"Contradicción en '{' - '.join(k)}': "
-                        f"{ref(a)} AFIRMA vs {ref(n)} NIEGA"
-                    ),
-                })
-    return choques
-
-
-def contradiccion_de_cota(decls: List[Dict]) -> List[Dict]:
-    grupos: Dict[Tuple[str, str], List[Dict]] = {}
-    for d in decls:
-        if d["cota"] is None:
-            continue
-        grupos.setdefault(
-            (d["sujeto"].lower().strip(), d["relacion"].lower().strip()),
-            [],
-        ).append(d)
-
-    choques: List[Dict] = []
-    for (suj, rel), grupo in grupos.items():
-        porcota: Dict[str, List[str]] = {}
-        for d in grupo:
-            porcota.setdefault(d["cota"], []).append(ref(d))
-        if len(porcota) > 1:
-            choques.append({
-                "tipo": "contradiccion_de_cota",
-                "sujeto": suj,
-                "relacion": rel,
-                "cotas": porcota,
-                "mensaje": (
-                    f"Contradicción de cota en '{suj} {rel}'. "
-                    f"Cotas: {list(porcota.keys())}"
-                ),
-            })
-    return choques
-
-
-# ===============================================================
-# Capacidades de contrato
-# ===============================================================
-def barrer(declaraciones_externas: Optional[Dict[str, List[Dict]]] = None) -> Dict:
-    """Capacidad principal: coherencia axiomática del cuerpo."""
-    decls, errores = recolectar(declaraciones_externas)
-    choques = contradiccion_directa(decls) + contradiccion_de_cota(decls)
-
-    if (choques or errores) and DiagnosticoGlobal is not None:
-        try:
-            DiagnosticoGlobal.recibir_reporte(
-                modulo="axiomas",
-                errores=(
-                    [{"tipo": "choque", "detalle": c} for c in choques]
-                    + [{"tipo": "error_carga", "detalle": e} for e in errores]
-                ),
-            )
-        except Exception:  # noqa: BLE001
-            pass
-
-    cuerpos = sorted({d["cuerpo"] for d in decls})
-    por_tipo = {t: sum(1 for d in decls if d["tipo"] == t) for t in TIPOS}
-
-    return {
-        "coherente": not (choques or errores),
-        "choques": choques,
-        "errores": errores,
-        "declaraciones": len(decls),
-        "cuerpos": cuerpos,
-        "por_tipo": por_tipo,
-        "ids_dominio_k_o": ids_dominio_k_o(declaraciones_externas)
-        if not (choques or errores)
-        else [],
-    }
-
-
-def verificar_salida(salida: Dict) -> bool:
-    return bool(salida.get("coherente", False))
-
-
-def declaraciones(
-    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
-) -> List[Dict]:
-    """Lista normalizada si el cuerpo es coherente; si no → []."""
-    resultado = barrer(declaraciones_externas)
-    if not resultado["coherente"]:
-        return []
-    decls, _ = recolectar(declaraciones_externas)
-    return decls
-
-
-def axiomas(
-    declaraciones_externas: Optional[Dict[str, List[Dict]]] = None,
-) -> List[Dict]:
-    """Alias de contrato: misma semántica que declaraciones()."""
-    return declaraciones(declaraciones_externas)
-
-
-def inventario(peticion=None) -> Dict:
-    decls, errores = recolectar()
-    return {
-        "contenedor": "axiomas",
-        "version": "9.5",
-        "tipos": list(TIPOS),
-        "declaraciones": len(decls),
-        "por_tipo": {t: sum(1 for d in decls if d["tipo"] == t) for t in TIPOS},
-        "cuerpos": sorted({d["cuerpo"] for d in decls}),
-        "errores": errores,
-        "vigila": ["contradiccion_directa", "contradiccion_de_cota"],
-        "ids_dominio_k_o": ids_dominio_k_o(),
-        "nota": (
-            "Def-5.3.1 y dominio O viven en los cuerpos cargados; "
-            "este módulo los vigila y expone, no los clasifica en entrada."
-        ),
-    }
-
-
-# --- ids canónicos del paper (TR1, |Θ|=24) ---
-THETA_CANONICO = frozenset({
-    "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
-    "T11", "T12", "T13", "T14", "T15", "T16", "T17",
-    "U0", "U1", "M1", "M.1", "B-Canonical", "TT.6.1", "TR1",
-})
-
-DOMINIO_CANONICO = {
-    "ontologia": "ONT",
-    "ont": "ONT",
-    "informacion": "INF",
-    "info": "INF",
-    "logica": "LOG",
-    "log": "LOG",
-    "epistemologia": "EPI",
-    "epi": "EPI",
-    "semantica": "SEM",
-    "sem": "SEM",
-    "temporal": "TMP",
-    "tmp": "TMP",
-    "meta": "MET",
-    "met": "MET",
-    "constantes": "MET",
-    "self": "EPI",
-    "inferencia_causal": "INF",
-    "verificacion": "EPI",
-    "ver": "VER",
-    "contexto": "SEM",
-}
-
-
-def _dominios_canonicos(gobierna) -> set:
-    out = set()
-    for g in gobierna or []:
-        key = str(g).lower().strip()
-        out.add(DOMINIO_CANONICO.get(key, key.upper()[:3]))
-    return out
-
-
-def _medir_pares(theta: list) -> dict:
-    n = len(theta)
-    pares_tot = n * (n - 1) // 2 if n >= 2 else 0
-    compatibles = 0
-    novedosos = 0
-    for i in range(n):
-        Di = theta[i]["dominios"]
-        for j in range(i + 1, n):
-            Dj = theta[j]["dominios"]
-            if not (Di & Dj):
-                continue
-            compatibles += 1
-            union = Di | Dj
-            if union > Di and union > Dj:
-                novedosos += 1
-    return {
-        "theta_n": n,
-        "pares_totales": pares_tot,
-        "pares_compatibles": compatibles,
-        "pares_novedosos": novedosos,
-        "im_vs_theta": (
-            "GENERATIVO" if n > 0 and novedosos > n
-            else ("ESTANCADO" if n > 0 else "SIN_DATOS")
-        ),
-    }
-
-
-def generatividad() -> dict:
-    """
-    TR1 en dos capas (saber, no creer):
-
-    1) operativa  — todo axioma/teorema con gobierna (grafo del repo)
-    2) canonica   — solo los 24 ids del paper + dominios normalizados
-
-    No inventa candidatos. No calcula Tru. Una sola definición (sin duplicar).
-    """
-    decls, errores = recolectar()
-
-    oper = []
-    for d in decls:
-        if d.get("tipo") not in ("teorema", "axioma"):
-            continue
-        gob = d.get("gobierna") or []
-        if not gob:
-            continue
-        oper.append({
-            "id": d["id"],
-            "tipo": d["tipo"],
-            "dominios": set(gob),
-        })
-    m_op = _medir_pares(oper)
-    dominios_op = sorted({g for n in oper for g in n["dominios"]})
-
-    por_id = {}
-    for d in decls:
-        i = str(d.get("id", ""))
-        if i in THETA_CANONICO:
-            cand = {
-                "id": i,
-                "tipo": d.get("tipo"),
-                "dominios": _dominios_canonicos(d.get("gobierna")),
-            }
-            prev = por_id.get(i)
-            if prev is None or len(cand["dominios"]) >= len(prev["dominios"]):
-                por_id[i] = cand
-
-    can = [por_id[i] for i in sorted(por_id.keys()) if por_id[i]["dominios"]]
-    m_can = _medir_pares(can)
-    dominios_can = sorted({g for n in can for g in n["dominios"]})
-    faltan = sorted(THETA_CANONICO - set(por_id.keys()))
-    sin_dominio = sorted(i for i, n in por_id.items() if not n["dominios"])
-
-    u1_proxy = (
-        "NO_STAGNANT"
-        if m_can.get("pares_novedosos", 0) > 0 or m_op.get("pares_novedosos", 0) > 0
-        else "REVISAR"
-    )
-
-    return {
-        "contenedor": "axiomas",
-        "theta_n": m_op["theta_n"],
-        "pares_totales": m_op["pares_totales"],
-        "pares_compatibles": m_op["pares_compatibles"],
-        "pares_novedosos": m_op["pares_novedosos"],
-        "im_vs_theta": m_op["im_vs_theta"],
-        "dominios": dominios_op,
-        "u1_proxy": u1_proxy,
-        "errores_recoleccion": len(errores),
-        "por_tipo_theta": {
-            "axioma": sum(1 for n in oper if n["tipo"] == "axioma"),
-            "teorema": sum(1 for n in oper if n["tipo"] == "teorema"),
-        },
-        "canonica": {
-            **m_can,
-            "ids_presentes": sorted(por_id.keys()),
-            "ids_faltantes": faltan,
-            "ids_sin_dominio": sin_dominio,
-            "dominios": dominios_can,
-            "objetivo_paper": {
-                "theta_n": 24,
-                "im_esperada": 153,
-                "nota": "|Im(⊕)|=153 > 24=|Θ| en enumeración del texto",
-            },
-        },
-        "ids_dominio_k_o": ids_dominio_k_o(),
-        "nota": (
-            "Capa operativa = grafo del repo. "
-            "Capa canonica = solo ids TR1 del paper. "
-            "Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí)."
-        ),
-    }
-
-
-# ===============================================================
-# Contrato
-# ===============================================================
-CONTENEDOR = {
-    "nombre": "axiomas",
-    "rol": "AX",
-    "version": "9.5",
-    "requiere": [],
-    "descripcion": (
-        "Contenedor de axiomas. Rol AX. "
-        "Define y vigila axiomas, lemas, teoremas y corolarios. "
-        "No calcula Tru_total. No clasifica O de entrada (CX). "
-        "Mide generatividad TR1 sobre su propio cuerpo. "
-        "Expone ids de dominio K/O ya cargados en el grafo."
-    ),
-    "capacidades": {
-        "verificar": barrer,
-        "barrer": barrer,
-        "inventario": inventario,
-        "axiomas": axiomas,
-        "generatividad": generatividad,
-    },
-}
-
-
-__all__ = [
-    "CONTENEDOR",
-    "AXIOMA",
-    "LEMA",
-    "TEOREMA",
-    "COROLARIO",
-    "DEFINICION",
-    "TIPOS",
-    "normalizar",
-    "clave",
-    "ref",
-    "recolectar",
-    "por_dominio",
-    "ids_dominio_k_o",
-    "declaraciones",
-    "axiomas",
-    "contradiccion_directa",
-    "contradiccion_de_cota",
-    "barrer",
-    "verificar_salida",
-    "inventario",
-    "generatividad",
-]
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
