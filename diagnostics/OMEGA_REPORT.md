@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-03 06:02:30 UTC    Commit: 23c98c4d6b96
+Generado: 2026-08-03 06:17:54 UTC    Commit: d6c2c40b08bc
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
@@ -46,24 +46,30 @@ Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
   ÚLTIMO TEST EVALUADO
   Último ciclo real depositado (tests / uso) · mismos campos
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ⚠️ —
-  Razón      : sin evaluaciones.json o lista vacía
+  Estado     : ✅ OK
+  permite_k  : True
 
   📐  CÁLCULO  (fórmula canónica VPSI)
   ┌─────────────────────────────────────────────────────────┐
-  │  C          =  —                                       │
-  │  L          =  —                                       │
-  │  K          =  —                                       │
+  │  C          =  1                                       │
+  │  L          =  1                                       │
+  │  K          =  0                                       │
   │─────────────────────────────────────────────────────────│
   │  Tru_Ri     =  C · L · K                              │
-  │             =  —                                       │
+  │             =  0                                       │
   │─────────────────────────────────────────────────────────│
   │  Tru_total  =  (Tru_Ri · α) + β                       │
-  │             =  —                                       │
+  │             =  1/27                                    │
+  │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
 
   Taxonomía  : none
-  📎 Citas      : — (sin ids/anuncios en el ciclo)
+  📎 Citas (teoremas / axiomas / normas):
+       1. CX-A14
+       2. CX-A1
+       3. CX-C4
+  Origen     : test_conversacion
+  Secuencia  : 6
 ══════════════════════════════════════════════════════════════════════════════
 
 ESTADO GLOBAL

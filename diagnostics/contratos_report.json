@@ -945,9 +945,11 @@
   "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
   "evidencia_evaluacion": {
     "path": "diagnostics/evaluaciones.json",
-    "n": 0,
+    "n": 6,
     "propios": 0,
-    "origenes": [],
+    "origenes": [
+      "test_conversacion"
+    ],
     "modo": "fusion"
   }
 }

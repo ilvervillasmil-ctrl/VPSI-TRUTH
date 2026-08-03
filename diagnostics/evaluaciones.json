@@ -1,10 +1,313 @@
 {
   "tipo": "evidencia_evaluacion",
   "version": "1.1",
-  "origen": null,
-  "origenes": [],
+  "origen": "test_conversacion",
+  "origenes": [
+    "test_conversacion"
+  ],
   "invocador_id": "ci_auditoria",
   "estado_engine": "OPERATIVO",
-  "n": 0,
-  "resultados": []
+  "n": 6,
+  "resultados": [
+    {
+      "entrada": {
+        "quien": "Carlos",
+        "texto": "Anoche me quedé en casa todo el tiempo.",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "vuelta": 1,
+        "turno": 1
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1"
+        },
+        "tru_ri": "1",
+        "tru_total": "1",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "1",
+      "tru_ri": "1",
+      "tru_total": "1",
+      "origen": "test_conversacion",
+      "invocador_id": "test_conversacion",
+      "secuencia": 1
+    },
+    {
+      "entrada": {
+        "quien": "Luis",
+        "texto": "Yo lo vi a Carlos en el parque a las ocho.",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "vuelta": 1,
+        "turno": 2
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1"
+        },
+        "tru_ri": "1",
+        "tru_total": "1",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "1",
+      "tru_ri": "1",
+      "tru_total": "1",
+      "origen": "test_conversacion",
+      "invocador_id": "test_conversacion",
+      "secuencia": 2
+    },
+    {
+      "entrada": {
+        "quien": "Carlos",
+        "texto": "No salí. Estuve viendo una película en el sofá.",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "vuelta": 2,
+        "turno": 3
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "0"
+        },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "0",
+      "tru_ri": "0",
+      "tru_total": "1/27",
+      "origen": "test_conversacion",
+      "invocador_id": "test_conversacion",
+      "secuencia": 3
+    },
+    {
+      "entrada": {
+        "quien": "Luis",
+        "texto": "A las ocho estaba en el parque. Lo saludé y no respondió.",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "vuelta": 2,
+        "turno": 4
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": "1/2",
+          "L": "1",
+          "K": "1/2"
+        },
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1/2",
+      "L": "1",
+      "K": "1/2",
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
+      "origen": "test_conversacion",
+      "invocador_id": "test_conversacion",
+      "secuencia": 4
+    },
+    {
+      "entrada": {
+        "quien": "Carlos",
+        "texto": "Si alguien te dijo que me vio fuera, se confunde de persona.",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "vuelta": 3,
+        "turno": 5
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "0"
+        },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "0",
+      "tru_ri": "0",
+      "tru_total": "1/27",
+      "origen": "test_conversacion",
+      "invocador_id": "test_conversacion",
+      "secuencia": 5
+    },
+    {
+      "entrada": {
+        "quien": "Luis",
+        "texto": "Entonces o me confundo de persona o alguien no dice la verdad.",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "vuelta": 3,
+        "turno": 6
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "0"
+        },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "0",
+      "tru_ri": "0",
+      "tru_total": "1/27",
+      "origen": "test_conversacion",
+      "invocador_id": "test_conversacion",
+      "secuencia": 6
+    }
+  ]
 }
