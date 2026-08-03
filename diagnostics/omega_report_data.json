@@ -1746,7 +1746,7 @@
   },
   "contratos": {
     "tipo": "auditoria_estructural_contratos",
-    "version": "1.2",
+    "version": "1.3",
     "coherente": true,
     "errores": [],
     "avisos": [],
@@ -2688,14 +2688,17 @@
       "errores_arranque": [],
       "determinismo_censar": "OK"
     },
-    "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real.",
+    "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 0
+      "n": 0,
+      "propios": 0,
+      "origenes": [],
+      "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": "ci_auditoria_contratos",
+    "origen": null,
     "n": 0,
     "path": "evaluaciones.json",
     "invocador_id": "ci_auditoria"

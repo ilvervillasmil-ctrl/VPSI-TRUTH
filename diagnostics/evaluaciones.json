@@ -1,10 +1,10 @@
 {
   "tipo": "evidencia_evaluacion",
   "version": "1.1",
-  "origen": "ci_auditoria_contratos",
+  "origen": null,
+  "origenes": [],
   "invocador_id": "ci_auditoria",
   "estado_engine": "OPERATIVO",
   "n": 0,
-  "resultados": [],
-  "nota": "Sin humo en auditoría. n puede ser 0 si no hubo ciclo real en este proceso; pytest aporta valuación en su propio camino."
+  "resultados": []
 }
