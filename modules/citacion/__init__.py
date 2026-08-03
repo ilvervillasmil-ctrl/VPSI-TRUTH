@@ -1,28 +1,30 @@
 """
 VPSI-TRUTH --- modules/citacion/__init__.py
 
-Módulo de citación / enunciados de norma–evidencia–O.
+Rol CIT — citación / anuncio de la cadena norma–evidencia–O.
 
-OFICIO ÚNICO
-  Citar y anunciar. Registrar y exponer la cadena
-  (id + enunciado + descripción + evidencia_ref + O)
-  que Engine y los módulos ya produjeron en un ciclo.
+OFICIO
+  Citar y anunciar. Autoridad total sobre la *forma* y el *universo
+  citable del ciclo*: puede anunciar todo lo que Engine y los módulos
+  ya aportaron (ids, factores reportados, O, límites, FO aplicada, …).
 
-NO OFICIO (prohibido en este módulo)
+  Engine orquesta el ciclo y entrega el paquete.
+  CIT no orquesta módulos ajenos: lee el paquete y documenta.
+
+NO OFICIO
   - Calcular C, L, K, Tru_Ri, Tru_total.
   - Fijar O.
-  - Aprobar o rechazar material de realidad.
-  - Declarar que alguien "miente" o "dice la verdad" como veredicto personal.
+  - Aprobar/rechazar material de realidad.
+  - Veredicto personal ("miente" / "dice la verdad").
   - Interpretar estados mentales.
-  - Sustituir a AX, MC, CA, FO, CX, TX, RE, CH, SF o Engine.
-  - Orquestar módulos.
+  - Sustituir AX, MC, CA, FO, CX, TX, RE, CH, SF o Engine.
 
-La palabra coordinada la orquesta Engine.
-Este módulo solo documenta el porqué, citando lo que cada instrumento aportó.
-No inventa evidencia. No recalcula.
+AGENCIA
+  Total para citar: si está en el paquete del ciclo (o en fuentes
+  resolubles sin recálculo), puede anunciarse.
+  Cero agencia sobre el valor numérico del cálculo.
 
-Capacidad de anuncio: TOTAL (puede citar todo lo aportado en el ciclo).
-Presentación (Omega u otro visor): puede filtrar; este módulo no limita el universo citable.
+Versión 1.1 — anunciar(paquete) de ciclo + anunciar(cita) de forma.
 """
 
 from __future__ import annotations
@@ -36,43 +38,35 @@ from typing import Any, Dict, List, Optional
 CONTENEDOR = {
     "nombre": "citacion",
     "rol": "CIT",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "descripcion": (
-        "Citar y anunciar la cadena norma–evidencia–O de un ciclo de evaluación. "
-        "No calcula. No juzga personas. No inventa factores. "
-        "Expone id, enunciado, descripción y referencias que otros módulos "
-        "ya emitieron bajo orquestación de Engine. "
-        "Capacidad de anuncio total; la presentación puede filtrar."
+        "Citar y anunciar la cadena norma–evidencia–O del ciclo. "
+        "Autoridad total de anuncio sobre lo aportado en el paquete. "
+        "No calcula Tru. No fija O. No juzga personas. "
+        "Engine entrega el paquete; CIT documenta el porqué."
     ),
     "requiere": [],
     "capacidades": {
-        "citar": "citar",
-        "registrar": "registrar",
         "anunciar": "anunciar",
         "anunciar_todo": "anunciar_todo",
+        "citar": "citar",
+        "registrar": "registrar",
         "resolver_enunciado": "resolver_enunciado",
         "inventario": "inventario",
         "barrer": "barrer",
         "verificar": "verificar",
         "limpiar_ciclo": "limpiar_ciclo",
+        "evaluar": "anunciar",
+        "registrar": "registrar",
     },
 }
-
-# ===============================================================
-# FUNCIÓN / ALCANCE
-# ===============================================================
 
 FUNCION = {
     "nombre": "citacion",
     "hace": (
-        "Registrar y exponer citas del ciclo: ids de axiomas/teoremas/lemas/corolarios, "
-        "pasos de mecánica, reglas de taxonomía, fijaciones de contexto, "
-        "oficios reportados de calculator/fórmulas (sin rehacer la cuenta), "
-        "material de realidad etiquetado, límites de precisión y refs de evidencia. "
-        "Cada cita lleva enunciado y descripción. "
-        "Responde a peticiones del tipo: "
-        "'necesito lo que hizo correlación bajo tal contexto' "
-        "devolviendo citas y anuncios, no un recálculo."
+        "Registrar y exponer citas del ciclo: AX, MC, CX, TX, CA, FO, RE, "
+        "CT, CH, SF, límites estructurales y evidencia. "
+        "anunciar(paquete) arma la cadena desde el resultado del Engine."
     ),
     "no_hace": [
         "calcular_C",
@@ -85,83 +79,32 @@ FUNCION = {
         "orquestar_modulos",
         "aprobar_material_realidad",
     ],
-    "provee": [
-        "cita_estructurada",
-        "anuncio_estructurado",
-        "registro_de_ciclo",
-        "enunciado_de_id",
-        "descripcion_de_aporte",
-        "limite_de_precision_citado",
-    ],
-    "anuncio": {
-        "capacidad": "total",
-        "campos_obligatorios": [
-            "id",
-            "tipo",
-            "fuente_modulo",
-            "enunciado",
-            "descripcion",
-            "evidencia_ref",
-        ],
-        "campos_opcionales": [
-            "o_ref",
-            "contexto_ciclo",
-            "meta",
-        ],
-        "presentacion": (
-            "Omega u otro visor puede filtrar por tipo, modulo o id; "
-            "citacion no limita el universo citable del ciclo."
-        ),
-    },
-    "respecto_otros_contratos": (
-        "El contenido del enunciado se toma de lo que cada módulo declara "
-        "en su contrato o salida; citacion define la maqueta de anuncio, "
-        "no el funcionamiento interno de esos módulos."
-    ),
-    "fractal": (
-        "Las mismas reglas se aplican a este módulo: "
-        "si anuncia, debe poder citar de dónde salió su propia salida "
-        "(contrato + archivos internos), sin calcular Tru."
+    "agencia": (
+        "Total para citar lo presente en el paquete del ciclo. "
+        "Nula sobre valores numéricos de C/L/K/Tru."
     ),
     "autoridad": (
-        "Única autoridad: citar y anunciar según lo que cada módulo/instrumento "
-        "aportó en el ciclo orquestado por Engine. "
-        "Cero autoridad sobre el valor numérico del cálculo. "
-        "Si no hay base suficiente, anuncia límite de precisión; no rellena."
-    ),
-    "auditoria": (
-        "Los tests y Omega pueden usar las citas para auditar el instrumento: "
-        "si el cálculo no cuadra con norma+evidencia, el desajuste es evidencia "
-        "contra el sistema, no un veredicto sobre personas."
+        "Única autoridad: forma y exposición de la cadena. "
+        "Si no hay base, anuncia límite de precisión; no rellena factores."
     ),
 }
 
-# ===============================================================
-# TIPOS DE CITA
-# ===============================================================
-
 TIPOS_CITA = (
-    "ax",         # axioma / teorema / lema / corolario
-    "mc",         # correlación mecánica
-    "cx",         # contexto / O
-    "tx",         # taxonomía
-    "ca",         # calculator (oficio reportado; sin rehacer cuenta)
-    "fo",         # fórmula aplicada (expresión; sin recomputar)
-    "re",         # realidad / material etiquetado
-    "ct",         # constantes / ancla
-    "ch",         # cache / evidencia persistida
-    "sf",         # self (si aportó al ciclo)
-    "limite",     # no hay base suficiente para precisar
-    "evidencia",  # ref a artefacto o turno
-    "citacion",   # fractal: cita sobre el propio módulo de citación
+    "ax", "mc", "cx", "tx", "ca", "fo", "re", "ct", "ch", "sf",
+    "limite", "evidencia", "citacion",
 )
 
+CAMPOS_OBLIGATORIOS = (
+    "id", "tipo", "fuente_modulo", "enunciado", "descripcion", "evidencia_ref",
+)
+CAMPOS_OPCIONALES = ("o_ref", "contexto_ciclo", "meta")
+
+
 # ===============================================================
-# ESQUEMA DE UNA CITA
+# REGISTRO DE CICLO (proceso; no verdad persistente)
 # ===============================================================
 
-CAMPOS_OBLIGATORIOS = tuple(FUNCION["anuncio"]["campos_obligatorios"])
-CAMPOS_OPCIONALES = tuple(FUNCION["anuncio"]["campos_opcionales"])
+_REGISTRO: List[Dict[str, Any]] = []
 
 
 def _validar_cita(cita: Dict[str, Any]) -> List[str]:
@@ -173,7 +116,6 @@ def _validar_cita(cita: Dict[str, Any]) -> List[str]:
         errores.append("tipo de cita no admitido: {0}".format(tipo))
     for campo in CAMPOS_OBLIGATORIOS:
         if campo == "id" and tipo == "limite":
-            # límite puede no tener id de norma
             continue
         if not cita.get(campo) and cita.get(campo) != 0:
             errores.append("falta campo obligatorio: {0}".format(campo))
@@ -195,27 +137,13 @@ def _normalizar_cita(cita: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-# ===============================================================
-# REGISTRO DE CICLO (memoria de proceso; no persistencia de verdad)
-# ===============================================================
-
-_REGISTRO: List[Dict[str, Any]] = []
-
-
 def limpiar_ciclo() -> Dict[str, Any]:
-    """Limpia el registro del ciclo actual. No toca artefactos en disco."""
     n = len(_REGISTRO)
     _REGISTRO.clear()
     return {"ok": True, "limpiadas": n}
 
 
 def registrar(cita: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Acumula una cita del ciclo.
-    Obligatorios: id (salvo tipo=limite), tipo, fuente_modulo,
-    enunciado, descripcion, evidencia_ref.
-    No valida verdad; solo forma.
-    """
     errores = _validar_cita(cita)
     if errores:
         return {"ok": False, "errores": errores}
@@ -224,16 +152,7 @@ def registrar(cita: Dict[str, Any]) -> Dict[str, Any]:
     return {"ok": True, "n": len(_REGISTRO), "cita": normalizada}
 
 
-# ===============================================================
-# OFICIO: CITAR / ANUNCIAR
-# ===============================================================
-
 def citar(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Devuelve citas del ciclo, opcionalmente filtradas.
-    Filtros admitidos: modulo, tipo, o_ref, id.
-    No calcula. No orquesta.
-    """
     pet = peticion or {}
     out = list(_REGISTRO)
     if pet.get("modulo"):
@@ -244,62 +163,48 @@ def citar(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         out = [c for c in out if c.get("o_ref") == pet["o_ref"]]
     if pet.get("id"):
         out = [c for c in out if c.get("id") == pet["id"]]
-    return {
-        "citas": out,
-        "n": len(out),
-        "nota": "solo exposición; sin recálculo",
-    }
+    return {"citas": out, "n": len(out), "nota": "solo exposición; sin recálculo"}
 
 
-def anunciar(cita: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Una cita → bloque de anuncio (maqueta de citacion).
-    enunciado + descripcion + refs. Sin cálculo.
-    """
+# ===============================================================
+# ANUNCIO DE UNA CITA (forma)
+# ===============================================================
+
+def _anuncio_de_cita(cita: Dict[str, Any]) -> Dict[str, Any]:
     errores = _validar_cita(cita)
     if errores:
         return {"ok": False, "errores": errores, "anuncio": None}
     c = _normalizar_cita(cita)
-    bloque = {
-        "titulo": "[{0}] {1}".format(c.get("fuente_modulo"), c.get("id")),
-        "tipo": c.get("tipo"),
-        "enunciado": c.get("enunciado"),
-        "descripcion": c.get("descripcion"),
-        "evidencia_ref": c.get("evidencia_ref"),
-        "o_ref": c.get("o_ref"),
-        "contexto_ciclo": c.get("contexto_ciclo"),
+    return {
+        "ok": True,
+        "anuncio": {
+            "titulo": "[{0}] {1}".format(c.get("fuente_modulo"), c.get("id")),
+            "tipo": c.get("tipo"),
+            "enunciado": c.get("enunciado"),
+            "descripcion": c.get("descripcion"),
+            "evidencia_ref": c.get("evidencia_ref"),
+            "o_ref": c.get("o_ref"),
+            "contexto_ciclo": c.get("contexto_ciclo"),
+        },
     }
-    return {"ok": True, "anuncio": bloque}
 
 
 def anunciar_todo(filtro: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    Anuncia todas las citas del ciclo (o filtradas).
-    Pensado para auditoría completa; Omega puede usar un subconjunto.
-    """
     pack = citar(filtro)
     anuncios: List[Dict[str, Any]] = []
     for c in pack["citas"]:
-        r = anunciar(c)
+        r = _anuncio_de_cita(c)
         if r.get("ok") and r.get("anuncio"):
             anuncios.append(r["anuncio"])
     return {
         "anuncios": anuncios,
         "n": len(anuncios),
         "filtro": filtro or {},
-        "nota": (
-            "capacidad total de anuncio; "
-            "presentación puede filtrar sin limitar el universo citable"
-        ),
+        "nota": "capacidad total de anuncio; presentación puede filtrar",
     }
 
 
 def resolver_enunciado(id_norma: str) -> Dict[str, Any]:
-    """
-    Resuelve enunciado textual de un id si hay puente a AX u otra fuente.
-    El init no calcula; la resolución detallada vive en archivos de la carpeta
-    (fuentes/ax.py, etc.). Aquí: oficio del contrato + búsqueda en registro.
-    """
     if not id_norma:
         return {
             "id": id_norma,
@@ -318,15 +223,425 @@ def resolver_enunciado(id_norma: str) -> Dict[str, Any]:
                 "resuelto": True,
                 "nota": "resuelto desde registro de ciclo",
             }
+    # Puente AX sin inventar
+    try:
+        from modules.citacion.fuentes import ax as fuente_ax
+
+        r = fuente_ax.anunciar_id(
+            str(id_norma),
+            evidencia_ref="resolver_enunciado",
+            registrar=False,
+        )
+        if r.get("resuelto") and r.get("cita"):
+            c = r["cita"]
+            return {
+                "id": id_norma,
+                "enunciado": c.get("enunciado"),
+                "descripcion": c.get("descripcion"),
+                "fuente_modulo": c.get("fuente_modulo"),
+                "resuelto": True,
+                "nota": "resuelto desde declaraciones AX",
+            }
+    except Exception:
+        pass
     return {
         "id": id_norma,
         "enunciado": None,
         "descripcion": None,
         "resuelto": False,
+        "nota": "sin enunciado en registro ni en AX cargado",
+    }
+
+
+# ===============================================================
+# DETECCIÓN: paquete de ciclo (Engine) vs cita suelta
+# ===============================================================
+
+def _es_paquete_ciclo(obj: Any) -> bool:
+    if not isinstance(obj, dict):
+        return False
+    if "resultado" in obj and isinstance(obj.get("resultado"), dict):
+        return True
+    if "contexto_cx" in obj and "tipos_peticion" in obj:
+        return True
+    if obj.get("engine_version") and ("resultado" in obj or "peticion" in obj):
+        return True
+    return False
+
+
+def _es_cita_suelta(obj: Any) -> bool:
+    if not isinstance(obj, dict):
+        return False
+    if _es_paquete_ciclo(obj):
+        return False
+    # forma mínima de cita
+    return "tipo" in obj or "enunciado" in obj or "id" in obj
+
+
+# ===============================================================
+# ANUNCIAR CICLO — autoridad total de cita sobre el paquete
+# ===============================================================
+
+def _evidencia_ref(paquete: Dict[str, Any]) -> str:
+    inv = paquete.get("invocador_id") or "ciclo"
+    ver = paquete.get("engine_version") or ""
+    res = paquete.get("resultado") or {}
+    seq = res.get("secuencia")  # puede no estar aún
+    return "ciclo:{0}:v{1}".format(inv, ver) + (
+        ":seq={0}".format(seq) if seq is not None else ""
+    )
+
+
+def _o_ref(paquete: Dict[str, Any]) -> Optional[str]:
+    res = paquete.get("resultado") or {}
+    cx = paquete.get("contexto_cx") or {}
+    reg = cx.get("registro") if isinstance(cx.get("registro"), dict) else {}
+    for src in (res, cx, reg, paquete.get("peticion") or {}):
+        if not isinstance(src, dict):
+            continue
+        for k in ("O_id", "o_id", "O_context", "contexto", "enunciado_O"):
+            v = src.get(k)
+            if v is not None and str(v).strip() and str(v).strip().lower() not in (
+                "undefined",
+                "indefinido",
+                "none",
+                "null",
+            ):
+                return str(v).strip()[:200]
+    return None
+
+
+def _anunciar_paquete(paquete: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Oficio principal para Engine.
+    Lee solo el paquete. No calcula Tru. No inventa factores.
+    Autoridad total para citar lo presente.
+    """
+    limpiar_ciclo()
+
+    res = paquete.get("resultado") if isinstance(paquete.get("resultado"), dict) else {}
+    cx = paquete.get("contexto_cx") if isinstance(paquete.get("contexto_cx"), dict) else {}
+    tipos = list(paquete.get("tipos_peticion") or cx.get("tipos_peticion") or [])
+    if not tipos:
+        tipos = ["dame_cadena_completa"]
+
+    evid = _evidencia_ref(paquete)
+    o_ref = _o_ref(paquete)
+    ctx_ciclo = str(res.get("estado") or cx.get("modo_entrada") or "ciclo")
+
+    errores: List[str] = []
+    n_fuentes = 0
+
+    def _ok_fuente(r: Any) -> None:
+        nonlocal n_fuentes
+        if isinstance(r, dict) and r.get("ok") is False:
+            errores.extend([str(e) for e in (r.get("errores") or [])])
+        else:
+            n_fuentes += 1
+
+    # ----- CX -----
+    try:
+        from modules.citacion.fuentes import cx as fuente_cx
+
+        if cx:
+            _ok_fuente(
+                fuente_cx.desde_resolver(
+                    cx,
+                    evidencia_ref=evid,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+        estado_cx = None
+        reg = cx.get("registro") if isinstance(cx.get("registro"), dict) else {}
+        estado_cx = reg.get("estado") or cx.get("estado")
+        if estado_cx in ("indefinido",) or res.get("estado") == "UNDEFINED":
+            _ok_fuente(
+                fuente_cx.anunciar_indefinido(
+                    motivo=str(
+                        res.get("razon")
+                        or "O/contexto no usable en el ciclo (Def-5.3.1)"
+                    ),
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+    except Exception as e:
+        errores.append("fuente cx: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- CA (factores ya en resultado; no recalcular) -----
+    try:
+        from modules.citacion.fuentes import ca as fuente_ca
+
+        factores = res.get("factores") if isinstance(res.get("factores"), dict) else {}
+        C = factores.get("C")
+        L = factores.get("L")
+        K = factores.get("K")
+        if C is not None or L is not None or K is not None:
+            _ok_fuente(
+                fuente_ca.anunciar_factores(
+                    C=C,
+                    L=L,
+                    K=K,
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+        elif res.get("estado") in ("PARCIAL", "UNDEFINED"):
+            _ok_fuente(
+                fuente_ca.anunciar_sin_factores(
+                    motivo=str(res.get("razon") or "factores incompletos en ciclo"),
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+    except Exception as e:
+        errores.append("fuente ca: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- FO (valores ya calculados en resultado) -----
+    try:
+        from modules.citacion.fuentes import fo as fuente_fo
+
+        tru_ri = res.get("tru_ri") or res.get("Tru_Ri")
+        tru_total = res.get("tru_total") or res.get("Tru_total")
+        if (
+            tru_ri is not None
+            and tru_total is not None
+            and str(tru_ri) not in ("UNDEFINED", "None")
+            and str(tru_total) not in ("UNDEFINED", "None")
+        ):
+            factores = res.get("factores") if isinstance(res.get("factores"), dict) else {}
+            _ok_fuente(
+                fuente_fo.anunciar_formula_aplicada(
+                    tru_ri=tru_ri,
+                    tru_total=tru_total,
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    C=factores.get("C"),
+                    L=factores.get("L"),
+                    K=factores.get("K"),
+                    registrar=True,
+                )
+            )
+        elif "dame_normas" in tipos or "dame_cadena_completa" in tipos:
+            _ok_fuente(
+                fuente_fo.anunciar_expresion(
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+    except Exception as e:
+        errores.append("fuente fo: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- CT ancla (lectura; no recalcula aritmética de valuación) -----
+    try:
+        from modules.citacion.fuentes import ct as fuente_ct
+
+        if res.get("alpha") is not None or res.get("beta") is not None:
+            _ok_fuente(
+                fuente_ct.anunciar_valores(
+                    alpha=res.get("alpha"),
+                    beta=res.get("beta"),
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+        elif "dame_normas" in tipos or "dame_cadena_completa" in tipos:
+            _ok_fuente(
+                fuente_ct.anunciar_ancla(
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+    except Exception as e:
+        errores.append("fuente ct: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- AX ids (valuacion.ids / ids_cx_relevantes) -----
+    try:
+        from modules.citacion.fuentes import ax as fuente_ax
+
+        ids: List[str] = []
+        val = res.get("valuacion") if isinstance(res.get("valuacion"), dict) else {}
+        for src in (
+            val.get("ids"),
+            cx.get("ids_cx_relevantes"),
+            res.get("ids"),
+        ):
+            if isinstance(src, list):
+                for i in src:
+                    s = str(i).strip()
+                    if s and s not in ids:
+                        ids.append(s)
+        if ids:
+            pack_ax = fuente_ax.anunciar_lista(
+                ids,
+                evidencia_ref=evid,
+                o_ref=o_ref,
+                contexto_ciclo=ctx_ciclo,
+                registrar=True,
+            )
+            n_fuentes += int(pack_ax.get("n") or 0)
+    except Exception as e:
+        errores.append("fuente ax: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- MC permite_k / informe si vino en paquete -----
+    try:
+        from modules.citacion.fuentes import mc as fuente_mc
+
+        if "permite_k" in cx:
+            _ok_fuente(
+                fuente_mc.anunciar_permite_k(
+                    permite_k=bool(cx.get("permite_k")),
+                    enunciado="permite_k={0} según CX del ciclo.".format(
+                        cx.get("permite_k")
+                    ),
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+        informe_mc = paquete.get("informe_mecanica") or res.get("informe_mecanica")
+        if isinstance(informe_mc, dict):
+            _ok_fuente(
+                fuente_mc.desde_informe_barrer(
+                    informe_mc,
+                    evidencia_ref=evid,
+                    o_ref=o_ref,
+                    contexto_ciclo=ctx_ciclo,
+                    registrar=True,
+                )
+            )
+    except Exception as e:
+        errores.append("fuente mc: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- Límites estructurales (sin inventar números) -----
+    try:
+        from modules.citacion.fuentes import limite as fuente_lim
+
+        factores = res.get("factores") if isinstance(res.get("factores"), dict) else {}
+        tiene_factores = all(
+            factores.get(k) is not None
+            and str(factores.get(k)) not in ("UNDEFINED", "None", "")
+            for k in ("C", "L", "K")
+        )
+        permite_k = cx.get("permite_k")
+        reg = cx.get("registro") if isinstance(cx.get("registro"), dict) else {}
+        o_estado = reg.get("estado")
+        if res.get("estado") == "UNDEFINED":
+            o_estado = o_estado or "indefinido"
+
+        pack_lim = fuente_lim.anunciar_desde_ciclo(
+            evidencia_ref=evid,
+            o_ref=o_ref,
+            contexto_ciclo=ctx_ciclo,
+            permite_k=permite_k if isinstance(permite_k, bool) else None,
+            tiene_factores=tiene_factores,
+            o_estado=o_estado,
+            registrar=True,
+        )
+        if pack_lim.get("citas"):
+            n_fuentes += len(pack_lim.get("citas") or [])
+    except Exception as e:
+        errores.append("fuente limite: {0}: {1}".format(type(e).__name__, e))
+
+    # ----- Fractal: cita del propio oficio CIT -----
+    try:
+        from modules.citacion.esquema import plantilla
+
+        cita_self = plantilla(
+            id="CIT-CICLO",
+            tipo="citacion",
+            fuente_modulo="citacion",
+            enunciado=(
+                "CIT anunció la cadena del ciclo; estado_resultado={0}; "
+                "tipos_peticion={1}.".format(res.get("estado"), tipos)
+            ),
+            descripcion=(
+                "Auto-cita del oficio de citación; no calcula Tru; "
+                "documenta que el cierre de anuncio se ejecutó."
+            ),
+            evidencia_ref=evid,
+            o_ref=o_ref,
+            contexto_ciclo=ctx_ciclo,
+            meta={"tipos_peticion": tipos, "estado": res.get("estado")},
+        )
+        registrar(cita_self)
+        n_fuentes += 1
+    except Exception as e:
+        errores.append("cita fractal: {0}: {1}".format(type(e).__name__, e))
+
+    anuncios_pack = anunciar_todo()
+    return {
+        "estado": "OK" if n_fuentes > 0 else "VACIO",
+        "ok": n_fuentes > 0,
+        "n_citas": len(_REGISTRO),
+        "n_anuncios": anuncios_pack.get("n", 0),
+        "anuncios": anuncios_pack.get("anuncios") or [],
+        "tipos_peticion": tipos,
+        "evidencia_ref": evid,
+        "o_ref": o_ref,
+        "errores": errores,
+        "engine_version": paquete.get("engine_version"),
         "nota": (
-            "sin enunciado en registro de ciclo; "
-            "puente a AX/fuentes pendiente en archivos de citacion"
+            "CIT: autoridad total de anuncio sobre el paquete; "
+            "cero agencia sobre valores de Tru; sin recálculo."
         ),
+    }
+
+
+# ===============================================================
+# OFICIO ÚNICO: anunciar (cita | paquete)
+# ===============================================================
+
+def anunciar(arg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Entrada única para Engine y para uso manual.
+
+    - Si arg es paquete de ciclo (Engine._cierre_cit) → cadena completa.
+    - Si arg es una cita suelta → un bloque de anuncio.
+    - Si arg es None → anunciar_todo() del registro actual.
+
+    No calcula Tru. No inventa factores.
+    """
+    if arg is None:
+        return anunciar_todo()
+
+    if _es_paquete_ciclo(arg):
+        return _anunciar_paquete(arg)
+
+    if _es_cita_suelta(arg):
+        # registrar + anunciar forma
+        reg = registrar(arg)
+        if not reg.get("ok"):
+            return {
+                "ok": False,
+                "errores": reg.get("errores") or ["cita inválida"],
+                "anuncio": None,
+            }
+        return _anuncio_de_cita(reg.get("cita") or arg)
+
+    return {
+        "ok": False,
+        "estado": "ERROR_FORMA",
+        "errores": [
+            "anunciar: se esperaba paquete de ciclo (resultado/contexto_cx) "
+            "o una cita con tipo/enunciado"
+        ],
+        "anuncio": None,
     }
 
 
@@ -345,38 +660,26 @@ def inventario() -> Dict[str, Any]:
         "capacidades": list(CONTENEDOR["capacidades"].keys()),
         "registro_n": len(_REGISTRO),
         "no_hace": list(FUNCION["no_hace"]),
-        "anuncio_capacidad": FUNCION["anuncio"]["capacidad"],
+        "agencia": FUNCION["agencia"],
         "autoridad": FUNCION["autoridad"],
+        "anuncio_capacidad": "total",
+        "oficio_ciclo": (
+            "anunciar(paquete) con resultado+contexto_cx → cadena completa"
+        ),
     }
 
 
 def barrer() -> Dict[str, Any]:
-    """
-    Coherencia interna del módulo de citación.
-    No barre AX. No calcula Tru.
-    """
     errores: List[str] = []
     choques: List[str] = []
-
-    for campo in CAMPOS_OBLIGATORIOS:
-        if campo not in (
-            "id",
-            "tipo",
-            "fuente_modulo",
-            "enunciado",
-            "descripcion",
-            "evidencia_ref",
-        ):
-            choques.append("campo obligatorio inesperado en contrato: {0}".format(campo))
 
     for t in TIPOS_CITA:
         if not isinstance(t, str) or not t:
             errores.append("tipo de cita inválido en TIPOS_CITA")
 
-    # fractal: el módulo no debe declarar capacidades de cálculo
     for prohibido in ("tru_total", "tru_ri", "calcular", "evaluar_verdad"):
         for cap in CONTENEDOR["capacidades"]:
-            if prohibido in cap.lower():
+            if prohibido in str(cap).lower():
                 choques.append(
                     "capacidad incompatible con oficio de citacion: {0}".format(cap)
                 )
@@ -388,7 +691,8 @@ def barrer() -> Dict[str, Any]:
         "errores": errores,
         "funciones": list(CONTENEDOR["capacidades"].keys()),
         "registro_n": len(_REGISTRO),
-        "nota": "centinela de citacion; sin juicio de verdad",
+        "version": CONTENEDOR["version"],
+        "nota": "centinela CIT; sin juicio de verdad; anunciar acepta paquete de ciclo",
     }
 
 
