@@ -550,7 +550,7 @@
           "callable": true,
           "modulo": "contexto",
           "rol": "CX",
-          "version": "1.1",
+          "version": "1.3",
           "ok": true,
           "fn_name": "resolver"
         },
@@ -559,7 +559,7 @@
           "callable": true,
           "modulo": "contexto",
           "rol": "CX",
-          "version": "1.1",
+          "version": "1.3",
           "ok": true,
           "fn_name": "resolver"
         },
@@ -568,7 +568,7 @@
           "callable": true,
           "modulo": "contexto",
           "rol": "CX",
-          "version": "1.1",
+          "version": "1.3",
           "ok": true,
           "fn_name": "inventario"
         },
@@ -577,7 +577,7 @@
           "callable": true,
           "modulo": "contexto",
           "rol": "CX",
-          "version": "1.1",
+          "version": "1.3",
           "ok": true,
           "fn_name": "axiomas"
         }
@@ -605,7 +605,7 @@
         }
       ],
       "nombre": "contexto",
-      "version": "1.1"
+      "version": "1.3"
     },
     "RE": {
       "modulos": [
