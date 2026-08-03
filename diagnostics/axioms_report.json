@@ -2,7 +2,7 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 428,
+  "declaraciones": 445,
   "cuerpos": [
     "VPSI_AX",
     "contexto_AX",
@@ -14,14 +14,15 @@
     "sentido_estructural_AX",
     "sm_af_AX",
     "sm_mapa_AX",
-    "sm_memoria_AX"
+    "sm_memoria_AX",
+    "sm_precision_AX"
   ],
   "por_tipo": {
-    "axioma": 147,
-    "lema": 46,
-    "teorema": 111,
-    "corolario": 103,
-    "definicion": 21
+    "axioma": 150,
+    "lema": 48,
+    "teorema": 115,
+    "corolario": 107,
+    "definicion": 25
   },
   "ids_dominio_k_o": [
     "A1",

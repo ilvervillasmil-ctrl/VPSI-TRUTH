@@ -8,7 +8,7 @@
     "coherente": true,
     "choques": [],
     "errores": [],
-    "declaraciones": 428,
+    "declaraciones": 445,
     "cuerpos": [
       "VPSI_AX",
       "contexto_AX",
@@ -20,14 +20,15 @@
       "sentido_estructural_AX",
       "sm_af_AX",
       "sm_mapa_AX",
-      "sm_memoria_AX"
+      "sm_memoria_AX",
+      "sm_precision_AX"
     ],
     "por_tipo": {
-      "axioma": 147,
-      "lema": 46,
-      "teorema": 111,
-      "corolario": 103,
-      "definicion": 21
+      "axioma": 150,
+      "lema": 48,
+      "teorema": 115,
+      "corolario": 107,
+      "definicion": 25
     },
     "ids_dominio_k_o": [
       "A1",
@@ -851,13 +852,13 @@
           "corolario",
           "definicion"
         ],
-        "declaraciones": 428,
+        "declaraciones": 445,
         "por_tipo": {
-          "axioma": 147,
-          "lema": 46,
-          "teorema": 111,
-          "corolario": 103,
-          "definicion": 21
+          "axioma": 150,
+          "lema": 48,
+          "teorema": 115,
+          "corolario": 107,
+          "definicion": 25
         },
         "cuerpos": [
           "VPSI_AX",
@@ -870,7 +871,8 @@
           "sentido_estructural_AX",
           "sm_af_AX",
           "sm_mapa_AX",
-          "sm_memoria_AX"
+          "sm_memoria_AX",
+          "sm_precision_AX"
         ],
         "errores": [],
         "vigila": [
@@ -1673,7 +1675,7 @@
       "coherente": true,
       "choques": [],
       "errores": [],
-      "declaraciones": 428,
+      "declaraciones": 445,
       "cuerpos": [
         "VPSI_AX",
         "contexto_AX",
@@ -1685,14 +1687,15 @@
         "sentido_estructural_AX",
         "sm_af_AX",
         "sm_mapa_AX",
-        "sm_memoria_AX"
+        "sm_memoria_AX",
+        "sm_precision_AX"
       ],
       "por_tipo": {
-        "axioma": 147,
-        "lema": 46,
-        "teorema": 111,
-        "corolario": 103,
-        "definicion": 21
+        "axioma": 150,
+        "lema": 48,
+        "teorema": 115,
+        "corolario": 107,
+        "definicion": 25
       },
       "ids_dominio_k_o": [
         "A1",
@@ -3620,10 +3623,10 @@
   },
   "generatividad": {
     "contenedor": "axiomas",
-    "theta_n": 258,
-    "pares_totales": 33153,
-    "pares_compatibles": 9161,
-    "pares_novedosos": 5277,
+    "theta_n": 265,
+    "pares_totales": 34980,
+    "pares_compatibles": 9164,
+    "pares_novedosos": 5278,
     "im_vs_theta": "GENERATIVO",
     "dominios": [
       "K",
@@ -3635,6 +3638,7 @@
       "cache",
       "citacion",
       "composicion",
+      "condicion_funcionamiento",
       "conocimiento_operativo",
       "constantes",
       "contexto",
@@ -3649,13 +3653,17 @@
       "evaluacion",
       "exactitud_memoria",
       "formulas",
+      "frontera_disenador",
       "inferencia_causal",
       "informacion",
       "invarianza_significado",
       "logica",
       "maquina_sin_R",
+      "medicion_fiable",
       "meta",
       "ontologia",
+      "origen_distorsion",
+      "precision_mecanismo",
       "prioridad_mapa",
       "probabilidad_subordinada",
       "realidad",
@@ -3663,6 +3671,7 @@
       "seleccion_correlacion",
       "self",
       "semantica",
+      "subordinacion_probabilidad",
       "taxonomia",
       "temporal",
       "traza_resolucion",
@@ -3671,8 +3680,8 @@
     "u1_proxy": "NO_STAGNANT",
     "errores_recoleccion": 0,
     "por_tipo_theta": {
-      "axioma": 147,
-      "teorema": 111
+      "axioma": 150,
+      "teorema": 115
     },
     "canonica": {
       "theta_n": 24,

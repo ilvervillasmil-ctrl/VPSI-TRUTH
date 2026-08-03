@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-03 22:40:22 UTC    Commit: 8b86a1f08424
+Generado: 2026-08-03 23:06:27 UTC    Commit: aa7001288aa5
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 ================================================================================
@@ -114,10 +114,10 @@ ESTADO GLOBAL
       ALPHA = 26/27   BETA = 1/27
 
   ✅ Axiomas (AX)
-      declaraciones = 428
+      declaraciones = 445
       choques       = 0
       errores       = 0
-      por_tipo      = {'axioma': 147, 'lema': 46, 'teorema': 111, 'corolario': 103, 'definicion': 21}
+      por_tipo      = {'axioma': 150, 'lema': 48, 'teorema': 115, 'corolario': 107, 'definicion': 25}
 
   ✅ Fórmulas (FO)
       coherente = True
@@ -137,12 +137,12 @@ ESTADO GLOBAL
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
 ================================================================================
-  |Θ| (AX)           : 258
-  pares totales      : 33153
-  pares compatibles  : 9161
-  pares novedosos    : 5277
+  |Θ| (AX)           : 265
+  pares totales      : 34980
+  pares compatibles  : 9164
+  pares novedosos    : 5278
   |Im(⊕)| ? |Θ|      : ✅ GENERATIVO
-  dominios           : ['K', 'Tru_Ri', 'admisibilidad_medida', 'ancla_error', 'auditoria', 'axiomas', 'cache', 'citacion', 'composicion', 'conocimiento_operativo', 'constantes', 'contexto', 'correccion_acumulativa', 'correlacion', 'criterio_error', 'engine', 'entendimiento_operativo', 'entrenamiento', 'epistemologia', 'evacion_ciclo', 'evaluacion', 'exactitud_memoria', 'formulas', 'inferencia_causal', 'informacion', 'invarianza_significado', 'logica', 'maquina_sin_R', 'meta', 'ontologia', 'prioridad_mapa', 'probabilidad_subordinada', 'realidad', 'reapertura_legitima', 'seleccion_correlacion', 'self', 'semantica', 'taxonomia', 'temporal', 'traza_resolucion', 'verificacion']
+  dominios           : ['K', 'Tru_Ri', 'admisibilidad_medida', 'ancla_error', 'auditoria', 'axiomas', 'cache', 'citacion', 'composicion', 'condicion_funcionamiento', 'conocimiento_operativo', 'constantes', 'contexto', 'correccion_acumulativa', 'correlacion', 'criterio_error', 'engine', 'entendimiento_operativo', 'entrenamiento', 'epistemologia', 'evacion_ciclo', 'evaluacion', 'exactitud_memoria', 'formulas', 'frontera_disenador', 'inferencia_causal', 'informacion', 'invarianza_significado', 'logica', 'maquina_sin_R', 'medicion_fiable', 'meta', 'ontologia', 'origen_distorsion', 'precision_mecanismo', 'prioridad_mapa', 'probabilidad_subordinada', 'realidad', 'reapertura_legitima', 'seleccion_correlacion', 'self', 'semantica', 'subordinacion_probabilidad', 'taxonomia', 'temporal', 'traza_resolucion', 'verificacion']
   U1                 : NO_STAGNANT
   --- capa canónica ---
   |Θ|_can            : 24 / 24
