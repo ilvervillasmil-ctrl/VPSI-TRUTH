@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 09:37:31 UTC    Commit: c7718c6e7336
+Generado: 2026-08-04 09:58:57 UTC    Commit: 5db35ef8a731
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -18,10 +18,10 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   ┌─────────────────────────────────────────────────────────┐
   │  ✅ C (coherencia  ) =  1                               │
   │  ✅ L (lógica      ) =  1                               │
-  │  ✅ K (correlación ) =  13/24                           │
+  │  ✅ K (correlación ) =  91/249                          │
   │─────────────────────────────────────────────────────────│
-  │  ✅ Tru_Ri     =  13/24                                   │
-  │  ✅ Tru_total  =  181/324                                 │
+  │  ✅ Tru_Ri     =  91/249                                  │
+  │  ✅ Tru_total  =  2615/6723                               │
   │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
@@ -60,10 +60,10 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   ┌─────────────────────────────────────────────────────────┐
   │  ✅ C (coherencia  ) =  1                               │
   │  ✅ L (lógica      ) =  1                               │
-  │  ✅ K (correlación ) =  7/9                             │
+  │  ✅ K (correlación ) =  199/249                         │
   │─────────────────────────────────────────────────────────│
-  │  ✅ Tru_Ri     =  7/9                                     │
-  │  ✅ Tru_total  =  191/243                                 │
+  │  ✅ Tru_Ri     =  199/249                                 │
+  │  ✅ Tru_total  =  5423/6723                               │
   │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado

@@ -71,10 +71,10 @@
         "factores": {
           "C": "19/20",
           "L": "1",
-          "K": "7/200"
+          "K": "41/630"
         },
-        "tru_ri": "133/4000",
-        "tru_total": "1243/18000",
+        "tru_ri": "779/12600",
+        "tru_total": "16427/170100",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -100,9 +100,9 @@
       "estado": "OK",
       "C": "19/20",
       "L": "1",
-      "K": "7/200",
-      "tru_ri": "133/4000",
-      "tru_total": "1243/18000",
+      "K": "41/630",
+      "tru_ri": "779/12600",
+      "tru_total": "16427/170100",
       "origen": "test_contradiccion_estructural_interna",
       "invocador_id": "test_contradiccion_estructural_interna",
       "secuencia": 2
@@ -173,10 +173,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "1/4"
+          "K": "3/7"
         },
-        "tru_ri": "1/4",
-        "tru_total": "5/18",
+        "tru_ri": "3/7",
+        "tru_total": "85/189",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -202,9 +202,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "1/4",
-      "tru_ri": "1/4",
-      "tru_total": "5/18",
+      "K": "3/7",
+      "tru_ri": "3/7",
+      "tru_total": "85/189",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 4
@@ -223,10 +223,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "1/4"
+          "K": "3/7"
         },
-        "tru_ri": "1/4",
-        "tru_total": "5/18",
+        "tru_ri": "3/7",
+        "tru_total": "85/189",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -252,9 +252,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "1/4",
-      "tru_ri": "1/4",
-      "tru_total": "5/18",
+      "K": "3/7",
+      "tru_ri": "3/7",
+      "tru_total": "85/189",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 5
@@ -519,10 +519,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "7/9"
+          "K": "199/249"
         },
-        "tru_ri": "7/9",
-        "tru_total": "191/243",
+        "tru_ri": "199/249",
+        "tru_total": "5423/6723",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -548,9 +548,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "7/9",
-      "tru_ri": "7/9",
-      "tru_total": "191/243",
+      "K": "199/249",
+      "tru_ri": "199/249",
+      "tru_total": "5423/6723",
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
       "secuencia": 11
