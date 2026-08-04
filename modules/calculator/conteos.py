@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.3 (SOLO ADICIONES - lógica intacta)
+Version: 3.3 (corrección: info adicional no es falsa)
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple, Set, FrozenSet
 VERSION = "3.3"
 
 # ===============================================================
-# SEGMENTO 1 --- RETICULA DE SEVERIDAD (IDÉNTICO)
+# SEGMENTO 1 --- RETICULA DE SEVERIDAD
 # ===============================================================
 
 PESO_ROCE    = Fraction(1, 4)
@@ -40,11 +40,11 @@ def nombre_reticula(peso: Fraction) -> str:
 
 
 # ===============================================================
-# SEGMENTO 2 --- PATRONES (SOLO AÑADIDOS, NUNCA MODIFICADOS)
+# SEGMENTO 2 --- PATRONES (ORIGINALES + ADICIONES)
 # ===============================================================
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
-    # ORIGINALES (intactos)
+    # ORIGINALES
     (r"\by\s+no\b",                 PESO_TOTAL),
     (r"\bpero\s+no\b",              PESO_TOTAL),
     (r"\bes\b.+\bno\s+es\b",        PESO_TOTAL),
@@ -57,7 +57,7 @@ _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
     (r"\baunque\b",                 PESO_ROCE),
     (r"\bmas\s+no\b",               PESO_PARCIAL),
     (r"\bsin\s+dejar\s+de\b",       PESO_ROCE),
-    # ADICIONES (nuevos patrones, no modifican los originales)
+    # ADICIONES
     (r"\bpero\s+tambi[ée]n\b",      PESO_PARCIAL),
     (r"\bno\s+s[óo]lo\b.+\bsino\b", PESO_PARCIAL),
     (r"\bpor\s+el\s+contrario\b",   PESO_GRAVE),
@@ -67,7 +67,7 @@ _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
 )
 
 _SENALES_ADOPCION = (
-    # ORIGINALES (intactos)
+    # ORIGINALES
     r"\bno\s+invento\b",
     r"\bno\s+decido\b",
     r"\bno\s+salgo\b",
@@ -96,7 +96,7 @@ _SENALES_ADOPCION = (
 )
 
 _SENALES_ACTO = (
-    # ORIGINALES (intactos)
+    # ORIGINALES
     r"\bpropongo\b",
     r"\bpropongamos\b",
     r"\bintroduzcamos\b",
@@ -119,7 +119,7 @@ _SENALES_ACTO = (
 )
 
 _SENALES_NO_PROPOSICION = (
-    # ORIGINALES (intactos)
+    # ORIGINALES
     r"^\s*(?:si|cuando|aunque|mientras|donde|como)\b",
     r"\?\s*$",
     r"^\s*(?:¿|¡)",
@@ -159,11 +159,11 @@ _UMBRAL_SOLAPE_REVERSION = Fraction(1, 4)
 
 
 # ===============================================================
-# SEGMENTO 3 --- STOPWORDS (SOLO AÑADIDAS)
+# SEGMENTO 3 --- STOPWORDS (ORIGINALES + ADICIONES)
 # ===============================================================
 
 _DICCIONARIO_STOP: frozenset = frozenset({
-    # ORIGINALES (todos intactos)
+    # ORIGINALES
     "el", "la", "los", "las", "un", "una", "unos", "unas",
     "lo", "al", "del",
     "a", "ante", "bajo", "cabe", "con", "contra", "de", "desde",
@@ -196,7 +196,7 @@ _DICCIONARIO_STOP: frozenset = frozenset({
     "antes", "luego", "entonces", "así", "bien", "mal",
     "solo", "sólo", "solamente", "apenas", "casi", "tan", "tanto",
     "etc", "etcétera", "vs",
-    # ADICIONES (términos técnicos comunes)
+    # ADICIONES
     "figura", "tabla", "ecuación", "sección", "capítulo",
     "véase", "consultar", "referencia", "bibliografía",
     "nota", "pie", "página", "fig", "eq", "ref",
@@ -207,7 +207,7 @@ _STOP = _DICCIONARIO_STOP
 
 
 # ===============================================================
-# SEGMENTO 4 --- LECTURA (CON MÁS CLAVES)
+# SEGMENTO 4 --- LECTURA
 # ===============================================================
 
 _CLAVES_TEXTO = ("mensaje", "descripcion", "texto", "D", "contenido")
@@ -268,7 +268,7 @@ def _leer_lexico(peticion: Dict[str, Any]) -> set:
 
 
 # ===============================================================
-# SEGMENTO 5 --- HELPERS (CON CACHE - SOLO OPTIMIZACIÓN)
+# SEGMENTO 5 --- HELPERS
 # ===============================================================
 
 def _norm(s: Any) -> str:
@@ -369,7 +369,7 @@ def _peso_acto_contra_compromiso(acto: str, hay_restr: bool) -> Fraction:
 
 
 # ===============================================================
-# ⚠️  FUNCIONES CRÍTICAS: IDÉNTICAS AL ORIGINAL
+# ⚠️  FUNCIÓN MODIFICADA: info adicional NO es falsa
 # ===============================================================
 
 def _divergencia_peso(
@@ -380,11 +380,16 @@ def _divergencia_peso(
     a_tok = _tokens(afirmacion, lexico_extra)
     if not a_tok or not o_tokens:
         return PESO_TOTAL
+    
     inter = a_tok & o_tokens
+    
+    # Si no hay intersección: es información adicional, NO contradicción
     if not inter:
-        return PESO_TOTAL
+        return Fraction(0)
+    
+    # Si hay intersección parcial: calculamos divergencia
     ratio = Fraction(len(inter), len(a_tok))
-    return Fraction(1) - ratio  # <--- EXACTAMENTE ORIGINAL
+    return Fraction(1) - ratio
 
 
 def _peso_reversion(
