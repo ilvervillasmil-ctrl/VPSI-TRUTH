@@ -296,7 +296,7 @@
         "factores": {
           "C": null,
           "L": "1",
-          "K": "1/4"
+          "K": "1/2"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -309,7 +309,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": "1",
-      "K": "1/4",
+      "K": "1/2",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -331,7 +331,7 @@
         "factores": {
           "C": null,
           "L": "1",
-          "K": "1/4"
+          "K": "1/2"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -344,7 +344,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": "1",
-      "K": "1/4",
+      "K": "1/2",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -1131,7 +1131,7 @@
           "C": "2.0",
           "L": "2.0",
           "K": "2.0",
-          "conteos": "2.1",
+          "conteos": "2.0",
           "orquestador": "2.0"
         },
         "coherente": true,
@@ -4362,7 +4362,7 @@
       "C": "2.0",
       "L": "2.0",
       "K": "2.0",
-      "conteos": "2.1",
+      "conteos": "2.0",
       "orquestador": "2.0"
     },
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."

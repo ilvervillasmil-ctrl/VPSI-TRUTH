@@ -24,7 +24,7 @@
         "factores": {
           "C": null,
           "L": "1",
-          "K": "1/4"
+          "K": "1/2"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -37,7 +37,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": "1",
-      "K": "1/4",
+      "K": "1/2",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -59,7 +59,7 @@
         "factores": {
           "C": null,
           "L": "1",
-          "K": "1/4"
+          "K": "1/2"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -72,7 +72,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": "1",
-      "K": "1/4",
+      "K": "1/2",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
