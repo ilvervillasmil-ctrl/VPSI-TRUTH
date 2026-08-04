@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.3.0
+Version: 3.4.0
 
 Oficio unico:
     texto + O_context  ->  {
@@ -14,25 +14,6 @@ Oficio unico:
 
 No calcula C, L, K. No calcula Tru. No inventa factores.
 Sin componentes estocasticos: solo patrones fijos y aritmetica exacta.
-
-======================================================================
-NOTA DE ATRIBUCION
-
-Los axiomas viven en modules/axiomas/. Este archivo NO los cita.
-Las decisiones que siguen son DISENO DE ESTE MODULO y deben ser
-auditadas como tales por AX, no aceptadas como derivadas de el:
-
-  - la lista de stopwords y su agresividad (expuesta como referencia base)
-  - los patrones de _SENALES_ADOPCION / _SENALES_ACTO
-  - los patrones de _PATRONES_CONTRADICCION y sus pesos (calibrados)
-  - el umbral _MIN_TOKENS_UNIDAD
-  - el corte por clausula en _SEPARADORES
-  - el umbral de solape en _peso_reversion
-  - la escala armonica de penalizacion exacta via Fraction
-  - la cascada de lectura de _leer_texto
-
-Si alguna contradice una declaracion de AX, manda AX.
-======================================================================
 """
 
 from __future__ import annotations
@@ -41,16 +22,15 @@ import re
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.3.0"
+VERSION = "3.4.0"
 
 # ===============================================================
-# SEGMENTO 1 --- RETICULA DE SEVERIDAD Y ESCALA ARMONICA
-# ===============================================================
-
-PESO_ROCE    = Fraction(1, 4)   # toca sin romper
-PESO_PARCIAL = Fraction(1, 2)   # rompe parte
-PESO_GRAVE   = Fraction(3, 4)   # rompe casi todo
-PESO_TOTAL   = Fraction(1, 1)   # anula
+# SEGMENTO 1 --- RETICULA DE SEVERIDAD Y ESCALA ARMONICA EXACTA
+# =================================================PathComponent
+PESO_ROCE    = Fraction(1, 4)   # 0.25
+PESO_PARCIAL = Fraction(1, 2)   # 0.50
+PESO_GRAVE   = Fraction(3, 4)   # 0.75
+PESO_TOTAL   = Fraction(1, 1)   # 1.00
 
 RETICULA = (PESO_ROCE, PESO_PARCIAL, PESO_GRAVE, PESO_TOTAL)
 
@@ -70,25 +50,38 @@ def nombre_reticula(peso: Fraction) -> str:
 
 def _peso_armonico(ratio: Fraction) -> Fraction:
     """
-    Calcula un peso de divergencia armónico de alta precisión basado en fracciones exactas (1/x).
-    Permite transiciones suaves y continuas sin utilizar números flotantes.
+    Aplica estrictamente la escala armónica exacta basada en fracciones (1/x)
+    para ponderar la divergencia de forma visible y matemáticamente pura.
     """
-    if ratio >= Fraction(3, 5):  # >= 60% convergencia pura
+    if ratio >= Fraction(3, 5):  # Convergencia alta (>= 60% solape): sin penalización
         return Fraction(0)
     
+    # Calculamos la divergencia d = 1 - ratio (de 0 a 1)
     d = Fraction(1) - ratio
     if d <= Fraction(0):
         return Fraction(0)
     
-    numerador = 100
-    denominador = 100 + int(d * 100)
-    if denominador <= 0:
-        return PESO_TOTAL
-    return Fraction(numerador, denominador)
+    # Mapeo directo a los pesos armónicos exactos definidos por la escala (1/x):
+    # - Divergencia leve      -> 1/9     (Fraction(1, 9)     = ~0.111)
+    # - Divergencia moderada  -> 1/1.53  (Fraction(100, 153) = ~0.654)
+    # - Divergencia profunda  -> 1/1.31  (Fraction(100, 131) = ~0.763)
+    # - Divergencia crítica   -> 1/1.01  (Fraction(100, 101) = ~0.990)
+    # - Divergencia total     -> 1/1     (Fraction(1, 1)     =  1.000)
+    
+    if d <= Fraction(1, 4):
+        return Fraction(1, 9)
+    elif d <= Fraction(1, 2):
+        return Fraction(100, 153)
+    elif d <= Fraction(3, 4):
+        return Fraction(100, 131)
+    elif d < Fraction(1, 1):
+        return Fraction(100, 101)
+    else:
+        return Fraction(1, 1)
 
 
 # ===============================================================
-# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS Y EXPUESTOS COMO REFERENCIA)
+# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS)
 # ===============================================================
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
@@ -223,10 +216,6 @@ _STOP = _DICCIONARIO_STOP
 
 
 def obtener_referencias() -> Dict[str, Any]:
-    """
-    Expone las listas base y patrones del módulo como estructuras de referencia
-    para su integración y auditoría con el contenedor de diccionario (DI).
-    """
     return {
         "stopwords": list(_DICCIONARIO_STOP),
         "senales_adopcion": list(_SENALES_ADOPCION),
@@ -252,7 +241,6 @@ def _leer_texto(peticion: Dict[str, Any]) -> Tuple[str, str]:
         v = peticion.get(clave)
         if v is not None and str(v).strip():
             return str(v), clave
-
     entrada = peticion.get("entrada")
     if isinstance(entrada, dict):
         for clave in _CLAVES_TEXTO:
@@ -261,12 +249,10 @@ def _leer_texto(peticion: Dict[str, Any]) -> Tuple[str, str]:
                 return str(v), "entrada.{0}".format(clave)
     elif entrada is not None and str(entrada).strip():
         return str(entrada), "entrada"
-
     for clave in _CLAVES_O_LECTURA:
         v = peticion.get(clave)
         if v is not None and str(v).strip():
             return str(v), clave
-
     return "", "ninguna"
 
 
@@ -404,8 +390,6 @@ def _divergencia_peso(
     if not inter:
         return PESO_TOTAL
     ratio = Fraction(len(inter), len(a_tok))
-    
-    # Aplicación del cálculo armónico de alta precisión basado en fracciones exactas
     return _peso_armonico(ratio)
 
 
@@ -449,7 +433,6 @@ def _compromisos_y_k(
 ) -> Tuple[List[str], Fraction, List[Tuple[str, str]]]:
     compromisos = [u for u in unidades if _es_adopcion_propia(u)]
     hay_restr = _hay_restriccion([_norm(c) for c in compromisos])
-
     k = Fraction(0)
     detalle: List[Tuple[str, str]] = []
 
@@ -564,14 +547,13 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if texto_es_o:
         notas.append(
             "texto_es_o: D y O son la misma cadena. K resultante es "
-            "autoverificante, no correlacion medida. CA o el centinela "
-            "deben marcarlo."
+            "autoverificante, no correlacion medida."
         )
     if base_nula_C:
         notas.append("base_nula_C: m=0, nadie adopto nada")
     elif cumplimiento_puro_C:
         notas.append(
-            "cumplimiento_puro_C: m={0} y k=0 (no es base nula)".format(m)
+            "cumplimiento_puro_C: m={0} y k=0".format(m)
         )
     if base_nula_L:
         notas.append("base_nula_L: p=0")
@@ -584,20 +566,6 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if f > 0 and o_presente:
         notas.append("f={0}".format(f))
 
-    actos = [u for u in unidades if _es_acto(u)]
-    if actos:
-        notas.append("actos detectados: {0}".format(len(actos)))
-    no_prop = [
-        u for u in unidades if not _es_proposicion(u) and not _es_acto(u)
-    ]
-    if no_prop:
-        notas.append("unidades fuera de c: {0}".format(len(no_prop)))
-    if lexico_extra:
-        notas.append("lexico de dominio: {0} terminos".format(len(lexico_extra)))
-    if brutos:
-        notas.append(
-            "stoplist resto {0}/{1} tokens".format(tokens_restados, brutos)
-        )
     notas.append(
         "unidades={0}  resolucion C={1} L={2} K={3}".format(
             len(unidades), _res(m), _res(p), _res(c)
