@@ -1,16 +1,17 @@
 {
   "tipo": "evidencia_evaluacion",
   "version": "1.1",
-  "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso",
+  "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso, test_verdad_astronomica",
   "origenes": [
     "test_claude_dentro_del_repo",
     "test_contradiccion_estructural_interna",
     "test_conversacion",
-    "test_paradoja_mentiroso"
+    "test_paradoja_mentiroso",
+    "test_verdad_astronomica"
   ],
   "invocador_id": "ci_auditoria",
   "estado_engine": "OPERATIVO",
-  "n": 9,
+  "n": 10,
   "resultados": [
     {
       "entrada": {
@@ -452,6 +453,54 @@
       "origen": "test_paradoja_mentiroso",
       "invocador_id": "test_paradoja_mentiroso",
       "secuencia": 9
+    },
+    {
+      "entrada": {
+        "quien": "Sistema",
+        "texto": "El Sol es una estrella ubicada en el sistema solar, el cual forma parte de nuestra galaxia, la Vía Láctea.",
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea."
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "29/45"
+        },
+        "tru_ri": "29/45",
+        "tru_total": "799/1215",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "29/45",
+      "tru_ri": "29/45",
+      "tru_total": "799/1215",
+      "origen": "test_verdad_astronomica",
+      "invocador_id": "test_verdad_astronomica",
+      "secuencia": 10
     }
   ]
 }
