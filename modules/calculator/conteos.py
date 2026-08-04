@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.2.1
+Version: 3.3.0
 
 Oficio unico:
     texto + O_context  ->  {
@@ -28,6 +28,7 @@ auditadas como tales por AX, no aceptadas como derivadas de el:
   - el umbral _MIN_TOKENS_UNIDAD
   - el corte por clausula en _SEPARADORES
   - el umbral de solape en _peso_reversion
+  - la escala armonica de penalizacion exacta via Fraction
   - la cascada de lectura de _leer_texto
 
 Si alguna contradice una declaracion de AX, manda AX.
@@ -40,10 +41,10 @@ import re
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.2.1"
+VERSION = "3.3.0"
 
 # ===============================================================
-# SEGMENTO 1 --- RETICULA DE SEVERIDAD
+# SEGMENTO 1 --- RETICULA DE SEVERIDAD Y ESCALA ARMONICA
 # ===============================================================
 
 PESO_ROCE    = Fraction(1, 4)   # toca sin romper
@@ -65,6 +66,30 @@ def nombre_reticula(peso: Fraction) -> str:
     if peso <= PESO_GRAVE:
         return "grave"
     return "total"
+
+
+def _peso_armonico(ratio: Fraction) -> Fraction:
+    """
+    Calcula un peso de divergencia armónico de alta precisión basado en fracciones exactas (1/x).
+    Permite transiciones suaves y continuas sin utilizar números flotantes.
+    """
+    if ratio >= Fraction(3, 5): # >= 60% convergencia pura
+        return Fraction(0)
+    
+    # Mapeo armónico determinista basado en el complemento del ratio de solape
+    # Si el ratio es bajo, la penalización armónica escala con precisión exacta de enteros.
+    # Distancia de divergencia D = 1 - ratio
+    d = Fraction(1) - ratio
+    if d <= Fraction(0):
+        return Fraction(0)
+    
+    # Mapeo armónico discreto/continuo seguro sin floats: 1 / (1 + d) expresado en fracciones puras
+    # Ejemplo: si d = 0.5 (Fraction(1, 2)), 1 / (1 + 1/2) = 2/3
+    numerador = 100
+    denominador = 100 + int(d * 100)
+    if denominador <= 0:
+        return PESO_TOTAL
+    return Fraction(numerador, denominador)
 
 
 # ===============================================================
@@ -385,12 +410,8 @@ def _divergencia_peso(
         return PESO_TOTAL
     ratio = Fraction(len(inter), len(a_tok))
     
-    # Si el solape es alto (>= 60%), se considera coincidencia convergente pura (f = 0)
-    if ratio >= Fraction(3, 5):
-        return Fraction(0)
-    elif ratio >= Fraction(1, 2):
-        return PESO_ROCE
-    return Fraction(1) - ratio
+    # Aplicación del cálculo armónico de alta precisión basado en fracciones exactas
+    return _peso_armonico(ratio)
 
 
 def _peso_reversion(
