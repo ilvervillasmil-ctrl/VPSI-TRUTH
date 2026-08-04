@@ -1,211 +1,215 @@
 """
 VPSI-TRUTH --- modules/calculator/logica.py
 
----
-### **DESCRIPCIÓN DEL SUB-MÓDULO**
-Este archivo implementa **exclusivamente el cálculo de la variable L (Lógica)**.
-La lógica mide la **estabilidad y determinismo del proceso** que genera una descripción D o un conjunto de posturas.
+Cálculo del factor de lógica L.
 
----
-### **DEFINICIÓN FORMAL (IlverVillasmil.pdf)**
-- **L(D) = 1** si existe un espacio **Z** y una transformación **T** tal que:
-  - Para todo **z ∈ Z**, **T(z)** es **único e invariante**.
-- **L(D) = 0** si el proceso no es determinista o no es invariante.
-- **Rango**: L(D) ∈ {0, 1} (en el enfoque teórico puro).
-- **Interpretación**:
-  - **L = 1**: El proceso es **determinista e invariante** (mismo input → mismo output).
-  - **L = 0**: El proceso **no es determinista** (mismo input → outputs diferentes) o **no es invariante** (el output cambia sin cambio en el input).
-- **Fuente**: Axioma TA2 (Objetividad de la Lógica) en IlverVillasmil.pdf.
+Versión: 2.0
+Cambio principal respecto a 1.x:
+  - Ancla de base nula (AM-D6 / AM-A3): si p == 0 (o base_nula_L),
+    L = UNDEFINED. No se maquilla como 1.
+  - Acepta r (reversiones) como Fraction de la retícula AM-D5
+    (no solo enteros binarios).
+  - L = 1 - r/p  (exacto, Fraction) cuando p > 0.
+  - Comentarios explícitos de las anclas para que el código
+    documente la fórmula de medición.
 
----
-### **DEFINICIÓN OPERACIONAL (PROTOCOLO.pdf)**
-- **L = 1 - (r / p)**, donde:
-  - **r**: Número de **posturas que revierten una posición previamente consolidada** por el sistema.
-  - **p**: Número total de **posturas** asumidas por el sistema.
-- **Rango**: L ∈ [0, 1] (en el enfoque operacional).
-- **Ejemplo**:
-  - Si un sistema asume 3 posturas: ["Sé la respuesta", "No sé", "Sé la respuesta"],
-    y hay 1 reversión (de "No sé" a "Sé la respuesta"),
-    entonces **L = 1 - (1/3) ≈ 0.6667**.
-- **Fuente**: Sección 0.15 (Regla Operacional: Cómputo Determinista de Factores) en PROTOCOLO.pdf.
+Fórmula canónica (operacional):
+    L(D) = 1 - r/p
+    donde
+        p = número de posturas / puntos de fijación (AM-D2)
+        r = suma de pesos de severidad de las reversiones (AM-D5)
 
----
-### **NOTAS IMPORTANTES**
-1. **L = 1** no implica que D sea verdadera, solo que el **proceso es determinista e invariante**.
-2. **L = 0** implica que el proceso **no es determinista** o **no es invariante**.
-3. **UNDEFINED**:
-   - Si no se proporcionan `posturas` o `reversiones` para el método operacional, se devuelve `UNDEFINED`.
-   - Si no se proporciona `descripcion` para el método teórico, se devuelve `UNDEFINED`.
-4. **Precisión**:
-   - Todos los cálculos usan `Fraction` para evitar errores de punto flotante.
-5. **Dependencias**:
-   - No depende de otros módulos. Solo usa `Fraction` y el estado `UNDEFINED` definido en `__init__.py`.
+Definición formal de referencia (Def 5.2):
+    L es la existencia de un punto fijo / salida única e invariante
+    bajo las reglas del dominio. Una reversión de postura
+    degrada ese punto fijo.
+
+Referencias:
+  Def 5.2 (Lógica), AM-D2, AM-D5, AM-D6, AM-A3
+  PROTOCOLO sec. 0.15
+  conteos.py v2.0 (productor de p y r)
 """
 
+from __future__ import annotations
+
 from fractions import Fraction
-from typing import List, Optional, Union
-from . import UNDEFINED, DominioError
+from typing import Any, Dict, Optional, Union
 
-# ===============================================================
-# FUNCIONES INTERNAS: Cálculo de L (Lógica)
-# ===============================================================
+# Sentinel compartido con el resto de CA
+try:
+    from modules.calculator import UNDEFINED
+except Exception:
+    UNDEFINED = "UNDEFINED"
 
-def _calcular_l_teorico(descripcion: str) -> Union[Fraction, type(UNDEFINED)]:
-    """
-    Calcula L (Lógica) usando el método teórico (IlverVillasmil.pdf).
 
-    **Definición formal**:
-    L(D) = 1 si existe un espacio Z y una transformación T tal que:
-    ∀z ∈ Z, T(z) es único e invariante.
+VERSION = "2.0"
 
-    Args:
-        descripcion (str): Descripción D a evaluar.
 
-    Returns:
-        Fraction: 1 si el proceso es determinista e invariante, 0 de lo contrario.
-        UNDEFINED: Si no se puede evaluar (ej: descripcion vacía).
-    """
-    if not descripcion or not isinstance(descripcion, str):
-        return UNDEFINED
+def _a_fraction(x: Any) -> Fraction:
+    """Convierte a Fraction de forma determinista. No inventa."""
+    if isinstance(x, Fraction):
+        return x
+    if isinstance(x, (int, float)):
+        return Fraction(x).limit_denominator(10_000)
+    if isinstance(x, str):
+        try:
+            return Fraction(x)
+        except Exception:
+            return Fraction(0)
+    return Fraction(0)
 
-    # Verificar si el proceso es determinista e invariante
-    es_determinista = _es_proceso_determinista(descripcion)
-    es_invariante = _es_proceso_invariante(descripcion)
-
-    return Fraction(1, 1) if (es_determinista and es_invariante) else Fraction(0, 1)
 
 def _calcular_l_operacional(
-    posturas: Optional[List[str]] = None,
-    reversiones: Optional[int] = None
-) -> Union[Fraction, type(UNDEFINED)]:
+    p: int,
+    r: Union[int, Fraction],
+    base_nula: bool = False,
+) -> Any:
     """
-    Calcula L (Lógica) usando el método operacional (PROTOCOLO.pdf).
+    Ruta operacional pura.
 
-    **Fórmula**:
-    L = 1 - (r / p), donde:
-    - r: Número de reversiones de postura.
-    - p: Número total de posturas asumidas.
+    AM-A3 / AM-D6:
+        Si p == 0 o base_nula → UNDEFINED.
+        (Antes se devolvía 1; eso inflaba Tru_Ri artificialmente.)
 
-    Args:
-        posturas (List[str]): Lista de posturas asumidas por el sistema.
-        reversiones (int): Número de posturas que revierten una posición previa.
-
-    Returns:
-        Fraction: Valor de L en [0, 1].
-        UNDEFINED: Si no se proporcionan posturas o reversiones.
-
-    Raises:
-        DominioError: Si reversiones > len(posturas).
+    AM-D5:
+        r puede ser Fraction (suma de pesos de la retícula).
+        L = 1 - r/p  se calcula en Fraction exacta.
     """
-    if posturas is None or reversiones is None:
+    if base_nula or p <= 0:
         return UNDEFINED
 
-    p = len(posturas)
-    if p == 0:
-        return Fraction(1, 1)  # Sin posturas, L = 1 por defecto
+    r_f = _a_fraction(r)
+    # r no puede superar p en peso efectivo
+    if r_f > p:
+        r_f = Fraction(p)
 
-    r = reversiones
-    if r > p:
-        raise DominioError(
-            f"El número de reversiones (r={r}) no puede ser mayor que el número de posturas (p={p})."
+    l = Fraction(1) - (r_f / Fraction(p))
+    # L ∈ [0, 1]
+    if l < 0:
+        l = Fraction(0)
+    if l > 1:
+        l = Fraction(1)
+    return l
+
+
+def _calcular_l_teorico(peticion: Dict[str, Any]) -> Any:
+    """
+    Ruta teórica (si el llamador ya aporta L explícito o
+    una señal de no-determinismo / contradicción de punto fijo).
+    No inventa valores.
+    """
+    if "L" in peticion and peticion["L"] is not None:
+        val = peticion["L"]
+        if val == UNDEFINED or str(val).upper() == "UNDEFINED":
+            return UNDEFINED
+        return _a_fraction(val)
+
+    # Señal dura de no-determinismo (dos salidas incompatibles)
+    if peticion.get("no_determinista") is True:
+        return Fraction(0)
+
+    # Contradicción de punto fijo explícita
+    if peticion.get("punto_fijo_roto") is True:
+        return Fraction(0)
+
+    return None  # no hay dato teórico → se cae a operacional
+
+
+def calcular_l(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Oficio público de lógica.
+
+    Entrada esperada (inyectada por conteos.inyectar_en_peticion
+    o por el ciclo de Engine):
+        posturas             : list
+        reversiones          : int | Fraction   (r)
+        _conteos_meta        : dict opcional con base_nula_L, p, ...
+
+    Salida:
+        {
+            "L": Fraction | UNDEFINED,
+            "p": int,
+            "r": Fraction,
+            "ruta": "operacional" | "teorico",
+            "version": "2.0",
+            "notas": list[str],
+        }
+    """
+    peticion = dict(peticion or {})
+    notas: list[str] = []
+
+    # ----- Intento teórico primero -----
+    l_teo = _calcular_l_teorico(peticion)
+    if l_teo is not None:
+        return {
+            "L": l_teo,
+            "p": peticion.get("p") or len(peticion.get("posturas") or []),
+            "r": _a_fraction(peticion.get("reversiones") or 0),
+            "ruta": "teorico",
+            "version": VERSION,
+            "notas": ["L tomado de ruta teórica"],
+        }
+
+    # ----- Ruta operacional -----
+    meta = peticion.get("_conteos_meta") or {}
+    posturas = peticion.get("posturas") or []
+    p = meta.get("p")
+    if p is None:
+        p = len(posturas)
+    p = int(p)
+
+    r = peticion.get("reversiones")
+    if r is None:
+        r = meta.get("r") or 0
+    r_f = _a_fraction(r)
+
+    base_nula = bool(meta.get("base_nula_L", False)) or (p <= 0)
+
+    l = _calcular_l_operacional(p, r_f, base_nula=base_nula)
+
+    if l is UNDEFINED:
+        notas.append(
+            "L = UNDEFINED (AM-D6 / AM-A3): p=0 tras ancla de inclusión. "
+            "No se asigna 1 artificialmente."
         )
-
-    return Fraction(p - r, p)
-
-# ===============================================================
-# FUNCIONES AUXILIARES: Lógica interna para validar determinismo e invariancia
-# ===============================================================
-
-def _es_proceso_determinista(descripcion: str) -> bool:
-    """
-    Verifica si un proceso es determinista.
-    **Criterio**: El mismo input siempre produce el mismo output.
-
-    Args:
-        descripcion (str): Descripción del proceso o sistema.
-
-    Returns:
-        bool: True si el proceso es determinista, False de lo contrario.
-    """
-    # En la práctica, esto se validaría con pruebas o análisis del código.
-    # Aquí asumimos que es determinista si no hay indicios de aleatoriedad.
-    descripcion_lower = descripcion.lower()
-
-    # Patrones que indican no determinismo
-    patrones_no_deterministas = [
-        "aleatorio", "random", "azar", "probabilidad",
-        "no determinista", "estocástico", "incierto",
-        "depende de", "varía con", "puede cambiar",
-    ]
-
-    for patron in patrones_no_deterministas:
-        if patron in descripcion_lower:
-            return False
-
-    # Si no hay patrones de no determinismo, asumimos que es determinista
-    return True
-
-def _es_proceso_invariante(descripcion: str) -> bool:
-    """
-    Verifica si un proceso es invariante.
-    **Criterio**: El output no cambia si el input no cambia.
-
-    Args:
-        descripcion (str): Descripción del proceso o sistema.
-
-    Returns:
-        bool: True si el proceso es invariante, False de lo contrario.
-    """
-    # En la práctica, esto se validaría con pruebas o análisis del código.
-    # Aquí asumimos que es invariante si no hay indicios de que el output cambie sin cambio en el input.
-    descripcion_lower = descripcion.lower()
-
-    # Patrones que indican no invariancia
-    patrones_no_invariantes = [
-        "cambia con el tiempo", "varía sin razón", "no es estable",
-        "depende de estado interno", "no es reproducible",
-    ]
-
-    for patron in patrones_no_invariantes:
-        if patron in descripcion_lower:
-            return False
-
-    # Si no hay patrones de no invariancia, asumimos que es invariante
-    return True
-
-# ===============================================================
-# FUNCIONES PÚBLICAS: Interfaz para el módulo calculator
-# ===============================================================
-
-def calcular_l(
-    descripcion: Optional[str] = None,
-    posturas: Optional[List[str]] = None,
-    reversiones: Optional[int] = None,
-    metodo: str = "operacional"
-) -> Union[Fraction, type(UNDEFINED)]:
-    """
-    Interfaz pública para calcular L (Lógica).
-
-    Args:
-        descripcion (str): Descripción D (para método teórico).
-        posturas (List[str]): Lista de posturas asumidas (para método operacional).
-        reversiones (int): Número de reversiones de postura (para método operacional).
-        metodo (str): "teorico" o "operacional" (default: "operacional").
-
-    Returns:
-        Fraction: Valor de L en [0, 1].
-        UNDEFINED: Si no hay suficiente información.
-
-    Raises:
-        MetodoError: Si el método no es "teorico" ni "operacional".
-        DominioError: Si los inputs violan el dominio (ej: reversiones > posturas).
-    """
-    if metodo == "teorico":
-        return _calcular_l_teorico(descripcion)
-    elif metodo == "operacional":
-        return _calcular_l_operacional(posturas, reversiones)
     else:
-        from . import MetodoError
-        raise MetodoError(
-            f"Método '{metodo}' no soportado. Usa 'teorico' o 'operacional'."
+        notas.append(
+            "L = 1 - r/p = 1 - {0}/{1} = {2} (Fraction exacta, AM-D5)".format(
+                str(r_f), p, str(l)
+            )
         )
+        if r_f == 0 and p > 0:
+            notas.append(
+                "Sin reversiones detectadas en el turno: punto fijo "
+                "preservado bajo la evidencia disponible."
+            )
+
+    return {
+        "L": l,
+        "p": p,
+        "r": r_f,
+        "ruta": "operacional",
+        "version": VERSION,
+        "notas": notas,
+    }
+
+
+def verificar_l(salida: Any) -> bool:
+    if not isinstance(salida, dict):
+        return False
+    if "L" not in salida:
+        return False
+    val = salida["L"]
+    if val is UNDEFINED or str(val).upper() == "UNDEFINED":
+        return True
+    if isinstance(val, Fraction):
+        return Fraction(0) <= val <= Fraction(1)
+    return False
+
+
+__all__ = [
+    "calcular_l",
+    "verificar_l",
+    "VERSION",
+    "UNDEFINED",
+]
