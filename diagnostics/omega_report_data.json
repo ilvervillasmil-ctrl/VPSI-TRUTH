@@ -328,6 +328,51 @@
     },
     {
       "entrada": {
+        "quien": "Sujeto",
+        "texto": "Soy una persona sumamente inteligente porque he desarrollado métodos para resolver problemas extremadamente difíciles y muchas personas reconocen mi capacidad analítica. Nunca me contradigo cuando hablo y siempre mantengo la misma posición desde el principio hasta el final. Sin embargo, reconozco que frecuentemente cambio de opinión sin darme cuenta y muchas veces termino defendiendo exactamente lo contrario de lo que afirmé unos segundos antes. Siempre digo la verdad y jamás invento información. Aunque debo admitir que en varias ocasiones inventé datos para hacer que mis argumentos parecieran más convincentes. Nunca tomo decisiones impulsivas. Pero también acepto que muchas de mis decisiones importantes las he tomado impulsivamente sin analizarlas con suficiente cuidado. No necesito ayuda de nadie para resolver problemas complejos. Sin embargo, la mayoría de mis logros importantes fueron posibles gracias a la ayuda constante de otras personas. Estoy completamente seguro de todo lo que afirmo. Aunque realmente tengo muchas dudas sobre casi todas mis propias afirmaciones. En conclusión, considero que soy completamente coherente en todo lo que acabo de decir y que este discurso no contiene ninguna contradicción.",
+        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones."
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
+        "factores": {
+          "C": "37/40",
+          "L": "1",
+          "K": "7/200"
+        },
+        "tru_ri": "259/8000",
+        "tru_total": "7367/108000",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "tru_ri": "259/8000",
+      "tru_total": "7367/108000",
+      "origen": "test_contradiccion_estructural_interna",
+      "invocador_id": "test_contradiccion_estructural_interna",
+      "secuencia": 2
+    },
+    {
+      "entrada": {
         "quien": "Carlos",
         "texto": "Anoche me quedé en casa todo el tiempo.",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
@@ -374,7 +419,7 @@
       "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 2
+      "secuencia": 3
     },
     {
       "entrada": {
@@ -424,7 +469,7 @@
       "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 3
+      "secuencia": 4
     },
     {
       "entrada": {
@@ -474,7 +519,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 4
+      "secuencia": 5
     },
     {
       "entrada": {
@@ -524,7 +569,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 5
+      "secuencia": 6
     },
     {
       "entrada": {
@@ -574,7 +619,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 6
+      "secuencia": 7
     },
     {
       "entrada": {
@@ -624,7 +669,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 7
+      "secuencia": 8
     }
   ],
   "fallos_engine": [],
@@ -3556,18 +3601,19 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 7,
+      "n": 8,
       "propios": 0,
       "origenes": [
         "test_claude_dentro_del_repo",
+        "test_contradiccion_estructural_interna",
         "test_conversacion"
       ],
       "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": "test_claude_dentro_del_repo, test_conversacion",
-    "n": 7,
+    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion",
+    "n": 8,
     "path": "evaluaciones.json",
     "invocador_id": "ci_auditoria"
   },
@@ -3640,8 +3686,8 @@
     ],
     "razon": null,
     "permite_k": true,
-    "origen": "test_claude_dentro_del_repo, test_conversacion",
-    "secuencia": 7,
+    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion",
+    "secuencia": 8,
     "n_citas": null,
     "n_anuncios": null,
     "fuentes_usadas": [
@@ -4552,8 +4598,8 @@
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
   },
   "tests": {
-    "total": 135,
-    "pasados": 134,
+    "total": 136,
+    "pasados": 135,
     "fallidos": 0,
     "omitidos": 1,
     "tasa": 99.26
