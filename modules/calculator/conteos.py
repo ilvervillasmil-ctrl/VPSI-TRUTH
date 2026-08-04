@@ -624,3 +624,4 @@ __all__ = [
     "PESO_TOTAL",
     "RETICULA",
     "_DICCIONARIO_STOP",
+]
