@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.2
+Version: 3.2.1
 
 Oficio unico:
     texto + O_context  ->  {
@@ -22,7 +22,7 @@ Los axiomas viven en modules/axiomas/. Este archivo NO los cita.
 Las decisiones que siguen son DISENO DE ESTE MODULO y deben ser
 auditadas como tales por AX, no aceptadas como derivadas de el:
 
-  - la lista de stopwords y su agresividad
+  - la lista de stopwords y su agresividad (expuesta como referencia base)
   - los patrones de _SENALES_ADOPCION / _SENALES_ACTO
   - los patrones de _PATRONES_CONTRADICCION y sus pesos (calibrados)
   - el umbral _MIN_TOKENS_UNIDAD
@@ -40,7 +40,7 @@ import re
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.2"
+VERSION = "3.2.1"
 
 # ===============================================================
 # SEGMENTO 1 --- RETICULA DE SEVERIDAD
@@ -68,7 +68,7 @@ def nombre_reticula(peso: Fraction) -> str:
 
 
 # ===============================================================
-# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS)
+# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS Y EXPUESTOS COMO REFERENCIA)
 # ===============================================================
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
@@ -161,7 +161,7 @@ _UMBRAL_SOLAPE_REVERSION = Fraction(1, 4)
 
 
 # ===============================================================
-# SEGMENTO 3 --- STOPWORDS (es)
+# SEGMENTO 3 --- STOPWORDS (es) Y REFERENCIAS LÉXICAS
 # ===============================================================
 
 _DICCIONARIO_STOP: frozenset = frozenset({
@@ -200,6 +200,22 @@ _DICCIONARIO_STOP: frozenset = frozenset({
 })
 
 _STOP = _DICCIONARIO_STOP
+
+
+def obtener_referencias() -> Dict[str, Any]:
+    """
+    Expone las listas base y patrones del módulo como estructuras de referencia
+    para su integración y auditoría con el contenedor de diccionario (DI).
+    """
+    return {
+        "stopwords": list(_DICCIONARIO_STOP),
+        "senales_adopcion": list(_SENALES_ADOPCION),
+        "senales_acto": list(_SENALES_ACTO),
+        "senales_no_proposicion": list(_SENALES_NO_PROPOSICION),
+        "patrones_contradiccion": [(pat, str(peso)) for pat, peso in _PATRONES_CONTRADICCION],
+        "umbral_min_tokens": _MIN_TOKENS_UNIDAD,
+        "version": VERSION,
+    }
 
 
 # ===============================================================
@@ -650,6 +666,7 @@ __all__ = [
     "inyectar_en_peticion",
     "verificar_conteos",
     "nombre_reticula",
+    "obtener_referencias",
     "VERSION",
     "PESO_ROCE",
     "PESO_PARCIAL",
@@ -657,4 +674,7 @@ __all__ = [
     "PESO_TOTAL",
     "RETICULA",
     "_DICCIONARIO_STOP",
+    "_SENALES_ADOPCION",
+    "_SENALES_ACTO",
+    "_PATRONES_CONTRADICCION",
 ]
