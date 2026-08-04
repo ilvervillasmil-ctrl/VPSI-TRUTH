@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.9)
-Generado: 2026-08-04 05:29:34 UTC    Commit: 867793259361
+Generado: 2026-08-04 05:33:23 UTC    Commit: 8006dbf5f764
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
 ================================================================================
@@ -39,28 +39,25 @@ Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
   ÚLTIMO TEST EVALUADO
   Último ciclo real depositado (tests / uso) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ✅ OK
+  Estado     : ⚠️ PARCIAL
+  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
-  Factores leídos: 3/3  (C=✅ L=✅ K=✅)
+  Factores leídos: 2/3  (C=⚪ L=✅ K=✅)
   ┌─────────────────────────────────────────────────────────┐
-  │  ✅ C (coherencia  ) =  1                               │
+  │  ⚪ C (coherencia  ) =  no depositado                   │
   │  ✅ L (lógica      ) =  1                               │
   │  ✅ K (correlación ) =  0                               │
   │─────────────────────────────────────────────────────────│
-  │  ✅ Tru_Ri     =  0                                       │
-  │  ✅ Tru_total  =  1/27                                    │
-  │  ancla      α=26/27  β=1/27                           │
+  │  ⚪ Tru_Ri     =  no depositado                           │
+  │  ⚪ Tru_total  =  no depositado                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
-  📎 Citas (teoremas / axiomas / normas):
-       1. CX-A14
-       2. CX-A1
-       3. CX-C4
+  📎 Citas      : — (sin ids/anuncios en el ciclo)
   Origen     : test_conversacion
   Secuencia  : 6
 ══════════════════════════════════════════════════════════════════════════════
