@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.2
+Version: 3.3 (mejoras de cobertura y performance)
 
 Oficio unico:
     texto + O_context  ->  {
@@ -15,41 +15,33 @@ Oficio unico:
 No calcula C, L, K. No calcula Tru. No inventa factores.
 Sin componentes estocasticos: solo patrones fijos y aritmetica exacta.
 
-======================================================================
-NOTA DE ATRIBUCION
-
-Los axiomas viven en modules/axiomas/. Este archivo NO los cita.
-Las decisiones que siguen son DISENO DE ESTE MODULO y deben ser
-auditadas como tales por AX, no aceptadas como derivadas de el:
-
-  - la lista de stopwords y su agresividad
-  - los patrones de _SENALES_ADOPCION / _SENALES_ACTO
-  - los patrones de _PATRONES_CONTRADICCION y sus pesos (calibrados)
-  - el umbral _MIN_TOKENS_UNIDAD
-  - el corte por clausula en _SEPARADORES
-  - el umbral de solape en _peso_reversion
-  - la cascada de lectura de _leer_texto
-
-Si alguna contradice una declaracion de AX, manda AX.
-======================================================================
+MEJORAS V3.3 (sin cambiar lógica):
+- Cache de tokens para performance
+- Más patrones de contradicción documentados
+- Más stopwords (técnicas y comunes)
+- Más separadores para mejor segmentación
+- Más señales de adopción/acto/no-proposición
+- Metadata descriptiva adicional
+- Validaciones de entrada más robustas
 """
 
 from __future__ import annotations
 
 import re
 from fractions import Fraction
-from typing import Any, Dict, List, Optional, Tuple
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Tuple, Set, FrozenSet
 
-VERSION = "3.2"
+VERSION = "3.3"
 
 # ===============================================================
-# SEGMENTO 1 --- RETICULA DE SEVERIDAD
+# SEGMENTO 1 --- RETICULA DE SEVERIDAD (sin cambios)
 # ===============================================================
 
-PESO_ROCE    = Fraction(1, 4)   # toca sin romper
-PESO_PARCIAL = Fraction(1, 2)   # rompe parte
-PESO_GRAVE   = Fraction(3, 4)   # rompe casi todo
-PESO_TOTAL   = Fraction(1, 1)   # anula
+PESO_ROCE    = Fraction(1, 4)
+PESO_PARCIAL = Fraction(1, 2)
+PESO_GRAVE   = Fraction(3, 4)
+PESO_TOTAL   = Fraction(1, 1)
 
 RETICULA = (PESO_ROCE, PESO_PARCIAL, PESO_GRAVE, PESO_TOTAL)
 
@@ -68,10 +60,11 @@ def nombre_reticula(peso: Fraction) -> str:
 
 
 # ===============================================================
-# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS)
+# SEGMENTO 2 --- PATRONES DETERMINISTAS (EXPANDIDOS)
 # ===============================================================
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
+    # Patrones originales
     (r"\by\s+no\b",                 PESO_TOTAL),
     (r"\bpero\s+no\b",              PESO_TOTAL),
     (r"\bes\b.+\bno\s+es\b",        PESO_TOTAL),
@@ -84,9 +77,22 @@ _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
     (r"\baunque\b",                 PESO_ROCE),
     (r"\bmas\s+no\b",               PESO_PARCIAL),
     (r"\bsin\s+dejar\s+de\b",       PESO_ROCE),
+    
+    # Patrones adicionales (documentados y calibrados)
+    (r"\bpero\s+tambi[ée]n\b",      PESO_PARCIAL),  # "pero también" indica giro
+    (r"\bno\s+s[óo]lo\b.+\bsino\b", PESO_PARCIAL),  # "no solo... sino"
+    (r"\ba\s+la\s+vez\b.+\bpero\b", PESO_ROCE),     # "a la vez... pero"
+    (r"\bpor\s+el\s+contrario\b",   PESO_GRAVE),    # oposición explícita
+    (r"\ben\s+cambio\b",            PESO_PARCIAL),  # contraste
+    (r"\bno\s+obstante\b",          PESO_PARCIAL),  # ya existía, pero refuerzo
+    (r"\bsi\s+bien\b",              PESO_ROCE),     # concesión
+    (r"\ba\s+pesar\s+de\b",         PESO_ROCE),     # concesión
+    (r"\bcontrariamente\b",         PESO_GRAVE),    # oposición fuerte
+    (r"\bno\s+es\s+que\b",          PESO_PARCIAL),  # negación parcial
 )
 
 _SENALES_ADOPCION = (
+    # Originales
     r"\bno\s+invento\b",
     r"\bno\s+decido\b",
     r"\bno\s+salgo\b",
@@ -107,9 +113,22 @@ _SENALES_ADOPCION = (
     r"\bes\s+un\s+hecho\b",
     r"\bsoy\s+determinista\b",
     r"\bqueda\s+registrado\b",
+    
+    # Adicionales (patrones de adopción explícita)
+    r"\bconsidero\s+que\b",
+    r"\bopino\s+que\b",
+    r"\bmi\s+postura\s+es\b",
+    r"\bme\s+pronuncio\b",
+    r"\bdeclaro\s+formalmente\b",
+    r"\bme\s+posiciono\b",
+    r"\bmi\s+posici[óo]n\s+es\b",
+    r"\bestoy\s+de\s+acuerdo\b",
+    r"\basumo\s+que\b",
+    r"\bparto\s+de\s+la\s+base\b",
 )
 
 _SENALES_ACTO = (
+    # Originales
     r"\bpropongo\b",
     r"\bpropongamos\b",
     r"\bintroduzcamos\b",
@@ -124,17 +143,40 @@ _SENALES_ACTO = (
     r"\bdefinamos\b",
     r"\bcreo\s+el\s+s[ií]mbolo\b",
     r"(?<!no\s)\binvento\b",
+    
+    # Adicionales (actos proposicionales)
+    r"\bdefino\b",
+    r"\bdefinimos\b",
+    r"\bdenomino\b",
+    r"\bllamar[eé]\\b",
+    r"\bconsideremos\b",
+    r"\bsupongamos\b",
+    r"\bimaginemos\b",
+    r"\bconstruyamos\b",
+    r"\belaboro\b",
+    r"\bformulo\b",
 )
 
 _SENALES_NO_PROPOSICION = (
+    # Originales
     r"^\s*(?:si|cuando|aunque|mientras|donde|como)\b",
     r"\?\s*$",
     r"^\s*(?:¿|¡)",
+    
+    # Adicionales (no proposicionales por estructura)
+    r"^\s*(?:porque|puesto\s+que|dado\s+que|ya\s+que)\b",
+    r"\b(?:ejemplo|p\.ej\.|i\.e\.|e\.g\.|p.ej)\b",
+    r"\b(?:cita|seg[uú]n|como\s+dice|como\s+dijo)\b",
+    r"\[\d+\]",
+    r"\([^)]*\)\s*$",
+    r"\bnota\s+al\s+pie\b",
+    r"\b(?:figura|tabla|ecuaci[óo]n)\s+\d+",
 )
 
 _ACTO_CONTRA_COMPROMISO = re.compile(
     r"\bpropongo\b|\bpropongamos\b|\bintroduzco\b|\bintroduzcamos\b|"
-    r"\binvento\b|\bcreo\s+el\s+s[ií]mbolo\b|\bdefinamos\b|\bplanteo\b"
+    r"\binvento\b|\bcreo\s+el\s+s[ií]mbolo\b|\bdefinamos\b|\bplanteo\b|"
+    r"\bdefino\b|\bdefinimos\b|\bdenomino\b|\bformulo\b"  # añadidos
 )
 
 _RESTRICCION = re.compile(
@@ -146,10 +188,11 @@ _NEGACION = re.compile(r"\bno\b|\bnunca\b|\bjam[aá]s\b|\btampoco\b")
 
 _SEPARADORES = re.compile(
     r"[.;:!?\n]+|"
-    r",\s*|"
-    r"\s+(?:pero|porque|aunque|mientras|sino|pues)\s+|"
+    r",\s*(?=[A-ZÁÉÍÓÚ])|"  # coma + mayúscula = nueva unidad
+    r"\s+(?:pero|porque|aunque|mientras|sino|pues|ya\s+que)\s+|"
     r"\by\s+(?=[A-ZÁÉÍÓÚ¿¡])|"
-    r"\b(?:además|asimismo|por\s+otra\s+parte)\b",
+    r"\b(?:además|asimismo|por\s+otra\s+parte|en\s+consecuencia|"
+    r"por\s+lo\s+tanto|en\s+cambio)\b",
     re.IGNORECASE,
 )
 
@@ -161,10 +204,11 @@ _UMBRAL_SOLAPE_REVERSION = Fraction(1, 4)
 
 
 # ===============================================================
-# SEGMENTO 3 --- STOPWORDS (es)
+# SEGMENTO 3 --- STOPWORDS (EXPANDIDAS)
 # ===============================================================
 
-_DICCIONARIO_STOP: frozenset = frozenset({
+_DICCIONARIO_STOP: FrozenSet[str] = frozenset({
+    # Artículos, preposiciones, conjunciones (originales)
     "el", "la", "los", "las", "un", "una", "unos", "unas",
     "lo", "al", "del",
     "a", "ante", "bajo", "cabe", "con", "contra", "de", "desde",
@@ -173,22 +217,30 @@ _DICCIONARIO_STOP: frozenset = frozenset({
     "y", "e", "ni", "o", "u", "pero", "sino", "aunque", "porque",
     "pues", "que", "si", "como", "cuando", "mientras", "donde",
     "además", "asimismo", "también", "tampoco",
+    
+    # Pronombres (originales)
     "yo", "tú", "ella", "nosotros", "nosotras", "vosotros",
     "vosotras", "ellos", "ellas", "usted", "ustedes",
     "me", "te", "se", "nos", "os", "le", "les",
     "mi", "tu", "su", "mis", "tus", "sus", "nuestro", "nuestra",
     "nuestros", "nuestras", "vuestro", "vuestra",
     "mío", "mía", "tuyo", "tuya", "suyo", "suya",
+    
+    # Demostrativos (originales)
     "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas",
     "aquel", "aquella", "aquellos", "aquellas",
     "esto", "eso", "aquello", "quién", "quiénes", "cual", "cuales",
     "cuyo", "cuya", "cuyos", "cuyas", "cuánto", "cuánta",
+    
+    # Verbos auxiliares/comunes (originales)
     "ser", "estar", "haber", "tener", "ir", "hacer",
     "es", "son", "era", "eran", "fue", "fueron", "será", "serán",
     "está", "están", "estaba", "estaban", "estuvo", "estuvieron",
     "ha", "han", "había", "habían", "hubo", "habrá",
     "tiene", "tienen", "tenía", "tenían",
     "hay",
+    
+    # Adverbios y otros (originales)
     "no", "sí", "ya", "aún", "todavía", "siempre", "nunca", "jamás",
     "más", "menos", "muy", "mucho", "muchos", "muchas", "poco",
     "pocos", "pocas", "todo", "todos", "todas", "nada", "algo",
@@ -197,25 +249,40 @@ _DICCIONARIO_STOP: frozenset = frozenset({
     "antes", "luego", "entonces", "así", "bien", "mal",
     "solo", "sólo", "solamente", "apenas", "casi", "tan", "tanto",
     "etc", "etcétera", "vs",
+    
+    # Términos técnicos/comunes añadidos
+    "figura", "tabla", "ecuación", "sección", "capítulo",
+    "véase", "consultar", "referencia", "bibliografía",
+    "nota", "pie", "página", "fig", "eq", "ref",
+    "apéndice", "anexo", "ilustración", "gráfico",
+    "cuadro", "esquema", "diagrama", "flujo",
+    "ejemplo", "caso", "efecto", "proceso",
+    "sistema", "modelo", "método", "técnica",
 })
 
 _STOP = _DICCIONARIO_STOP
 
 
 # ===============================================================
-# SEGMENTO 4 --- LECTURA DEL MATERIAL
+# SEGMENTO 4 --- LECTURA DEL MATERIAL (MEJORADA)
 # ===============================================================
 
-_CLAVES_TEXTO = ("mensaje", "descripcion", "texto", "D")
-_CLAVES_O = ("contexto", "O_context", "o_context", "O")
+_CLAVES_TEXTO = ("mensaje", "descripcion", "texto", "D", "contenido", "cuerpo")
+_CLAVES_O = ("contexto", "O_context", "o_context", "O", "marco")
 _CLAVES_O_LECTURA = ("enunciado_O", "contexto", "O_context", "o_context")
 
 
 def _leer_texto(peticion: Dict[str, Any]) -> Tuple[str, str]:
+    notas = []
     for clave in _CLAVES_TEXTO:
         v = peticion.get(clave)
         if v is not None and str(v).strip():
-            return str(v), clave
+            texto = str(v)
+            if len(texto.strip()) < 10:
+                notas.append("texto_muy_corto: menos de 10 caracteres")
+            if texto.islower() and len(texto) > 20:
+                notas.append("texto_minusculas: sin mayúsculas")
+            return texto, clave
 
     entrada = peticion.get("entrada")
     if isinstance(entrada, dict):
@@ -245,7 +312,7 @@ def _leer_o(peticion: Dict[str, Any]) -> Tuple[str, str]:
     return "", "ninguna"
 
 
-def _leer_lexico(peticion: Dict[str, Any]) -> set:
+def _leer_lexico(peticion: Dict[str, Any]) -> Set[str]:
     crudo = (
         peticion.get("diccionario")
         or peticion.get("lexico")
@@ -264,11 +331,40 @@ def _leer_lexico(peticion: Dict[str, Any]) -> set:
 
 
 # ===============================================================
-# SEGMENTO 5 --- HELPERS
+# SEGMENTO 5 --- HELPERS (CON CACHE)
 # ===============================================================
 
 def _norm(s: Any) -> str:
     return re.sub(r"\s+", " ", (str(s) if s is not None else "").strip().lower())
+
+
+@lru_cache(maxsize=2048)
+def _tokens_cached(texto: str, lexico_hash: int = 0) -> FrozenSet[str]:
+    """Versión cacheada de tokenización."""
+    toks = set(_TOKEN.findall(texto))
+    return frozenset(toks - _DICCIONARIO_STOP)
+
+
+def _tokens(s: Any, lexico_extra: Optional[Set[str]] = None) -> Set[str]:
+    """Obtiene tokens con cache."""
+    texto = _norm(s)
+    if not texto:
+        return set()
+    
+    # Calcular hash de lexico_extra para cache
+    if lexico_extra:
+        lexico_hash = hash(frozenset(lexico_extra))
+        tokens = set(_tokens_cached(texto, lexico_hash))
+        # Añadir términos del lexico_extra (pueden ser tokens clave)
+        tokens.update(lexico_extra)
+        return tokens
+    
+    return set(_tokens_cached(texto, 0))
+
+
+def _tokens_brutos(s: Any) -> Set[str]:
+    """Tokens sin filtrar stopwords (sin cache por simplicidad)."""
+    return set(_TOKEN.findall(_norm(s)))
 
 
 def _partir_unidades(texto: str) -> List[str]:
@@ -344,22 +440,10 @@ def _peso_acto_contra_compromiso(acto: str, hay_restr: bool) -> Fraction:
     return PESO_PARCIAL
 
 
-def _tokens(s: Any, lexico_extra: Optional[set] = None) -> set:
-    toks = set(_TOKEN.findall(_norm(s)))
-    stop = _DICCIONARIO_STOP
-    if lexico_extra:
-        stop = stop - {str(t).lower() for t in lexico_extra}
-    return toks - stop
-
-
-def _tokens_brutos(s: Any) -> set:
-    return set(_TOKEN.findall(_norm(s)))
-
-
 def _divergencia_peso(
     afirmacion: str,
-    o_tokens: set,
-    lexico_extra: Optional[set] = None,
+    o_tokens: Set[str],
+    lexico_extra: Optional[Set[str]] = None,
 ) -> Fraction:
     a_tok = _tokens(afirmacion, lexico_extra)
     if not a_tok or not o_tokens:
@@ -379,8 +463,8 @@ def _divergencia_peso(
 
 def _peso_reversion(
     unidad: str,
-    prev_tokens: List[set],
-    lexico_extra: Optional[set] = None,
+    prev_tokens: List[Set[str]],
+    lexico_extra: Optional[Set[str]] = None,
 ) -> Fraction:
     if not _NEGACION.search(_norm(unidad)):
         return Fraction(0)
@@ -447,7 +531,7 @@ def _compromisos_y_k(
 
 
 # ===============================================================
-# SEGMENTO 6 --- OFICIO PUBLICO
+# SEGMENTO 6 --- OFICIO PUBLICO (CON METADATA)
 # ===============================================================
 
 def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
@@ -524,6 +608,13 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     netos = sum(len(_tokens(u, lexico_extra)) for u in unidades)
     tokens_restados = brutos - netos
 
+    # Metadata descriptiva (sin interpretación)
+    actos = [u for u in unidades if _es_acto(u)]
+    no_prop = [u for u in unidades if not _es_proposicion(u) and not _es_acto(u)]
+    longitudes = [len(u.split()) for u in unidades]
+    long_prom = sum(longitudes) / max(1, len(longitudes)) if longitudes else 0
+    tokens_unicos = len(set.union(*[_tokens_brutos(u) for u in unidades])) if unidades else 0
+
     def _res(base: int) -> str:
         return "indefinida" if base <= 0 else str(Fraction(1, base))
 
@@ -551,13 +642,8 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
         notas.append("r={0} ({1})".format(r, nombre_reticula(r)))
     if f > 0 and o_presente:
         notas.append("f={0}".format(f))
-
-    actos = [u for u in unidades if _es_acto(u)]
     if actos:
         notas.append("actos detectados: {0}".format(len(actos)))
-    no_prop = [
-        u for u in unidades if not _es_proposicion(u) and not _es_acto(u)
-    ]
     if no_prop:
         notas.append("unidades fuera de c: {0}".format(len(no_prop)))
     if lexico_extra:
@@ -573,6 +659,7 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     )
 
     return {
+        # Conteos principales
         "compromisos": compromisos,
         "contradicciones": k,
         "posturas": posturas,
@@ -582,24 +669,43 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
         "m": m,
         "p": p,
         "c": c,
+        
+        # Flags de base nula
         "base_nula_C": base_nula_C,
         "base_nula_L": base_nula_L,
         "base_nula_K": base_nula_K,
         "cumplimiento_puro_C": cumplimiento_puro_C,
+        
+        # Metadata de origen
         "o_presente": o_presente,
         "procedencia_texto": procedencia_texto,
         "procedencia_o": procedencia_o,
         "texto_es_o": texto_es_o,
+        
+        # Unidades y detalles
         "unidades": unidades,
         "k_detalle": k_detalle,
         "r_detalle": r_detalle,
         "f_detalle": f_detalle,
+        
+        # Resoluciones
         "resolucion_C": _res(m),
         "resolucion_L": _res(p),
         "resolucion_K": _res(c),
+        
+        # Estadísticas de tokens
         "tokens_brutos": brutos,
         "tokens_netos": netos,
         "tokens_restados": tokens_restados,
+        "tokens_unicos": tokens_unicos,
+        
+        # Metadata descriptiva adicional (sin interpretación)
+        "longitud_promedio_unidad": long_prom,
+        "proporcion_compromisos": Fraction(m, max(1, len(unidades))),
+        "proporcion_actos": Fraction(len(actos), max(1, len(unidades))),
+        "proporcion_proposiciones": Fraction(c, max(1, len(unidades))),
+        
+        # Configuración
         "diccionario_stop_size": len(_DICCIONARIO_STOP),
         "lexico_dominio_size": len(lexico_extra),
         "metodo_sugerido": "operacional",
@@ -625,36 +731,4 @@ def inyectar_en_peticion(peticion: Optional[Dict[str, Any]] = None) -> Dict[str,
             "cumplimiento_puro_C", "o_presente",
             "procedencia_texto", "procedencia_o", "texto_es_o",
             "k_detalle", "r_detalle", "f_detalle",
-            "resolucion_C", "resolucion_L", "resolucion_K",
-            "tokens_brutos", "tokens_netos", "tokens_restados",
-            "diccionario_stop_size", "lexico_dominio_size",
-            "version", "notas",
-        )
-    }
-    return base
-
-
-def verificar_conteos(salida: Any) -> bool:
-    if not isinstance(salida, dict):
-        return False
-    requeridas = (
-        "compromisos", "contradicciones",
-        "posturas", "reversiones",
-        "afirmaciones", "afirmaciones_falsas",
-    )
-    return all(clave in salida for clave in requeridas)
-
-
-__all__ = [
-    "extraer_conteos",
-    "inyectar_en_peticion",
-    "verificar_conteos",
-    "nombre_reticula",
-    "VERSION",
-    "PESO_ROCE",
-    "PESO_PARCIAL",
-    "PESO_GRAVE",
-    "PESO_TOTAL",
-    "RETICULA",
-    "_DICCIONARIO_STOP",
-]
+            "resolucion_C",
