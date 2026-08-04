@@ -290,7 +290,7 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
+          "L": null,
           "K": "1/4"
         },
         "fallos": [],
@@ -303,7 +303,7 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
+      "L": null,
       "K": "1/4",
       "tru_ri": null,
       "tru_total": null,
@@ -325,7 +325,7 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
+          "L": null,
           "K": "1/4"
         },
         "fallos": [],
@@ -338,7 +338,7 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
+      "L": null,
       "K": "1/4",
       "tru_ri": null,
       "tru_total": null,
@@ -360,7 +360,7 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
+          "L": null,
           "K": "0"
         },
         "fallos": [],
@@ -373,7 +373,7 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
+      "L": null,
       "K": "0",
       "tru_ri": null,
       "tru_total": null,
@@ -395,7 +395,7 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
+          "L": null,
           "K": "0"
         },
         "fallos": [],
@@ -408,7 +408,7 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
+      "L": null,
       "K": "0",
       "tru_ri": null,
       "tru_total": null,
@@ -430,7 +430,7 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
+          "L": null,
           "K": "0"
         },
         "fallos": [],
@@ -443,7 +443,7 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
+      "L": null,
       "K": "0",
       "tru_ri": null,
       "tru_total": null,
@@ -465,7 +465,7 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
+          "L": null,
           "K": "0"
         },
         "fallos": [],
@@ -478,7 +478,7 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
+      "L": null,
       "K": "0",
       "tru_ri": null,
       "tru_total": null,
@@ -2069,7 +2069,7 @@
           "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
           "factores": {
             "C": null,
-            "L": "1",
+            "L": null,
             "K": "1"
           },
           "fallos": [],
@@ -3078,7 +3078,7 @@
   "auditoria_vpsi": {
     "estado": "PARCIAL",
     "C": null,
-    "L": "1",
+    "L": null,
     "K": "1",
     "tru_ri": null,
     "tru_total": null,
@@ -3098,7 +3098,7 @@
   "ultimo_test": {
     "estado": "PARCIAL",
     "C": null,
-    "L": "1",
+    "L": null,
     "K": "0",
     "tru_ri": null,
     "tru_total": null,
