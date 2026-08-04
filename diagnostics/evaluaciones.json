@@ -24,7 +24,7 @@
         "factores": {
           "C": null,
           "L": null,
-          "K": "1/4"
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -37,7 +37,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": null,
-      "K": "1/4",
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -59,7 +59,7 @@
         "factores": {
           "C": null,
           "L": null,
-          "K": "1/4"
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -72,7 +72,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": null,
-      "K": "1/4",
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -94,7 +94,7 @@
         "factores": {
           "C": null,
           "L": null,
-          "K": "0"
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -107,7 +107,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": null,
-      "K": "0",
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -129,7 +129,7 @@
         "factores": {
           "C": null,
           "L": null,
-          "K": "0"
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -142,7 +142,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": null,
-      "K": "0",
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -164,7 +164,7 @@
         "factores": {
           "C": null,
           "L": null,
-          "K": "0"
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -177,7 +177,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": null,
-      "K": "0",
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -199,7 +199,7 @@
         "factores": {
           "C": null,
           "L": null,
-          "K": "0"
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -212,7 +212,7 @@
       "estado": "PARCIAL",
       "C": null,
       "L": null,
-      "K": "0",
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
