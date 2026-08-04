@@ -18,28 +18,43 @@
         "turno": 1
       },
       "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+        "estado": "OK",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": null,
+          "C": "1",
           "L": "1",
           "K": "1/4"
         },
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": []
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
         }
       },
-      "estado": "PARCIAL",
-      "C": null,
+      "estado": "OK",
+      "C": "1",
       "L": "1",
       "K": "1/4",
-      "tru_ri": null,
-      "tru_total": null,
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 1
@@ -53,28 +68,43 @@
         "turno": 2
       },
       "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+        "estado": "OK",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": null,
+          "C": "1",
           "L": "1",
           "K": "1/4"
         },
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": []
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
         }
       },
-      "estado": "PARCIAL",
-      "C": null,
+      "estado": "OK",
+      "C": "1",
       "L": "1",
       "K": "1/4",
-      "tru_ri": null,
-      "tru_total": null,
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 2
@@ -88,28 +118,43 @@
         "turno": 3
       },
       "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+        "estado": "OK",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": null,
+          "C": "1",
           "L": "1",
           "K": "0"
         },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": []
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
         }
       },
-      "estado": "PARCIAL",
-      "C": null,
+      "estado": "OK",
+      "C": "1",
       "L": "1",
       "K": "0",
-      "tru_ri": null,
-      "tru_total": null,
+      "tru_ri": "0",
+      "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 3
@@ -123,28 +168,43 @@
         "turno": 4
       },
       "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+        "estado": "OK",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": null,
+          "C": "1/2",
           "L": "1",
           "K": "0"
         },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": []
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
         }
       },
-      "estado": "PARCIAL",
-      "C": null,
+      "estado": "OK",
+      "C": "1/2",
       "L": "1",
       "K": "0",
-      "tru_ri": null,
-      "tru_total": null,
+      "tru_ri": "0",
+      "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 4
@@ -193,28 +253,43 @@
         "turno": 6
       },
       "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+        "estado": "OK",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": null,
+          "C": "1",
           "L": "1",
           "K": "0"
         },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": []
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
         }
       },
-      "estado": "PARCIAL",
-      "C": null,
+      "estado": "OK",
+      "C": "1",
       "L": "1",
       "K": "0",
-      "tru_ri": null,
-      "tru_total": null,
+      "tru_ri": "0",
+      "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 6
