@@ -73,18 +73,13 @@ def _peso_armonico(ratio: Fraction) -> Fraction:
     Calcula un peso de divergencia armónico de alta precisión basado en fracciones exactas (1/x).
     Permite transiciones suaves y continuas sin utilizar números flotantes.
     """
-    if ratio >= Fraction(3, 5): # >= 60% convergencia pura
+    if ratio >= Fraction(3, 5):  # >= 60% convergencia pura
         return Fraction(0)
     
-    # Mapeo armónico determinista basado en el complemento del ratio de solape
-    # Si el ratio es bajo, la penalización armónica escala con precisión exacta de enteros.
-    # Distancia de divergencia D = 1 - ratio
     d = Fraction(1) - ratio
     if d <= Fraction(0):
         return Fraction(0)
     
-    # Mapeo armónico discreto/continuo seguro sin floats: 1 / (1 + d) expresado en fracciones puras
-    # Ejemplo: si d = 0.5 (Fraction(1, 2)), 1 / (1 + 1/2) = 2/3
     numerador = 100
     denominador = 100 + int(d * 100)
     if denominador <= 0:
