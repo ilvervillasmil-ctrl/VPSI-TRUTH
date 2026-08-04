@@ -3,31 +3,59 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.3 (corrección: info adicional no es falsa)
+Version: 3.5
+
+Oficio unico:
+    texto + O_context  ->  {
+        compromisos, contradicciones,      # m, k  (C = 1 - k/m)
+        posturas, reversiones,             # p, r  (L = 1 - r/p)
+        afirmaciones, afirmaciones_falsas  # c, f  (K = 1 - f/c)
+    }
+
+No calcula C, L, K. No calcula Tru. No inventa factores.
+Sin componentes estocasticos: solo patrones fijos y aritmetica exacta.
+
+======================================================================
+NOTA DE ATRIBUCION
+
+Los axiomas viven en modules/axiomas/. Este archivo NO los cita.
+Las decisiones que siguen son DISENO DE ESTE MODULO y deben ser
+auditadas como tales por AX, no aceptadas como derivadas de el:
+
+  - la lista de stopwords y su agresividad
+  - los patrones de _SENALES_ADOPCION / _SENALES_ACTO
+  - los patrones de _PATRONES_CONTRADICCION y sus pesos (calibrados)
+  - el umbral _MIN_TOKENS_UNIDAD
+  - el corte por clausula en _SEPARADORES
+  - el umbral de solape en _peso_reversion
+  - la cascada de lectura de _leer_texto
+
+Si alguna contradice una declaracion de AX, manda AX.
+======================================================================
 """
 
 from __future__ import annotations
 
 import re
 from fractions import Fraction
-from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple, Set, FrozenSet
+from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.3"
+VERSION = "3.2"
 
 # ===============================================================
 # SEGMENTO 1 --- RETICULA DE SEVERIDAD
 # ===============================================================
 
-PESO_ROCE    = Fraction(1, 4)
-PESO_PARCIAL = Fraction(1, 2)
-PESO_GRAVE   = Fraction(3, 4)
-PESO_TOTAL   = Fraction(1, 1)
+PESO_ROCE    = Fraction(1, 4)   # toca sin romper
+PESO_PARCIAL = Fraction(1, 2)   # rompe parte
+PESO_GRAVE   = Fraction(3, 4)   # rompe casi todo
+PESO_TOTAL   = Fraction(1, 1)   # anula
 
 RETICULA = (PESO_ROCE, PESO_PARCIAL, PESO_GRAVE, PESO_TOTAL)
 
 
 def nombre_reticula(peso: Fraction) -> str:
+    """Nombra la severidad de un peso continuo sin alterarlo."""
     if peso <= Fraction(0):
         return "nulo"
     if peso <= PESO_ROCE:
@@ -40,11 +68,10 @@ def nombre_reticula(peso: Fraction) -> str:
 
 
 # ===============================================================
-# SEGMENTO 2 --- PATRONES (ORIGINALES + ADICIONES)
+# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS)
 # ===============================================================
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
-    # ORIGINALES
     (r"\by\s+no\b",                 PESO_TOTAL),
     (r"\bpero\s+no\b",              PESO_TOTAL),
     (r"\bes\b.+\bno\s+es\b",        PESO_TOTAL),
@@ -57,17 +84,9 @@ _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
     (r"\baunque\b",                 PESO_ROCE),
     (r"\bmas\s+no\b",               PESO_PARCIAL),
     (r"\bsin\s+dejar\s+de\b",       PESO_ROCE),
-    # ADICIONES
-    (r"\bpero\s+tambi[ée]n\b",      PESO_PARCIAL),
-    (r"\bno\s+s[óo]lo\b.+\bsino\b", PESO_PARCIAL),
-    (r"\bpor\s+el\s+contrario\b",   PESO_GRAVE),
-    (r"\ben\s+cambio\b",            PESO_PARCIAL),
-    (r"\bsi\s+bien\b",              PESO_ROCE),
-    (r"\ba\s+pesar\s+de\b",         PESO_ROCE),
 )
 
 _SENALES_ADOPCION = (
-    # ORIGINALES
     r"\bno\s+invento\b",
     r"\bno\s+decido\b",
     r"\bno\s+salgo\b",
@@ -88,15 +107,9 @@ _SENALES_ADOPCION = (
     r"\bes\s+un\s+hecho\b",
     r"\bsoy\s+determinista\b",
     r"\bqueda\s+registrado\b",
-    # ADICIONES
-    r"\bconsidero\s+que\b",
-    r"\bopino\s+que\b",
-    r"\bmi\s+postura\s+es\b",
-    r"\bme\s+pronuncio\b",
 )
 
 _SENALES_ACTO = (
-    # ORIGINALES
     r"\bpropongo\b",
     r"\bpropongamos\b",
     r"\bintroduzcamos\b",
@@ -111,23 +124,12 @@ _SENALES_ACTO = (
     r"\bdefinamos\b",
     r"\bcreo\s+el\s+s[ií]mbolo\b",
     r"(?<!no\s)\binvento\b",
-    # ADICIONES
-    r"\bdefino\b",
-    r"\bdefinimos\b",
-    r"\bdenomino\b",
-    r"\bformulo\b",
 )
 
 _SENALES_NO_PROPOSICION = (
-    # ORIGINALES
     r"^\s*(?:si|cuando|aunque|mientras|donde|como)\b",
     r"\?\s*$",
     r"^\s*(?:¿|¡)",
-    # ADICIONES
-    r"^\s*(?:porque|puesto\s+que|dado\s+que)\b",
-    r"\b(?:ejemplo|p\.ej\.|i\.e\.|e\.g\.)\b",
-    r"\b(?:cita|seg[uú]n|como\s+dice)\b",
-    r"\[\d+\]",
 )
 
 _ACTO_CONTRA_COMPROMISO = re.compile(
@@ -159,11 +161,10 @@ _UMBRAL_SOLAPE_REVERSION = Fraction(1, 4)
 
 
 # ===============================================================
-# SEGMENTO 3 --- STOPWORDS (ORIGINALES + ADICIONES)
+# SEGMENTO 3 --- STOPWORDS (es)
 # ===============================================================
 
 _DICCIONARIO_STOP: frozenset = frozenset({
-    # ORIGINALES
     "el", "la", "los", "las", "un", "una", "unos", "unas",
     "lo", "al", "del",
     "a", "ante", "bajo", "cabe", "con", "contra", "de", "desde",
@@ -196,21 +197,16 @@ _DICCIONARIO_STOP: frozenset = frozenset({
     "antes", "luego", "entonces", "así", "bien", "mal",
     "solo", "sólo", "solamente", "apenas", "casi", "tan", "tanto",
     "etc", "etcétera", "vs",
-    # ADICIONES
-    "figura", "tabla", "ecuación", "sección", "capítulo",
-    "véase", "consultar", "referencia", "bibliografía",
-    "nota", "pie", "página", "fig", "eq", "ref",
-    "apéndice", "anexo", "ilustración", "gráfico",
 })
 
 _STOP = _DICCIONARIO_STOP
 
 
 # ===============================================================
-# SEGMENTO 4 --- LECTURA
+# SEGMENTO 4 --- LECTURA DEL MATERIAL
 # ===============================================================
 
-_CLAVES_TEXTO = ("mensaje", "descripcion", "texto", "D", "contenido")
+_CLAVES_TEXTO = ("mensaje", "descripcion", "texto", "D")
 _CLAVES_O = ("contexto", "O_context", "o_context", "O")
 _CLAVES_O_LECTURA = ("enunciado_O", "contexto", "O_context", "o_context")
 
@@ -273,26 +269,6 @@ def _leer_lexico(peticion: Dict[str, Any]) -> set:
 
 def _norm(s: Any) -> str:
     return re.sub(r"\s+", " ", (str(s) if s is not None else "").strip().lower())
-
-
-@lru_cache(maxsize=2048)
-def _tokens_cached(texto: str) -> frozenset:
-    toks = set(_TOKEN.findall(texto))
-    return frozenset(toks - _DICCIONARIO_STOP)
-
-
-def _tokens(s: Any, lexico_extra: Optional[set] = None) -> set:
-    texto = _norm(s)
-    if not texto:
-        return set()
-    tokens = set(_tokens_cached(texto))
-    if lexico_extra:
-        tokens.update(lexico_extra)
-    return tokens
-
-
-def _tokens_brutos(s: Any) -> set:
-    return set(_TOKEN.findall(_norm(s)))
 
 
 def _partir_unidades(texto: str) -> List[str]:
@@ -368,9 +344,17 @@ def _peso_acto_contra_compromiso(acto: str, hay_restr: bool) -> Fraction:
     return PESO_PARCIAL
 
 
-# ===============================================================
-# ⚠️  FUNCIÓN MODIFICADA: info adicional NO es falsa
-# ===============================================================
+def _tokens(s: Any, lexico_extra: Optional[set] = None) -> set:
+    toks = set(_TOKEN.findall(_norm(s)))
+    stop = _DICCIONARIO_STOP
+    if lexico_extra:
+        stop = stop - {str(t).lower() for t in lexico_extra}
+    return toks - stop
+
+
+def _tokens_brutos(s: Any) -> set:
+    return set(_TOKEN.findall(_norm(s)))
+
 
 def _divergencia_peso(
     afirmacion: str,
@@ -380,15 +364,16 @@ def _divergencia_peso(
     a_tok = _tokens(afirmacion, lexico_extra)
     if not a_tok or not o_tokens:
         return PESO_TOTAL
-    
     inter = a_tok & o_tokens
-    
-    # Si no hay intersección: es información adicional, NO contradicción
     if not inter:
-        return Fraction(0)
-    
-    # Si hay intersección parcial: calculamos divergencia
+        return PESO_TOTAL
     ratio = Fraction(len(inter), len(a_tok))
+    
+    # Si el solape es alto (>= 60%), se considera coincidencia convergente pura (f = 0)
+    if ratio >= Fraction(3, 5):
+        return Fraction(0)
+    elif ratio >= Fraction(1, 2):
+        return PESO_ROCE
     return Fraction(1) - ratio
 
 
