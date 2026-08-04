@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 08:47:01 UTC    Commit: 31ca48d01ac9
+Generado: 2026-08-04 08:58:41 UTC    Commit: f638589dc490
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -146,7 +146,7 @@ ESTADO GLOBAL
       coherente=True  validos=16  caps_ok=87  caps_fallo=0
 
   ✅ Tests (pytest — forma)
-      total=141  pasados=140  fallidos=0  tasa=99.29%
+      total=146  pasados=145  fallidos=0  tasa=99.32%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
