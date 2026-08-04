@@ -1,10 +1,19 @@
 """
 VPSI-TRUTH --- modules/calculator/conteos.py
 
-Productor de conteos operacionales con anclas de medición (AM v1.0) 
-y escala armónica basada en tablas de referencia exactas.
+Productor de conteos operacionales.
 
-Versión: 3.5.1
+Version: 3.3.1
+
+Oficio unico:
+    texto + O_context  ->  {
+        compromisos, contradicciones,      # m, k  (C = 1 - k/m)
+        posturas, reversiones,             # p, r  (L = 1 - r/p)
+        afirmaciones, afirmaciones_falsas  # c, f  (K = 1 - f/c)
+    }
+
+No calcula C, L, K. No calcula Tru. No inventa factores.
+Sin componentes estocasticos: solo patrones fijos y aritmetica exacta.
 """
 
 from __future__ import annotations
@@ -13,73 +22,18 @@ import re
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.5.1"
+VERSION = "3.3.1"
 
 # ===============================================================
-# SEGMENTO 1 --- RETÍCULA DE SEVERIDAD Y ESCALA ARMÓNICA CONTROLADA
+# SEGMENTO 1 --- RETICULA DE SEVERIDAD Y ESCALA ARMONICA CALIBRADA
 # ===============================================================
 
-PESO_ROCE = Fraction(1, 4)    # 0.250
-PESO_PARCIAL = Fraction(1, 2) # 0.500
-PESO_GRAVE = Fraction(3, 4)   # 0.750
-PESO_TOTAL = Fraction(1, 1)   # 1.000
+PESO_ROCE    = Fraction(1, 4)   # toca sin romper (0.25)
+PESO_PARCIAL = Fraction(1, 2)   # rompe parte (0.50)
+PESO_GRAVE   = Fraction(3, 4)   # rompe casi todo (0.75)
+PESO_TOTAL   = Fraction(1, 1)   # anula (1.0)
 
 RETICULA = (PESO_ROCE, PESO_PARCIAL, PESO_GRAVE, PESO_TOTAL)
-
-# ===============================================================
-# TABLAS DE REFERENCIA (NO MODIFICAN LA LÓGICA EXISTENTE)
-# ===============================================================
-
-TABLA_RETICULA = {
-    "PESO_ROCE": {"fraccion": PESO_ROCE, "decimal": 0.250},
-    "PESO_PARCIAL": {"fraccion": PESO_PARCIAL, "decimal": 0.500},
-    "PESO_GRAVE": {"fraccion": PESO_GRAVE, "decimal": 0.750},
-    "PESO_TOTAL": {"fraccion": PESO_TOTAL, "decimal": 1.000},
-}
-
-TABLA_DIVISIONES = {}
-
-# Generar la tabla de divisiones 1/n para enteros (1 a 9)
-for n in range(1, 10):
-    fraction = Fraction(1, n)
-    TABLA_DIVISIONES[f"1/{n}"] = {
-        "fraccion": fraction,
-        "decimal": round(float(fraction), 3)
-    }
-
-# Generar la tabla de divisiones 1/n para decimales (1.1 a 9.0)
-for n in [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9,
-          2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9,
-          3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9,
-          4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9,
-          5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9,
-          6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9,
-          7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9,
-          8.0, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 9.0]:
-    n_frac = Fraction(str(n)).limit_denominator(100)
-    fraction = Fraction(1, n_frac).limit_denominator(100)
-    TABLA_DIVISIONES[f"1/{n}"] = {
-        "fraccion": fraction,
-        "decimal": round(float(fraction), 3)
-    }
-
-
-def obtener_peso_reticula(nombre: str) -> Dict[str, Any]:
-    """Devuelve la fracción y el decimal de un peso de la retícula."""
-    return TABLA_RETICULA.get(nombre, {"fraccion": None, "decimal": None})
-
-
-def obtener_division(division: str) -> Dict[str, Any]:
-    """Devuelve la fracción y el decimal de una división 1/n desde la tabla."""
-    return TABLA_DIVISIONES.get(division, {"fraccion": None, "decimal": None})
-
-
-def listar_tablas() -> Dict[str, Dict[str, Any]]:
-    """Devuelve todas las tablas de referencia."""
-    return {
-        "reticula": TABLA_RETICULA,
-        "divisiones": TABLA_DIVISIONES,
-    }
 
 
 def nombre_reticula(peso: Fraction) -> str:
@@ -97,25 +51,26 @@ def nombre_reticula(peso: Fraction) -> str:
 
 def _peso_armonico(ratio: Fraction) -> Fraction:
     """
-    Calcula el peso de divergencia armónico utilizando las tablas exactas de división 1/n
-    para evitar explosiones en los denominadores y mantener la precisión limpia.
+    Calcula un peso de divergencia armónico calibrado mediante fracciones exactas.
+    Preserva el piso de roce estable para solapes moderados (protegiendo el baseline 7/9)
+    y escala suavemente ante divergencias profundas.
     """
-    if ratio >= Fraction(3, 5):  # >= 60% solape: convergencia pura
+    if ratio >= Fraction(3, 5):  # >= 60% convergencia pura (sin penalización)
         return Fraction(0)
+    if ratio >= Fraction(1, 2):  # 50% - 60% de solape (mantiene el roce calibrado 0.25)
+        return PESO_ROCE
     
+    # Para solapes inferiores al 50%, aplicamos una progresión armónica suave basada en la distancia d
     d = Fraction(1) - ratio
     if d <= Fraction(0):
         return Fraction(0)
     
-    # Mapeo limpio utilizando las referencias exactas de la tabla
-    if d <= Fraction(1, 4):
-        return TABLA_DIVISIONES["1/9"]["fraccion"]
-    elif d <= Fraction(1, 2):
-        return TABLA_DIVISIONES["1/1.5"]["fraccion"]
-    elif d <= Fraction(3, 4):
-        return TABLA_DIVISIONES["1/1.3"]["fraccion"]
-    else:
-        return TABLA_DIVISIONES["1/1.01"]["fraccion"]
+    # Escala armónica exacta acotada entre PESO_ROCE y PESO_TOTAL sin saltos violentos
+    # d va de 0.5 a 1.0. Mapeamos proporcionalmente mediante aritmética exacta de enteros.
+    numerador = 25 + int(d * 75)
+    denominador = 100
+    res = Fraction(numerador, denominador)
+    return min(res, PESO_TOTAL)
 
 
 # ===============================================================
@@ -123,18 +78,18 @@ def _peso_armonico(ratio: Fraction) -> Fraction:
 # ===============================================================
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
-    (r"\by\s+no\b", PESO_TOTAL),
-    (r"\bpero\s+no\b", PESO_TOTAL),
-    (r"\bes\b.+\bno\s+es\b", PESO_TOTAL),
-    (r"\bno\s+es\b.+\bes\b", PESO_TOTAL),
-    (r"\bs[ií]\s+y\s+no\b", PESO_TOTAL),
-    (r"\bno\s+y\s+s[ií]\b", PESO_TOTAL),
-    (r"\bsin\s+embargo\b", PESO_PARCIAL),
-    (r"\bno\s+obstante\b", PESO_PARCIAL),
+    (r"\by\s+no\b",                 PESO_TOTAL),
+    (r"\bpero\s+no\b",              PESO_TOTAL),
+    (r"\bes\b.+\bno\s+es\b",        PESO_TOTAL),
+    (r"\bno\s+es\b.+\bes\b",        PESO_TOTAL),
+    (r"\bs[ií]\s+y\s+no\b",         PESO_TOTAL),
+    (r"\bno\s+y\s+s[ií]\b",         PESO_TOTAL),
+    (r"\bsin\s+embargo\b",          PESO_PARCIAL),
+    (r"\bno\s+obstante\b",          PESO_PARCIAL),
     (r"\bpor\s+un\s+lado\b.+\bpor\s+(?:el\s+)?otro\b", PESO_PARCIAL),
-    (r"\baunque\b", PESO_ROCE),
-    (r"\bmas\s+no\b", PESO_PARCIAL),
-    (r"\bsin\s+dejar\s+de\b", PESO_ROCE),
+    (r"\baunque\b",                 PESO_ROCE),
+    (r"\bmas\s+no\b",               PESO_PARCIAL),
+    (r"\bsin\s+dejar\s+de\b",       PESO_ROCE),
 )
 
 _SENALES_ADOPCION = (
@@ -210,6 +165,7 @@ _SIMBOLICO = re.compile(r"[0-9=+\-*/^αβ]")
 _MIN_TOKENS_UNIDAD = 2
 _UMBRAL_SOLAPE_REVERSION = Fraction(1, 4)
 
+
 # ===============================================================
 # SEGMENTO 3 --- STOPWORDS (es) Y REFERENCIAS LÉXICAS
 # ===============================================================
@@ -261,7 +217,6 @@ def obtener_referencias() -> Dict[str, Any]:
         "patrones_contradiccion": [(pat, str(peso)) for pat, peso in _PATRONES_CONTRADICCION],
         "umbral_min_tokens": _MIN_TOKENS_UNIDAD,
         "version": VERSION,
-        "tablas": listar_tablas(),
     }
 
 
@@ -451,7 +406,7 @@ def _peso_reversion(
         solape = Fraction(len(u_tok & pt), len(union))
         if solape > mejor:
             mejor = solape
-    return mejor if mejor >= _UMBRAL_SOLAPE_REVERSION else Fraction(0)
+    return mejor if melhor >= _UMBRAL_SOLAPE_REVERSION else Fraction(0)
 
 
 def _normalizar_entrada(*args: Any, **kwargs: Any) -> Dict[str, Any]:
@@ -478,8 +433,7 @@ def _compromisos_y_k(
         w = _peso_contradiccion_en(u)
         if w > 0:
             k += w
-            w_dec = round(float(w), 4)
-            detalle.append((u, "{0} ({1})".format(w, w_dec)))
+            detalle.append((u, "{0} ({1})".format(w, nombre_reticula(w))))
 
     for u in unidades:
         if not _es_acto(u):
@@ -488,10 +442,9 @@ def _compromisos_y_k(
         if w > 0:
             compromisos.append(u)
             k += w
-            w_dec = round(float(w), 4)
             detalle.append((
                 u,
-                "{0} ({1}, acto vs compromiso)".format(w, w_dec),
+                "{0} ({1}, acto vs compromiso)".format(w, nombre_reticula(w)),
             ))
 
     if k > len(compromisos):
@@ -542,11 +495,10 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
             w = _peso_reversion(u, prev_tokens, lexico_extra)
             if w > 0:
                 r += w
-                w_dec = round(float(w), 4)
                 r_detalle.append((
                     u,
                     "{0} ({1}, solape vs historial)".format(
-                        w, w_dec
+                        w, nombre_reticula(w)
                     ),
                 ))
         if r > len(posturas):
@@ -563,8 +515,7 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if not o_presente:
         f = Fraction(len(afirmaciones))
         for a in afirmaciones:
-            f_dec = round(float(Fraction(1)), 4)
-            f_detalle.append((a, "1 ({0}, sin O_context)".format(f_dec)))
+            f_detalle.append((a, "1 (sin O_context)"))
         if afirmaciones:
             notas.append("O_context ausente -> f saturado")
     else:
@@ -572,8 +523,7 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
             w = _divergencia_peso(a, o_tokens, lexico_extra)
             if w > 0:
                 f += w
-                w_dec = round(float(w), 4)
-                f_detalle.append((a, "{0} ({1})".format(w, w_dec)))
+                f_detalle.append((a, "{0} ({1})".format(w, nombre_reticula(w))))
 
     c = len(afirmaciones)
     base_nula_K = c == 0
@@ -603,14 +553,11 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if base_nula_K:
         notas.append("base_nula_K: c=0")
     if k > 0:
-        k_dec = round(float(k), 4)
-        notas.append("k={0} ({1})".format(k, k_dec))
+        notas.append("k={0} ({1})".format(k, nombre_reticula(k)))
     if r > 0:
-        r_dec = round(float(r), 4)
-        notas.append("r={0} ({1})".format(r, r_dec))
+        notas.append("r={0} ({1})".format(r, nombre_reticula(r)))
     if f > 0 and o_presente:
-        f_dec = round(float(f), 4)
-        notas.append("f={0} ({1})".format(f, f_dec))
+        notas.append("f={0}".format(f))
 
     notas.append(
         "unidades={0}  resolucion C={1} L={2} K={3}".format(
@@ -697,9 +644,6 @@ __all__ = [
     "verificar_conteos",
     "nombre_reticula",
     "obtener_referencias",
-    "obtener_peso_reticula",
-    "obtener_division",
-    "listar_tablas",
     "VERSION",
     "PESO_ROCE",
     "PESO_PARCIAL",
