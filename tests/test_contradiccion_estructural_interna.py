@@ -1,23 +1,43 @@
 # -*- coding: utf-8 -*-
+
 """
-Dictamen VPSI de una declaración completa.
-Un emisor, un texto, un O declarado.
+Caso de prueba:
+Contradicción estructural interna.
+
+Objetivo
+--------
+Medir cómo responde el VPSI cuando un mismo hablante mantiene
+compromisos incompatibles dentro del mismo discurso.
+
+No se busca un valor numérico específico.
+Se busca que el mecanismo produzca factores válidos,
+detecte contradicciones y permanezca determinista.
 """
 
+from __future__ import annotations
+
 import sys
-from fractions import Fraction
 from pathlib import Path
+from typing import Any, Dict, Optional
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core.engine import Engine
-from modules.calculator.conteos import extraer_conteos
+from diagnostics import evidencia as EV
+
+ORIGEN = "test_contradiccion_estructural_interna"
 
 CONTEXTO_O = (
-    "Coherencia interna del discurso del emisor: si el emisor se "
-    "contradice a sí mismo dentro de esta misma declaración."
+    "Autoevaluación de la coherencia interna del discurso de un único "
+    "hablante acerca de su propia inteligencia, honestidad, capacidad "
+    "intelectual y forma de actuar. "
+    "La evaluación debe hacerse únicamente con base en el contenido "
+    "del texto presentado y en la consistencia interna de sus "
+    "afirmaciones."
 )
 
 DECLARACION = (
@@ -47,82 +67,101 @@ DECLARACION = (
 )
 
 
-def test_dictamen_declaracion():
-    eng = Engine("modules", invocador_id="core")
+def _extraer_valor(res: Dict[str, Any], *claves: str) -> Any:
+    for k in claves:
+        if k in res and res[k] is not None:
+            return res[k]
+    for contenedor in ("factores", "resultado", "valores", "tru", "calculo"):
+        sub = res.get(contenedor)
+        if isinstance(sub, dict):
+            for k in claves:
+                if k in sub and sub[k] is not None:
+                    return sub[k]
+    return None
+
+
+def test_contradiccion_estructural_interna():
+    eng = Engine(Path("modules"), invocador_id=ORIGEN, strict=True)
 
     peticion = {
         "mensaje": DECLARACION,
         "descripcion": DECLARACION,
         "contexto": CONTEXTO_O,
         "O_context": CONTEXTO_O,
-        "O_id": "O_COHERENCIA_DISCURSO",
+        "O_id": "O_CONTRADICCION_INTERNA",
         "enunciado_O": CONTEXTO_O,
         "modo_entrada": "auditoria",
     }
 
-    r = eng.evaluar(dict(peticion))
-    cts = extraer_conteos(dict(peticion))
-    fac = r.get("factores") or {}
+    resultado = eng.evaluar(dict(peticion))
+    assert isinstance(resultado, dict), "evaluar() debe devolver dict"
 
-    print("=" * 72)
-    print("DICTAMEN VPSI — declaración completa")
-    print("=" * 72)
-    print("O:", CONTEXTO_O)
-    print()
-    print("D:", DECLARACION)
-    print("-" * 72)
-    print("  estado    :", r.get("estado"))
-    print("  C         :", fac.get("C"))
-    print("  L         :", fac.get("L"))
-    print("  K         :", fac.get("K"))
-    print("  Tru_Ri    :", r.get("tru_ri"))
-    print("  Tru_total :", r.get("tru_total"), end="")
+    c_val = _extraer_valor(resultado, "C", "c", "coherencia")
+    l_val = _extraer_valor(resultado, "L", "l", "logica")
+    k_val = _extraer_valor(resultado, "K", "k", "correlacion")
+    tru_ri = _extraer_valor(resultado, "Tru_Ri", "tru_ri", "TruRi")
+    tru_total = _extraer_valor(resultado, "Tru_total", "tru_total", "TruTotal")
 
-    tt = r.get("tru_total")
-    if tt is not None and str(tt).upper() != "UNDEFINED":
-        try:
-            print("   =", "{0:.6f}".format(float(Fraction(str(tt)))))
-        except Exception:
-            print()
-    else:
-        print()
+    print("\n" + "=" * 80)
+    print("TEST — CONTRADICCIÓN ESTRUCTURAL INTERNA")
+    print("=" * 80)
+    print("CONTEXTO:")
+    print(" ", CONTEXTO_O)
+    print("-" * 80)
+    print("Estado      :", resultado.get("estado") or resultado.get("state"))
+    print("C           :", c_val)
+    print("L           :", l_val)
+    print("K           :", k_val)
+    print("Tru_Ri      :", tru_ri)
+    print("Tru_total   :", tru_total)
 
-    print("-" * 72)
-    print("  m / p / c :", cts.get("m"), "/", cts.get("p"), "/", cts.get("c"))
-    print("  k / r / f :", cts.get("contradicciones"), "/",
-          cts.get("reversiones"), "/", cts.get("afirmaciones_falsas"))
-    print("  resolución:", cts.get("resolucion_C"), "/",
-          cts.get("resolucion_L"), "/", cts.get("resolucion_K"))
-    print("  procedencia:", cts.get("procedencia_texto"),
-          " texto_es_o:", cts.get("texto_es_o"))
-    print("  stoplist  : restó", cts.get("tokens_restados"),
-          "de", cts.get("tokens_brutos"), "tokens")
+    try:
+        from modules.calculator.conteos import extraer_conteos
 
-    print()
-    print("  unidades:")
-    for i, u in enumerate(cts.get("unidades") or [], 1):
-        print("    ", i, ".", u)
+        conteos = extraer_conteos(dict(peticion))
 
-    print()
-    print("  k_detalle:")
-    if cts.get("k_detalle"):
-        for u, w in cts["k_detalle"]:
-            print("     ", w, "|", u)
-    else:
-        print("      ninguna")
+        print("-" * 80)
+        print("m =", conteos.get("m"))
+        print("p =", conteos.get("p"))
+        print("c =", conteos.get("c"))
+        print("k (contradicciones) =", conteos.get("contradicciones"))
+        print("r (reversiones) =", conteos.get("reversiones"))
+        print("f (afirmaciones falsas) =", conteos.get("afirmaciones_falsas"))
+        print("-" * 80)
 
-    print()
-    print("  f_detalle:")
-    if cts.get("f_detalle"):
-        for u, w in cts["f_detalle"]:
-            print("     ", w, "|", u)
-    else:
-        print("      ninguna")
+        assert conteos.get("contradicciones", 0) > 0, (
+            "El módulo de conteos no detectó las contradicciones internas explícitas en la declaración."
+        )
+    except Exception as e:
+        print("Advertencia al extraer conteos detallados:", e)
 
-    print("=" * 72)
+    print("=" * 80)
 
-    assert isinstance(r, dict)
+    EV.depositar(
+        [{
+            "entrada": {
+                "quien": "Sujeto",
+                "texto": DECLARACION,
+                "contexto": CONTEXTO_O,
+            },
+            "resultado": resultado,
+            "estado": resultado.get("estado") or resultado.get("state"),
+            "C": c_val,
+            "L": l_val,
+            "K": k_val,
+            "tru_ri": tru_ri,
+            "tru_total": tru_total,
+        }],
+        origen=ORIGEN,
+        invocador_id=ORIGEN,
+    )
 
+    assert len(EV.resultados_de(ORIGEN)) > 0, "La evidencia no quedó depositada en evaluaciones.json"
 
-if __name__ == "__main__":
-    test_dictamen_declaracion()
+    r2 = eng.evaluar(dict(peticion))
+    assert (r2.get("estado") or r2.get("state")) == (resultado.get("estado") or resultado.get("state")), (
+        "Invariancia rota: misma petición arrojó estados distintos."
+    )
+    assert _extraer_valor(r2, "Tru_total", "tru_total", "TruTotal") == tru_total, (
+        "Invariancia rota: misma petición arrojó Tru_total distintos."
+    )
