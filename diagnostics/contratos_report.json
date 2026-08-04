@@ -1151,22 +1151,88 @@
       "version": "1.0"
     },
     "TT": {
-      "modulos": [],
+      "modulos": [
+        "tru_totales"
+      ],
       "obligatorio": false,
-      "presente": false,
-      "n_modulos": 0,
-      "claves_contrato": [],
+      "presente": true,
+      "n_modulos": 1,
+      "claves_contrato": [
+        "verificar",
+        "barrer",
+        "inventario",
+        "capacidades",
+        "categorias",
+        "resolver_pedido"
+      ],
       "esperado": [],
-      "resolucion": []
+      "resolucion": [
+        {
+          "clave": "verificar",
+          "callable": true,
+          "modulo": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "barrer",
+          "callable": true,
+          "modulo": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "inventario",
+          "callable": true,
+          "modulo": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "inventario"
+        },
+        {
+          "clave": "capacidades",
+          "callable": true,
+          "modulo": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "capacidades"
+        },
+        {
+          "clave": "categorias",
+          "callable": true,
+          "modulo": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "categorias"
+        },
+        {
+          "clave": "resolver_pedido",
+          "callable": true,
+          "modulo": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "resolver_pedido"
+        }
+      ],
+      "nombre": "tru_totales",
+      "version": "1.1"
     }
   },
   "resumen": {
     "roles_totales": 17,
-    "roles_presentes": 16,
+    "roles_presentes": 17,
     "roles_obligatorios": 5,
-    "contratos_validos": 16,
+    "contratos_validos": 17,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 87,
+    "capacidades_verificadas": 93,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 0,

@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 23:29:18 UTC    Commit: 9c97db95810d
+Generado: 2026-08-04 23:30:09 UTC    Commit: 4a20013cbe05
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -87,8 +87,8 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
 ESTADO GLOBAL
   ✅ Engine       : OPERATIVO
   ✅ Axiomas      : coherente
-  📦 Contenedores : 16
-  ⚠️ Roles vacíos : 1
+  📦 Contenedores : 17
+  ✅ Roles vacíos : 0
   ✅ Rechazados   : 0
   ✅ Salud        : OPERATIVO — listo para avanzar
 
@@ -109,7 +109,7 @@ ESTADO GLOBAL
   | MC   | CARGADO   | 1   | correlacion_mecanica                 |
   | RE   | CARGADO   | 1   | realidad                             |
   | SF   | CARGADO   | 1   | self                                 |
-  | TT   | VACÍO     | 0   | (sin módulo)                         |
+  | TT   | CARGADO   | 1   | tru_totales                          |
   | TX   | CARGADO   | 1   | taxonomia                            |
   | UI   | CARGADO   | 1   | interfaz                             |
   | VX   | CARGADO   | 1   | verificacion                         |
@@ -119,10 +119,7 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ⚠️ 1. [VACÍO] TT
-     Detalle   : rol sin módulo
-     Impacto   : Capacidad ausente
-     Acción    : Montar módulo rol=TT
+  ✅ Sin acciones pendientes.
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -147,7 +144,7 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=16  caps_ok=87  caps_fallo=0
+      coherente=True  validos=17  caps_ok=93  caps_fallo=0
 
   ✅ Tests (pytest — forma)
       total=147  pasados=146  fallidos=0  tasa=99.32%
@@ -184,11 +181,12 @@ Presente:
   ✅ MC: correlacion_mecanica
   ✅ RE: realidad
   ✅ SF: self
+  ✅ TT: tru_totales
   ✅ TX: taxonomia
   ✅ UI: interfaz
   ✅ VX: verificacion
 Ausente:
-  ⚪ TT
+  ✅ (ninguno)
 Rechazado:
   ✅ (ninguno)
 
@@ -197,7 +195,7 @@ Rechazado:
 ================================================================================
   Versión Omega      : 10.0
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 1
+  Acciones abiertas  : 0
   Bloqueantes        : 0
   Sección 1          : Auditoría del VPSI (sistema) — LECTURA ABIERTA
   Sección 2          : Último test evaluado — LECTURA ABIERTA

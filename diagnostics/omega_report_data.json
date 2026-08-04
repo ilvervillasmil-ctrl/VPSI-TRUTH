@@ -904,11 +904,11 @@
         "GL": [
           "glosario"
         ],
-        "TT": []
+        "TT": [
+          "tru_totales"
+        ]
       },
-      "roles_vacios": [
-        "TT"
-      ],
+      "roles_vacios": [],
       "rechazados": [],
       "cargados": [
         {
@@ -1156,6 +1156,22 @@
           }
         },
         {
+          "nombre": "tru_totales",
+          "rol": "TT",
+          "version": "1.1",
+          "requiere": [],
+          "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/tru_totales/__init__.py",
+          "descripcion": "Catálogo pasivo de categorías de alcance de Tru_Ri / Tru_total. Aquí están las capacidades; Engine y Omega las utilizan cuando quieren. Calculator calcula. Este módulo no calcula ni orquesta. Auto-carga categorias/*.py.",
+          "capacidades": {
+            "verificar": "barrer",
+            "barrer": "barrer",
+            "inventario": "inventario",
+            "capacidades": "capacidades",
+            "categorias": "categorias",
+            "resolver_pedido": "resolver_pedido"
+          }
+        },
+        {
           "nombre": "verificacion",
           "rol": "VX",
           "version": "1.0.0",
@@ -1168,7 +1184,7 @@
           }
         }
       ],
-      "total": 16
+      "total": 17
     },
     "contenido": {
       "axiomas": {
@@ -1751,7 +1767,7 @@
         "contenedor": "glosario",
         "version": "1.0",
         "rol": "GL",
-        "total": 1780,
+        "total": 1781,
         "modulos_vistos": [
           "axiomas",
           "cache",
@@ -1767,9 +1783,10 @@
           "realidad",
           "self",
           "taxonomia",
+          "tru_totales",
           "verificacion"
         ],
-        "claves_n": 1780,
+        "claves_n": 1781,
         "funcion": "Reutiliza lo declarado en el repositorio para el léxico interno. Preparado para roles y contratos nuevos. Puede depositar en caché."
       },
       "interfaz": {
@@ -2108,6 +2125,24 @@
         },
         "total_validas": 15,
         "funcion": "Taxonomía metodológica determinista. Mide tácticas por estructura, no por interpretación. El Engine la aplica cuando el contrato y MC lo autorizan. Si una táctica no pasa el filtro del init, no sale."
+      },
+      "tru_totales": {
+        "contenedor": "tru_totales",
+        "version": "1.1",
+        "rol": "TT",
+        "funcion": "Catálogo pasivo de categorías de alcance de Tru_Ri / Tru_total. Auto-carga categorias/*.py. No calcula. No orquesta. Engine y Omega utilizan las capacidades cuando las necesitan.",
+        "capacidades": {
+          "modulo": "tru_totales",
+          "version": "1.1",
+          "mensaje": "Capacidades de categorías de Tru_Ri y Tru_total. Úsenlas cuando quieran. Este módulo no calcula.",
+          "como_usar": "Omega declara el total a mostrar; Engine resuelve la categoría con resolver_pedido / por_id; CX aporta O; conteos + Calculator aplican la fórmula sobre el segmento.",
+          "categorias": [],
+          "total": 0,
+          "coherente": true,
+          "errores": []
+        },
+        "extension": "Editar o agregar un archivo en categorias/ sin tocar este INIT.",
+        "formula_referencia": "Tru_Ri = C·L·K ; Tru_total = Tru_Ri·α + β — las aplica Calculator, no este módulo."
       }
     },
     "informe_axiomas": {
@@ -3812,22 +3847,88 @@
         "version": "1.0"
       },
       "TT": {
-        "modulos": [],
+        "modulos": [
+          "tru_totales"
+        ],
         "obligatorio": false,
-        "presente": false,
-        "n_modulos": 0,
-        "claves_contrato": [],
+        "presente": true,
+        "n_modulos": 1,
+        "claves_contrato": [
+          "verificar",
+          "barrer",
+          "inventario",
+          "capacidades",
+          "categorias",
+          "resolver_pedido"
+        ],
         "esperado": [],
-        "resolucion": []
+        "resolucion": [
+          {
+            "clave": "verificar",
+            "callable": true,
+            "modulo": "tru_totales",
+            "rol": "TT",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "barrer",
+            "callable": true,
+            "modulo": "tru_totales",
+            "rol": "TT",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "inventario",
+            "callable": true,
+            "modulo": "tru_totales",
+            "rol": "TT",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "inventario"
+          },
+          {
+            "clave": "capacidades",
+            "callable": true,
+            "modulo": "tru_totales",
+            "rol": "TT",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "capacidades"
+          },
+          {
+            "clave": "categorias",
+            "callable": true,
+            "modulo": "tru_totales",
+            "rol": "TT",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "categorias"
+          },
+          {
+            "clave": "resolver_pedido",
+            "callable": true,
+            "modulo": "tru_totales",
+            "rol": "TT",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "resolver_pedido"
+          }
+        ],
+        "nombre": "tru_totales",
+        "version": "1.1"
       }
     },
     "resumen": {
       "roles_totales": 17,
-      "roles_presentes": 16,
+      "roles_presentes": 17,
       "roles_obligatorios": 5,
-      "contratos_validos": 16,
+      "contratos_validos": 17,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 87,
+      "capacidades_verificadas": 93,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 0,
@@ -4172,11 +4273,11 @@
       "GL": [
         "glosario"
       ],
-      "TT": []
+      "TT": [
+        "tru_totales"
+      ]
     },
-    "roles_vacios": [
-      "TT"
-    ],
+    "roles_vacios": [],
     "rechazados": [],
     "cargados": [
       {
@@ -4424,6 +4525,22 @@
         }
       },
       {
+        "nombre": "tru_totales",
+        "rol": "TT",
+        "version": "1.1",
+        "requiere": [],
+        "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/tru_totales/__init__.py",
+        "descripcion": "Catálogo pasivo de categorías de alcance de Tru_Ri / Tru_total. Aquí están las capacidades; Engine y Omega las utilizan cuando quieren. Calculator calcula. Este módulo no calcula ni orquesta. Auto-carga categorias/*.py.",
+        "capacidades": {
+          "verificar": "barrer",
+          "barrer": "barrer",
+          "inventario": "inventario",
+          "capacidades": "capacidades",
+          "categorias": "categorias",
+          "resolver_pedido": "resolver_pedido"
+        }
+      },
+      {
         "nombre": "verificacion",
         "rol": "VX",
         "version": "1.0.0",
@@ -4436,7 +4553,7 @@
         }
       }
     ],
-    "total": 16
+    "total": 17
   },
   "informe_formulas": {
     "contenedor": "formulas",
@@ -4836,9 +4953,7 @@
       "beta-Private-4"
     ],
     "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).",
-    "roles_vacios": [
-      "TT"
-    ],
+    "roles_vacios": [],
     "rechazados_n": 0,
     "engine_version": "11.1",
     "u1_estado": "NO_STAGNANT",
