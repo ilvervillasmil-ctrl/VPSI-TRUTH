@@ -2180,8 +2180,8 @@
           "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
           "factores": {
             "C": null,
-            "L": null,
-            "K": null
+            "L": "1",
+            "K": "1/2"
           },
           "fallos": [],
           "engine_version": "11.1",
@@ -3419,8 +3419,8 @@
   "auditoria_vpsi": {
     "estado": "PARCIAL",
     "C": null,
-    "L": null,
-    "K": null,
+    "L": "1",
+    "K": "1/2",
     "tru_ri": null,
     "tru_total": null,
     "alpha": null,
@@ -3435,10 +3435,17 @@
     "secuencia": 1,
     "n_citas": 1,
     "n_anuncios": 1,
+    "fuentes_usadas": [],
+    "fallos": [],
+    "engine_version": "11.1",
+    "modo_entrada": null,
+    "ids_cx": [],
+    "coherente_cx": null,
+    "contexto_texto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
     "lectura": {
       "C": false,
-      "L": false,
-      "K": false,
+      "L": true,
+      "K": true,
       "tru_ri": false,
       "tru_total": false
     }
@@ -3460,6 +3467,13 @@
     "secuencia": 6,
     "n_citas": null,
     "n_anuncios": null,
+    "fuentes_usadas": [],
+    "fallos": [],
+    "engine_version": "11.1",
+    "modo_entrada": null,
+    "ids_cx": [],
+    "coherente_cx": null,
+    "contexto_texto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
     "lectura": {
       "C": false,
       "L": true,

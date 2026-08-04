@@ -1,9 +1,9 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.9)
-Generado: 2026-08-04 05:44:55 UTC    Commit: da4642cfd845
+VPSI-TRUTH (Versión 10.0)
+Generado: 2026-08-04 06:02:39 UTC    Commit: 250685b5629e
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
-Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
+Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
 
 ══════════════════════════════════════════════════════════════════════════════
@@ -15,11 +15,11 @@ Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
-  Factores leídos: 0/3  (C=⚪ L=⚪ K=⚪)
+  Factores leídos: 2/3  (C=⚪ L=✅ K=✅)
   ┌─────────────────────────────────────────────────────────┐
   │  ⚪ C (coherencia  ) =  no depositado                   │
-  │  ⚪ L (lógica      ) =  no depositado                   │
-  │  ⚪ K (correlación ) =  no depositado                   │
+  │  ✅ L (lógica      ) =  1                               │
+  │  ✅ K (correlación ) =  1/2                             │
   │─────────────────────────────────────────────────────────│
   │  ⚪ Tru_Ri     =  no depositado                           │
   │  ⚪ Tru_total  =  no depositado                           │
@@ -33,6 +33,8 @@ Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
   CIT resumen: n_citas=1  n_anuncios=1
   Origen     : omega_report:PETICION_AUDITORIA_VPSI
   Secuencia  : 1
+  Engine     : 11.1
+  Contexto   : Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación ...
 ══════════════════════════════════════════════════════════════════════════════
 
 ══════════════════════════════════════════════════════════════════════════════
@@ -60,6 +62,8 @@ Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
   📎 Citas      : — (sin ids/anuncios en el ciclo)
   Origen     : test_conversacion
   Secuencia  : 6
+  Engine     : 11.1
+  Contexto   : Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuv...
 ══════════════════════════════════════════════════════════════════════════════
 
 ESTADO GLOBAL
@@ -96,10 +100,7 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ⚪ 1. [DATOS] auditoria_vpsi
-     Detalle   : Ciclo de auto-auditoría sin factores depositados legibles
-     Impacto   : La caja 1 no muestra C/L/K leídos
-     Acción    : Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado
+  ✅ Sin acciones pendientes.
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -172,12 +173,12 @@ Rechazado:
 ================================================================================
 ✅  CIERRE
 ================================================================================
-  Versión Omega      : 9.9
+  Versión Omega      : 10.0
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 1
+  Acciones abiertas  : 0
   Bloqueantes        : 0
-  Caja 1             : Auditoría del VPSI (sistema) — LECTURA
-  Caja 2             : Último test evaluado — LECTURA
+  Sección 1          : Auditoría del VPSI (sistema) — LECTURA ABIERTA
+  Sección 2          : Último test evaluado — LECTURA ABIERTA
   Omega no inventa C/L/K/Tru; lee lo que el ciclo depositó.
   0 = cero real · UNDEFINED = base nula · no depositado = no vino
 ================================================================================
