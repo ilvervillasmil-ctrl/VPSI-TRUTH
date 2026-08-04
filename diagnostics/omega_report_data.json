@@ -4752,8 +4752,8 @@
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
   },
   "tests": {
-    "total": 146,
-    "pasados": 145,
+    "total": 147,
+    "pasados": 146,
     "fallidos": 0,
     "omitidos": 1,
     "tasa": 99.32
