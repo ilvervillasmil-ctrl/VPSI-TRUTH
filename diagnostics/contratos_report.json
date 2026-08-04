@@ -1044,10 +1044,19 @@
       ],
       "nombre": "interfaz",
       "version": "1.0"
+    },
+    "GL": {
+      "modulos": [],
+      "obligatorio": false,
+      "presente": false,
+      "n_modulos": 0,
+      "claves_contrato": [],
+      "esperado": [],
+      "resolucion": []
     }
   },
   "resumen": {
-    "roles_totales": 15,
+    "roles_totales": 16,
     "roles_presentes": 15,
     "roles_obligatorios": 5,
     "contratos_validos": 15,

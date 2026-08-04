@@ -544,9 +544,12 @@
         ],
         "UI": [
           "interfaz"
-        ]
+        ],
+        "GL": []
       },
-      "roles_vacios": [],
+      "roles_vacios": [
+        "GL"
+      ],
       "rechazados": [],
       "cargados": [
         {
@@ -3224,10 +3227,19 @@
         ],
         "nombre": "interfaz",
         "version": "1.0"
+      },
+      "GL": {
+        "modulos": [],
+        "obligatorio": false,
+        "presente": false,
+        "n_modulos": 0,
+        "claves_contrato": [],
+        "esperado": [],
+        "resolucion": []
       }
     },
     "resumen": {
-      "roles_totales": 15,
+      "roles_totales": 16,
       "roles_presentes": 15,
       "roles_obligatorios": 5,
       "contratos_validos": 15,
@@ -3525,9 +3537,12 @@
       ],
       "UI": [
         "interfaz"
-      ]
+      ],
+      "GL": []
     },
-    "roles_vacios": [],
+    "roles_vacios": [
+      "GL"
+    ],
     "rechazados": [],
     "cargados": [
       {
@@ -4143,7 +4158,9 @@
       "beta-Private-4"
     ],
     "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).",
-    "roles_vacios": [],
+    "roles_vacios": [
+      "GL"
+    ],
     "rechazados_n": 0,
     "engine_version": "11.1",
     "u1_estado": "NO_STAGNANT",
