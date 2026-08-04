@@ -435,8 +435,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": "1",
-          "K": "0"
+          "L": null,
+          "K": null
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -448,8 +448,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": "1",
-      "K": "0",
+      "L": null,
+      "K": null,
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
