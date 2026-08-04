@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 06:09:53 UTC    Commit: f3d9fa66acf0
+Generado: 2026-08-04 06:22:12 UTC    Commit: 315e65228218
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -10,30 +10,41 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   AUDITORÍA DEL VPSI  ·  el repositorio como objeto
   Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ⚠️ PARCIAL
-  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
+  Estado     : ✅ OK
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
-  Factores leídos: 2/3  (C=⚪ L=✅ K=✅)
+  Factores leídos: 3/3  (C=✅ L=✅ K=✅)
   ┌─────────────────────────────────────────────────────────┐
-  │  ⚪ C (coherencia  ) =  no depositado                   │
+  │  ✅ C (coherencia  ) =  1                               │
   │  ✅ L (lógica      ) =  1                               │
-  │  ✅ K (correlación ) =  1/2                             │
+  │  ✅ K (correlación ) =  5/12                            │
   │─────────────────────────────────────────────────────────│
-  │  ⚪ Tru_Ri     =  no depositado                           │
-  │  ⚪ Tru_total  =  no depositado                           │
+  │  ✅ Tru_Ri     =  5/12                                    │
+  │  ✅ Tru_total  =  71/162                                  │
+  │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
   📎 Citas (teoremas / axiomas / normas):
-       1. [citacion] CIT-CICLO
+       1. CX-A14
+       2. CX-A1
+       3. CX-C4
+       4. PA-A1
+       5. PA-A2
+       6. PA-T1
+       7. PA-C2
+       8. [citacion] CIT-CICLO
   CIT resumen: n_citas=1  n_anuncios=1
   Origen     : omega_report:PETICION_AUDITORIA_VPSI
   Secuencia  : 1
   Engine     : 11.1
+  modo_entrada: auditoria
+  coherente_cx: False
+  Fuentes    : X, O_context
+  ids_cx     : CX-A14, CX-A1, CX-C4, PA-A1, PA-A2, PA-T1, PA-C2
   Contexto   : Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación ...
 ══════════════════════════════════════════════════════════════════════════════
 
@@ -41,28 +52,35 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   ÚLTIMO TEST EVALUADO
   Último ciclo real depositado (tests / uso) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ⚠️ PARCIAL
-  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
+  Estado     : ✅ OK
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
-  Factores leídos: 2/3  (C=⚪ L=✅ K=✅)
+  Factores leídos: 3/3  (C=✅ L=✅ K=✅)
   ┌─────────────────────────────────────────────────────────┐
-  │  ⚪ C (coherencia  ) =  no depositado                   │
+  │  ✅ C (coherencia  ) =  1                               │
   │  ✅ L (lógica      ) =  1                               │
   │  ✅ K (correlación ) =  0                               │
   │─────────────────────────────────────────────────────────│
-  │  ⚪ Tru_Ri     =  no depositado                           │
-  │  ⚪ Tru_total  =  no depositado                           │
+  │  ✅ Tru_Ri     =  0                                       │
+  │  ✅ Tru_total  =  1/27                                    │
+  │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
-  📎 Citas      : — (sin ids/anuncios en el ciclo)
+  📎 Citas (teoremas / axiomas / normas):
+       1. CX-A14
+       2. CX-A1
+       3. CX-C4
   Origen     : test_conversacion
   Secuencia  : 6
   Engine     : 11.1
+  modo_entrada: auditoria
+  coherente_cx: False
+  Fuentes    : X, O_context
+  ids_cx     : CX-A14, CX-A1, CX-C4
   Contexto   : Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuv...
 ══════════════════════════════════════════════════════════════════════════════
 
