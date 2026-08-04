@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.4.0
+Version: 3.5.0
 
 Oficio unico:
     texto + O_context  ->  {
@@ -22,11 +22,12 @@ import re
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.4.0"
+VERSION = "3.5.0"
 
 # ===============================================================
-# SEGMENTO 1 --- RETICULA DE SEVERIDAD Y ESCALA ARMONICA EXACTA
-# =================================================PathComponent
+# SEGMENTO 1 --- RETICULA DE SEVERIDAD Y ESCALA ARMONICA CONTROLADA
+# ===============================================================
+
 PESO_ROCE    = Fraction(1, 4)   # 0.25
 PESO_PARCIAL = Fraction(1, 2)   # 0.50
 PESO_GRAVE   = Fraction(3, 4)   # 0.75
@@ -50,34 +51,26 @@ def nombre_reticula(peso: Fraction) -> str:
 
 def _peso_armonico(ratio: Fraction) -> Fraction:
     """
-    Aplica estrictamente la escala armónica exacta basada en fracciones (1/x)
-    para ponderar la divergencia de forma visible y matemáticamente pura.
+    Aplica la escala armónica exacta basada en fracciones acotadas
+    y limita el denominador (limit_denominator) para evitar explosiones numéricas
+    en las sumas sucesivas, permitiendo ver la división de forma limpia.
     """
     if ratio >= Fraction(3, 5):  # Convergencia alta (>= 60% solape): sin penalización
         return Fraction(0)
     
-    # Calculamos la divergencia d = 1 - ratio (de 0 a 1)
     d = Fraction(1) - ratio
     if d <= Fraction(0):
         return Fraction(0)
     
-    # Mapeo directo a los pesos armónicos exactos definidos por la escala (1/x):
-    # - Divergencia leve      -> 1/9     (Fraction(1, 9)     = ~0.111)
-    # - Divergencia moderada  -> 1/1.53  (Fraction(100, 153) = ~0.654)
-    # - Divergencia profunda  -> 1/1.31  (Fraction(100, 131) = ~0.763)
-    # - Divergencia crítica   -> 1/1.01  (Fraction(100, 101) = ~0.990)
-    # - Divergencia total     -> 1/1     (Fraction(1, 1)     =  1.000)
-    
+    # Asignación armónica limpia con control estricto de denominadores mediante limit_denominator
     if d <= Fraction(1, 4):
-        return Fraction(1, 9)
+        return Fraction(1, 9).limit_denominator(100)
     elif d <= Fraction(1, 2):
-        return Fraction(100, 153)
+        return Fraction(2, 3).limit_denominator(100)
     elif d <= Fraction(3, 4):
-        return Fraction(100, 131)
-    elif d < Fraction(1, 1):
-        return Fraction(100, 101)
+        return Fraction(3, 4).limit_denominator(100)
     else:
-        return Fraction(1, 1)
+        return Fraction(1, 1).limit_denominator(100)
 
 
 # ===============================================================
@@ -440,7 +433,9 @@ def _compromisos_y_k(
         w = _peso_contradiccion_en(u)
         if w > 0:
             k += w
-            detalle.append((u, "{0} ({1})".format(w, nombre_reticula(w))))
+            # Mostramos la fracción y su valor decimal equivalente para total transparencia
+            w_dec = round(float(w), 4)
+            detalle.append((u, "{0} ({1})".format(w, w_dec)))
 
     for u in unidades:
         if not _es_acto(u):
@@ -449,9 +444,10 @@ def _compromisos_y_k(
         if w > 0:
             compromisos.append(u)
             k += w
+            w_dec = round(float(w), 4)
             detalle.append((
                 u,
-                "{0} ({1}, acto vs compromiso)".format(w, nombre_reticula(w)),
+                "{0} ({1}, acto vs compromiso)".format(w, w_dec),
             ))
 
     if k > len(compromisos):
@@ -502,10 +498,11 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
             w = _peso_reversion(u, prev_tokens, lexico_extra)
             if w > 0:
                 r += w
+                w_dec = round(float(w), 4)
                 r_detalle.append((
                     u,
                     "{0} ({1}, solape vs historial)".format(
-                        w, nombre_reticula(w)
+                        w, w_dec
                     ),
                 ))
         if r > len(posturas):
@@ -522,7 +519,8 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if not o_presente:
         f = Fraction(len(afirmaciones))
         for a in afirmaciones:
-            f_detalle.append((a, "1 (sin O_context)"))
+            f_dec = round(float(Fraction(1)), 4)
+            f_detalle.append((a, "1 ({0}, sin O_context)".format(f_dec)))
         if afirmaciones:
             notas.append("O_context ausente -> f saturado")
     else:
@@ -530,7 +528,8 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
             w = _divergencia_peso(a, o_tokens, lexico_extra)
             if w > 0:
                 f += w
-                f_detalle.append((a, "{0} ({1})".format(w, nombre_reticula(w))))
+                w_dec = round(float(w), 4)
+                f_detalle.append((a, "{0} ({1})".format(w, w_dec)))
 
     c = len(afirmaciones)
     base_nula_K = c == 0
@@ -560,11 +559,14 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if base_nula_K:
         notas.append("base_nula_K: c=0")
     if k > 0:
-        notas.append("k={0} ({1})".format(k, nombre_reticula(k)))
+        k_dec = round(float(k), 4)
+        notas.append("k={0} ({1})".format(k, k_dec))
     if r > 0:
-        notas.append("r={0} ({1})".format(r, nombre_reticula(r)))
+        r_dec = round(float(r), 4)
+        notas.append("r={0} ({1})".format(r, r_dec))
     if f > 0 and o_presente:
-        notas.append("f={0}".format(f))
+        f_dec = round(float(f), 4)
+        notas.append("f={0} ({1})".format(f, f_dec))
 
     notas.append(
         "unidades={0}  resolucion C={1} L={2} K={3}".format(
