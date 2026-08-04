@@ -1046,22 +1046,118 @@
       "version": "1.0"
     },
     "GL": {
-      "modulos": [],
+      "modulos": [
+        "glosario"
+      ],
       "obligatorio": false,
-      "presente": false,
-      "n_modulos": 0,
-      "claves_contrato": [],
+      "presente": true,
+      "n_modulos": 1,
+      "claves_contrato": [
+        "verificar",
+        "barrer",
+        "inventario",
+        "axiomas",
+        "resolver",
+        "listar",
+        "obtener",
+        "todo",
+        "depositar_en_cache"
+      ],
       "esperado": [],
-      "resolucion": []
+      "resolucion": [
+        {
+          "clave": "verificar",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "barrer",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "inventario",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "inventario"
+        },
+        {
+          "clave": "axiomas",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "axiomas"
+        },
+        {
+          "clave": "resolver",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "resolver"
+        },
+        {
+          "clave": "listar",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "listar"
+        },
+        {
+          "clave": "obtener",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "obtener"
+        },
+        {
+          "clave": "todo",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "todo"
+        },
+        {
+          "clave": "depositar_en_cache",
+          "callable": true,
+          "modulo": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "depositar_en_cache"
+        }
+      ],
+      "nombre": "glosario",
+      "version": "1.0"
     }
   },
   "resumen": {
     "roles_totales": 16,
-    "roles_presentes": 15,
+    "roles_presentes": 16,
     "roles_obligatorios": 5,
-    "contratos_validos": 15,
+    "contratos_validos": 16,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 78,
+    "capacidades_verificadas": 87,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 0,

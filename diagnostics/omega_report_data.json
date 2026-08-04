@@ -545,11 +545,11 @@
         "UI": [
           "interfaz"
         ],
-        "GL": []
+        "GL": [
+          "glosario"
+        ]
       },
-      "roles_vacios": [
-        "GL"
-      ],
+      "roles_vacios": [],
       "rechazados": [],
       "cargados": [
         {
@@ -717,6 +717,25 @@
           }
         },
         {
+          "nombre": "glosario",
+          "rol": "GL",
+          "version": "1.0",
+          "requiere": [],
+          "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/glosario/__init__.py",
+          "descripcion": "Glosario interno. Reutiliza literalmente lo declarado en el repositorio (contenedores, roles, contratos, axiomas). Preparado para roles y contratos nuevos por descubrimiento. Puede depositar el léxico en caché. No inventa entradas. No calcula Tru. No clasifica O.",
+          "capacidades": {
+            "verificar": "barrer",
+            "barrer": "barrer",
+            "inventario": "inventario",
+            "axiomas": "axiomas",
+            "resolver": "resolver",
+            "listar": "listar",
+            "obtener": "obtener",
+            "todo": "todo",
+            "depositar_en_cache": "depositar_en_cache"
+          }
+        },
+        {
           "nombre": "interfaz",
           "rol": "UI",
           "version": "1.0",
@@ -790,7 +809,7 @@
           }
         }
       ],
-      "total": 15
+      "total": 16
     },
     "contenido": {
       "axiomas": {
@@ -1341,6 +1360,31 @@
         },
         "reglas": 2,
         "declaraciones": 4
+      },
+      "glosario": {
+        "contenedor": "glosario",
+        "version": "1.0",
+        "rol": "GL",
+        "total": 1665,
+        "modulos_vistos": [
+          "axiomas",
+          "cache",
+          "calculator",
+          "citacion",
+          "constante",
+          "contexto",
+          "correlacion_mecanica",
+          "diagnostico",
+          "diccionario",
+          "formulas",
+          "interfaz",
+          "realidad",
+          "self",
+          "taxonomia",
+          "verificacion"
+        ],
+        "claves_n": 1665,
+        "funcion": "Reutiliza lo declarado en el repositorio para el léxico interno. Preparado para roles y contratos nuevos. Puede depositar en caché."
       },
       "interfaz": {
         "contenedor": "interfaz",
@@ -3229,22 +3273,118 @@
         "version": "1.0"
       },
       "GL": {
-        "modulos": [],
+        "modulos": [
+          "glosario"
+        ],
         "obligatorio": false,
-        "presente": false,
-        "n_modulos": 0,
-        "claves_contrato": [],
+        "presente": true,
+        "n_modulos": 1,
+        "claves_contrato": [
+          "verificar",
+          "barrer",
+          "inventario",
+          "axiomas",
+          "resolver",
+          "listar",
+          "obtener",
+          "todo",
+          "depositar_en_cache"
+        ],
         "esperado": [],
-        "resolucion": []
+        "resolucion": [
+          {
+            "clave": "verificar",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "barrer",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "inventario",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "inventario"
+          },
+          {
+            "clave": "axiomas",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "axiomas"
+          },
+          {
+            "clave": "resolver",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "resolver"
+          },
+          {
+            "clave": "listar",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "listar"
+          },
+          {
+            "clave": "obtener",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "obtener"
+          },
+          {
+            "clave": "todo",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "todo"
+          },
+          {
+            "clave": "depositar_en_cache",
+            "callable": true,
+            "modulo": "glosario",
+            "rol": "GL",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "depositar_en_cache"
+          }
+        ],
+        "nombre": "glosario",
+        "version": "1.0"
       }
     },
     "resumen": {
       "roles_totales": 16,
-      "roles_presentes": 15,
+      "roles_presentes": 16,
       "roles_obligatorios": 5,
-      "contratos_validos": 15,
+      "contratos_validos": 16,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 78,
+      "capacidades_verificadas": 87,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 0,
@@ -3538,11 +3678,11 @@
       "UI": [
         "interfaz"
       ],
-      "GL": []
+      "GL": [
+        "glosario"
+      ]
     },
-    "roles_vacios": [
-      "GL"
-    ],
+    "roles_vacios": [],
     "rechazados": [],
     "cargados": [
       {
@@ -3710,6 +3850,25 @@
         }
       },
       {
+        "nombre": "glosario",
+        "rol": "GL",
+        "version": "1.0",
+        "requiere": [],
+        "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/glosario/__init__.py",
+        "descripcion": "Glosario interno. Reutiliza literalmente lo declarado en el repositorio (contenedores, roles, contratos, axiomas). Preparado para roles y contratos nuevos por descubrimiento. Puede depositar el léxico en caché. No inventa entradas. No calcula Tru. No clasifica O.",
+        "capacidades": {
+          "verificar": "barrer",
+          "barrer": "barrer",
+          "inventario": "inventario",
+          "axiomas": "axiomas",
+          "resolver": "resolver",
+          "listar": "listar",
+          "obtener": "obtener",
+          "todo": "todo",
+          "depositar_en_cache": "depositar_en_cache"
+        }
+      },
+      {
         "nombre": "interfaz",
         "rol": "UI",
         "version": "1.0",
@@ -3783,7 +3942,7 @@
         }
       }
     ],
-    "total": 15
+    "total": 16
   },
   "informe_formulas": {
     "contenedor": "formulas",
@@ -4158,9 +4317,7 @@
       "beta-Private-4"
     ],
     "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).",
-    "roles_vacios": [
-      "GL"
-    ],
+    "roles_vacios": [],
     "rechazados_n": 0,
     "engine_version": "11.1",
     "u1_estado": "NO_STAGNANT",

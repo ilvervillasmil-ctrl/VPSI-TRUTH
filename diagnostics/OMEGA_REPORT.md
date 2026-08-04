@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.9)
-Generado: 2026-08-04 05:00:24 UTC    Commit: d8ca1944741e
+Generado: 2026-08-04 05:01:41 UTC    Commit: a5c7c0fc92b1
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
 ================================================================================
@@ -65,8 +65,8 @@ Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
 ESTADO GLOBAL
   ✅ Engine       : OPERATIVO
   ✅ Axiomas      : coherente
-  📦 Contenedores : 15
-  ⚠️ Roles vacíos : 1
+  📦 Contenedores : 16
+  ✅ Roles vacíos : 0
   ✅ Rechazados   : 0
   ✅ Salud        : OPERATIVO — listo para avanzar
 
@@ -83,7 +83,7 @@ ESTADO GLOBAL
   | DG   | CARGADO   | 1   | diagnostico                          |
   | DI   | CARGADO   | 1   | diccionario                          |
   | FO   | CARGADO   | 1   | formulas                             |
-  | GL   | VACÍO     | 0   | (sin módulo)                         |
+  | GL   | CARGADO   | 1   | glosario                             |
   | MC   | CARGADO   | 1   | correlacion_mecanica                 |
   | RE   | CARGADO   | 1   | realidad                             |
   | SF   | CARGADO   | 1   | self                                 |
@@ -96,12 +96,7 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ⚠️ 1. [VACÍO] GL
-     Detalle   : rol sin módulo
-     Impacto   : Capacidad ausente
-     Acción    : Montar módulo rol=GL
-
-  ⚪ 2. [DATOS] auditoria_vpsi
+  ⚪ 1. [DATOS] auditoria_vpsi
      Detalle   : Ciclo de auto-auditoría sin factores depositados legibles
      Impacto   : La caja 1 no muestra C/L/K leídos
      Acción    : Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado
@@ -129,7 +124,7 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=15  caps_ok=78  caps_fallo=0
+      coherente=True  validos=16  caps_ok=87  caps_fallo=0
 
   ✅ Tests (pytest — forma)
       total=134  pasados=133  fallidos=0  tasa=99.25%
@@ -162,6 +157,7 @@ Presente:
   ✅ DG: diagnostico
   ✅ DI: diccionario
   ✅ FO: formulas
+  ✅ GL: glosario
   ✅ MC: correlacion_mecanica
   ✅ RE: realidad
   ✅ SF: self
@@ -169,7 +165,7 @@ Presente:
   ✅ UI: interfaz
   ✅ VX: verificacion
 Ausente:
-  ⚪ GL
+  ✅ (ninguno)
 Rechazado:
   ✅ (ninguno)
 
@@ -178,7 +174,7 @@ Rechazado:
 ================================================================================
   Versión Omega      : 9.9
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 2
+  Acciones abiertas  : 1
   Bloqueantes        : 0
   Caja 1             : Auditoría del VPSI (sistema) — LECTURA
   Caja 2             : Último test evaluado — LECTURA
