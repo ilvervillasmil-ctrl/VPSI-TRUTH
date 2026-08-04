@@ -1462,7 +1462,7 @@
           "C": "2.0",
           "L": "2.0",
           "K": "2.0",
-          "conteos": "3.2.1",
+          "conteos": "3.2",
           "orquestador": "2.0"
         },
         "coherente": true,
@@ -4746,7 +4746,7 @@
       "C": "2.0",
       "L": "2.0",
       "K": "2.0",
-      "conteos": "3.2.1",
+      "conteos": "3.2",
       "orquestador": "2.0"
     },
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
