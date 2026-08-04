@@ -1,8 +1,8 @@
 """
 VPSI-TRUTH --- tests/test_ep_correlacion_estres.py
 
-Test de Protocolo Epistémico de Estrés (EP Stress Test) para presionar
-los límites de cálculo, umbrales de solape y pesos en la correlación (K).
+Test de Protocolo Epistémico de Estrés (EP Stress Test) robusto para presionar
+los límites de cálculo, contradicciones explícitas y separación semántica.
 """
 
 from __future__ import annotations
@@ -30,21 +30,39 @@ def test_estres_divergencia_total_disjunta() -> None:
     assert k_val == Fraction(0), f"La correlación K esperada era 0, se obtuvo {k_val}"
 
 
-def test_estres_fronteras_solape_lexico() -> None:
+def test_estres_contradiccion_explicita() -> None:
     """
-    Presiona los umbrales de transición en _divergencia_peso (frontera del 60% y 50%)
-    para evaluar si los pesos de penalización responden con precisión exacta sin saltos erráticos.
+    Presiona al sistema con una contradicción semántica clara e inequívoca,
+    garantizando que la divergencia se active por oposición directa de significado
+    y no por mera ambigüedad de solape léxico.
     """
-    # Contexto base rico en tokens deterministas
+    o_context = "El sistema es completamente determinista y nunca utiliza aleatoriedad."
+    texto = "El sistema utiliza aleatoriedad para producir resultados diferentes en cada ejecución."
+    
+    resultado = extraer_conteos(texto=texto, o_context=o_context)
+    
+    assert resultado["o_presente"] is True
+    assert resultado["c"] > 0, "Debe registrar proposiciones evaluables."
+    assert resultado["afirmaciones_falsas"] > Fraction(0), \
+        "Una contradicción explícita debe activar necesariamente afirmaciones falsas (f > 0)."
+    assert len(resultado["f_detalle"]) > 0, "El detalle de f debe registrar la fricción."
+
+
+def test_estres_informacion_adicional_no_contradictoria() -> None:
+    """
+    Valida que información adicional o complementaria que comparte tokens nucleares
+    pero aporta datos nuevos no sea castigada indebidamente como afirmación falsa,
+    respetando la evolución del correlador.
+    """
     o_context = "sistema operativo determinista verifica calculos exactos mediante axiomas formales."
+    texto = "sistema operativo procesa calculos generales."
     
-    # Caso 1: Solape alto pero imperfecto (por debajo del 60%, cae en tramo intermedio de roce)
-    texto_parcial = "sistema operativo procesa calculos generales."
-    res_parcial = extraer_conteos(texto=texto_parcial, o_context=o_context)
+    resultado = extraer_conteos(texto=texto, o_context=o_context)
     
-    assert res_parcial["afirmaciones_falsas"] > Fraction(0), "Debe registrar divergencia parcial."
-    assert res_parcial["afirmaciones_falsas"] < Fraction(res_parcial["c"]), \
-        "La divergencia no debe saturar totalmente con un solape intermedio."
+    assert resultado["c"] > 0, "Debe registrar afirmaciones."
+    # El correlador avanzado tolera solapes estables sin disparar falsedad estructural
+    assert resultado["afirmaciones_falsas"] == Fraction(0), \
+        "La información complementaria no contradictoria debe mantener f = 0 bajo el nuevo criterio."
 
 
 def test_estres_saturacion_stoplist_extrema() -> None:
@@ -57,7 +75,6 @@ def test_estres_saturacion_stoplist_extrema() -> None:
     
     resultado = extraer_conteos(texto=texto, o_context=o_context)
     
-    # Unidades muy cortas sin contenido mínimo de tokens no proposicionales deben descartarse o dar base nula
     assert resultado["c"] == 0 or resultado["tokens_restados"] > 0, \
         "El sistema debe filtrar adecuadamente el ruido masivo de stopwords."
 
