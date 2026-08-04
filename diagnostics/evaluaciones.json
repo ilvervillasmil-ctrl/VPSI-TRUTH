@@ -26,10 +26,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "1/12"
+          "K": "3/32"
         },
-        "tru_ri": "1/12",
-        "tru_total": "19/162",
+        "tru_ri": "3/32",
+        "tru_total": "55/432",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -53,8 +53,8 @@
         }
       },
       "estado": "OK",
-      "tru_ri": "1/12",
-      "tru_total": "19/162",
+      "tru_ri": "3/32",
+      "tru_total": "55/432",
       "origen": "test_claude_dentro_del_repo",
       "invocador_id": "test_claude_dentro_del_repo",
       "secuencia": 1
@@ -69,12 +69,12 @@
         "estado": "OK",
         "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
         "factores": {
-          "C": "37/40",
+          "C": "19/20",
           "L": "1",
           "K": "7/200"
         },
-        "tru_ri": "259/8000",
-        "tru_total": "7367/108000",
+        "tru_ri": "133/4000",
+        "tru_total": "1243/18000",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -98,11 +98,11 @@
         }
       },
       "estado": "OK",
-      "C": "37/40",
+      "C": "19/20",
       "L": "1",
       "K": "7/200",
-      "tru_ri": "259/8000",
-      "tru_total": "7367/108000",
+      "tru_ri": "133/4000",
+      "tru_total": "1243/18000",
       "origen": "test_contradiccion_estructural_interna",
       "invocador_id": "test_contradiccion_estructural_interna",
       "secuencia": 2
@@ -128,10 +128,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "1"
+          "K": "7/8"
         },
-        "tru_ri": "1",
-        "tru_total": "1",
+        "tru_ri": "7/8",
+        "tru_total": "95/108",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -519,10 +519,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "29/45"
+          "K": "47/72"
         },
-        "tru_ri": "29/45",
-        "tru_total": "799/1215",
+        "tru_ri": "47/72",
+        "tru_total": "647/972",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -548,9 +548,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "29/45",
-      "tru_ri": "29/45",
-      "tru_total": "799/1215",
+      "K": "47/72",
+      "tru_ri": "47/72",
+      "tru_total": "647/972",
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
       "secuencia": 11
