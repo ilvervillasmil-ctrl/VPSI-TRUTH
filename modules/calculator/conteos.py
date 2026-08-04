@@ -7,7 +7,7 @@ Versión: 3.5.1
 Cambios principales respecto a 3.5.0:
   - Se integran tablas de referencia para pesos y divisiones 1/n.
   - Las tablas NO modifican la lógica existente; solo sirven como referencia.
-  - Se mantienen todas las variables, funciones y estructuras originales.
+  - Se corrige el error de Fraction(1, n) para valores decimales.
 """
 
 from __future__ import annotations
@@ -44,15 +44,15 @@ TABLA_RETICULA = {
 # Tabla de divisiones 1/n (desde 1/1 hasta 1/9.0)
 TABLA_DIVISIONES = {}
 
-# Generar la tabla de divisiones 1/n
-for n in range(1, 10):  # De 1 a 9
+# Generar la tabla de divisiones 1/n para enteros (1 a 9)
+for n in range(1, 10):
     fraction = Fraction(1, n)
     TABLA_DIVISIONES[f"1/{n}"] = {
         "fraccion": fraction,
         "decimal": round(float(fraction), 3)
     }
 
-# Divisiones adicionales: 1/1.1, 1/1.2, ..., 1/9.0
+# Generar la tabla de divisiones 1/n para decimales (1.1 a 9.0)
 for n in [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9,
           2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9,
           3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9,
@@ -61,7 +61,9 @@ for n in [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9,
           6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9,
           7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9,
           8.0, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 9.0]:
-    fraction = Fraction(1, n).limit_denominator(100)
+    # Convertir n a fracción primero para evitar el error
+    n_frac = Fraction(str(n)).limit_denominator(100)
+    fraction = Fraction(1, n_frac).limit_denominator(100)
     TABLA_DIVISIONES[f"1/{n}"] = {
         "fraccion": fraction,
         "decimal": round(float(fraction), 3)
