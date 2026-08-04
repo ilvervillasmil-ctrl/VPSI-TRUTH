@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.9)
+VPSI-TRUTH (Versión 10.0)
 ==============================
 
 Orden de presentación (contrato de salida):
@@ -15,6 +15,7 @@ Contrato de cálculo (inviolable):
   - Omega SOLO LEE lo que el ciclo depositó y lo presenta tal cual.
   - 0 es 0. UNDEFINED es UNDEFINED. None es "no depositado".
   - Un chulito marca factor LEÍDO; su ausencia marca factor NO depositado.
+  - Espacio abierto: todo campo legible del ciclo se expone en el reporte.
 
 Autor: Ilver Villasmil
 ORCID: 0009-0009-3413-4270
@@ -49,7 +50,7 @@ ICON_CLK = "📐"
 ICON_READ = "📖"
 
 STRICT = os.getenv("OMEGA_STRICT", "0") == "1"
-VERSION = "9.9"
+VERSION = "10.0"
 
 CAMPOS_OBLIGATORIOS = (
     "estado_engine",
@@ -67,6 +68,11 @@ PETICION_AUDITORIA_VPSI = {
     "modo_entrada": "auditoria",
     "O_id": "O_VPSI_REPO",
     "enunciado_O": (
+        "Estado observable del repositorio VPSI-TRUTH "
+        "(axiomas, contratos, módulos, generatividad) en el run actual."
+    ),
+    # texto = material de conteo para CA cuando no hay mensaje suelto
+    "texto": (
         "Estado observable del repositorio VPSI-TRUTH "
         "(axiomas, contratos, módulos, generatividad) en el run actual."
     ),
@@ -288,6 +294,13 @@ def _extraer_valuacion(r: Any) -> Dict[str, Any]:
     if tru_total is None and isinstance(r, dict):
         tru_total = r.get("tru_total") or r.get("Tru_total")
 
+    fuentes = body.get("fuentes_usadas") or r.get("fuentes_usadas") or []
+    if not isinstance(fuentes, list):
+        fuentes = [fuentes] if fuentes else []
+    fallos = body.get("fallos") or r.get("fallos") or []
+    if not isinstance(fallos, list):
+        fallos = [fallos] if fallos else []
+
     return {
         "estado": _pick(body, "estado") or _pick(r, "estado"),
         "C": C,
@@ -305,6 +318,13 @@ def _extraer_valuacion(r: Any) -> Dict[str, Any]:
         "secuencia": r.get("secuencia"),
         "n_citas": cit.get("n_citas"),
         "n_anuncios": cit.get("n_anuncios"),
+        "fuentes_usadas": [str(x) for x in fuentes],
+        "fallos": [str(x) for x in fallos],
+        "engine_version": body.get("engine_version") or r.get("engine_version"),
+        "modo_entrada": cx.get("modo_entrada") or body.get("modo_entrada"),
+        "ids_cx": list(cx.get("ids_cx_relevantes") or []),
+        "coherente_cx": cx.get("coherente"),
+        "contexto_texto": body.get("contexto") or r.get("contexto"),
         "lectura": {
             "C": _depositado(C),
             "L": _depositado(L),
@@ -439,6 +459,29 @@ def _caja_valuacion(
         lineas.append("  Origen     : {0}".format(_fmt(v.get("origen"))))
     if v.get("secuencia") is not None:
         lineas.append("  Secuencia  : {0}".format(_fmt(v.get("secuencia"))))
+    if v.get("engine_version"):
+        lineas.append("  Engine     : {0}".format(_fmt(v.get("engine_version"))))
+    if v.get("modo_entrada"):
+        lineas.append("  modo_entrada: {0}".format(_fmt(v.get("modo_entrada"))))
+    if v.get("coherente_cx") is not None:
+        lineas.append("  coherente_cx: {0}".format(_fmt(v.get("coherente_cx"))))
+    fuentes = list(v.get("fuentes_usadas") or [])
+    if fuentes:
+        lineas.append("  Fuentes    : {0}".format(", ".join(fuentes)))
+    ids_cx = list(v.get("ids_cx") or [])
+    if ids_cx:
+        lineas.append("  ids_cx     : {0}".format(", ".join(str(x) for x in ids_cx[:16])))
+    fallos = list(v.get("fallos") or [])
+    if fallos:
+        lineas.append("  Fallos     : {0}".format(len(fallos)))
+        for f in fallos[:6]:
+            lineas.append("      - {0}".format(str(f)[:80]))
+    ctx = v.get("contexto_texto")
+    if ctx:
+        s = str(ctx).strip()
+        if len(s) > 110:
+            s = s[:107] + "..."
+        lineas.append("  Contexto   : {0}".format(s))
     lineas.append(borde)
     lineas.append("")
     return lineas
@@ -655,7 +698,7 @@ def presentar(datos: Dict[str, Any]) -> str:
         "VPSI-TRUTH (Versión {0})".format(VERSION),
         "Generado: {0}    Commit: {1}".format(ahora, sha),
         "Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas",
-        "Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena",
+        "Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo",
         "=" * 80,
         "",
     ]
@@ -933,8 +976,8 @@ def presentar(datos: Dict[str, Any]) -> str:
         "  Salud              : {0} {1}".format(icon_salud, salud),
         "  Acciones abiertas  : {0}".format(len(acciones)),
         "  Bloqueantes        : {0}".format(n_bloqueantes),
-        "  Caja 1             : Auditoría del VPSI (sistema) — LECTURA",
-        "  Caja 2             : Último test evaluado — LECTURA",
+        "  Sección 1          : Auditoría del VPSI (sistema) — LECTURA ABIERTA",
+        "  Sección 2          : Último test evaluado — LECTURA ABIERTA",
         "  Omega no inventa C/L/K/Tru; lee lo que el ciclo depositó.",
         "  0 = cero real · UNDEFINED = base nula · no depositado = no vino",
         "=" * 80,
@@ -960,7 +1003,7 @@ def _enriquecer_citas_desde_ax(
 ) -> Dict[str, Any]:
     if valuacion.get("citas"):
         return valuacion
-    for key in ("muestra_ids", "ids", "ids_relevantes", "normas"):
+    for key in ("muestra_ids", "ids", "ids_relevantes", "normas", "ids_dominio_k_o"):
         raw = ia.get(key)
         if isinstance(raw, list) and raw:
             valuacion["citas"] = [str(x) for x in raw[:24]]
