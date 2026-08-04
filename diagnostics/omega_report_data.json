@@ -1296,8 +1296,16 @@
         "contenedor": "diccionario",
         "version": "1.0",
         "rol": "DI",
-        "total": 1,
+        "total": 2,
         "diccionarios": [
+          {
+            "nombre": "en",
+            "idioma": "en",
+            "tipo": "registro_wordnet",
+            "size": 0,
+            "version": "2.0",
+            "archivo": "en.py"
+          },
           {
             "nombre": "es",
             "idioma": "es",
@@ -1308,6 +1316,9 @@
           }
         ],
         "por_idioma": {
+          "en": [
+            "en"
+          ],
           "es": [
             "es"
           ]
