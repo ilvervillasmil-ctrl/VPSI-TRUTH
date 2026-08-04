@@ -283,51 +283,6 @@
   "resultados_evaluacion": [
     {
       "entrada": {
-        "quien": "Claude",
-        "texto": "Estuve dentro del repositorio. Ejecuté el engine y medí sus factores. Leí conteos punto py línea por línea. No inventé el rol RE, aunque sí lo escribí sin verificarlo. Corrí el barrido axiomático y dio 487 declaraciones sin choques. No leí los 487 axiomas.",
-        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
-      },
-      "resultado": {
-        "estado": "OK",
-        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
-        "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1/12"
-        },
-        "tru_ri": "1/12",
-        "tru_total": "19/162",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
-        }
-      },
-      "estado": "OK",
-      "tru_ri": "1/12",
-      "tru_total": "19/162",
-      "origen": "test_claude_dentro_del_repo",
-      "invocador_id": "test_claude_dentro_del_repo",
-      "secuencia": 1
-    },
-    {
-      "entrada": {
         "quien": "Sujeto",
         "texto": "Soy una persona sumamente inteligente porque he desarrollado métodos para resolver problemas extremadamente difíciles y muchas personas reconocen mi capacidad analítica. Nunca me contradigo cuando hablo y siempre mantengo la misma posición desde el principio hasta el final. Sin embargo, reconozco que frecuentemente cambio de opinión sin darme cuenta y muchas veces termino defendiendo exactamente lo contrario de lo que afirmé unos segundos antes. Siempre digo la verdad y jamás invento información. Aunque debo admitir que en varias ocasiones inventé datos para hacer que mis argumentos parecieran más convincentes. Nunca tomo decisiones impulsivas. Pero también acepto que muchas de mis decisiones importantes las he tomado impulsivamente sin analizarlas con suficiente cuidado. No necesito ayuda de nadie para resolver problemas complejos. Sin embargo, la mayoría de mis logros importantes fueron posibles gracias a la ayuda constante de otras personas. Estoy completamente seguro de todo lo que afirmo. Aunque realmente tengo muchas dudas sobre casi todas mis propias afirmaciones. En conclusión, considero que soy completamente coherente en todo lo que acabo de decir y que este discurso no contiene ninguna contradicción.",
         "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones."
@@ -369,6 +324,51 @@
       "tru_total": "7367/108000",
       "origen": "test_contradiccion_estructural_interna",
       "invocador_id": "test_contradiccion_estructural_interna",
+      "secuencia": 1
+    },
+    {
+      "entrada": {
+        "quien": "Claude",
+        "texto": "Estuve dentro del repositorio. Ejecuté el engine y medí sus factores. Leí conteos punto py línea por línea. No inventé el rol RE, aunque sí lo escribí sin verificarlo. Corrí el barrido axiomático y dio 487 declaraciones sin choques. No leí los 487 axiomas.",
+        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1/12"
+        },
+        "tru_ri": "1/12",
+        "tru_total": "19/162",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "tru_ri": "1/12",
+      "tru_total": "19/162",
+      "origen": "test_claude_dentro_del_repo",
+      "invocador_id": "test_claude_dentro_del_repo",
       "secuencia": 2
     },
     {

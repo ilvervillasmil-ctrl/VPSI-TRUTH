@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 07:33:01 UTC    Commit: 8808113b768e
+Generado: 2026-08-04 07:46:42 UTC    Commit: 970af454c5b0
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
