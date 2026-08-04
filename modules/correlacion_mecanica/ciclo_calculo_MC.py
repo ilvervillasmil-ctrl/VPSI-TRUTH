@@ -1,244 +1,394 @@
 """
-VPSI-TRUTH --- modules/correlacion_mecanica/ciclo_calculo_MC.py
+VPSI-TRUTH --- modules/correlacion_mecanica/calculo_variables.py
 
-CICLO DE CÁLCULO (MC): Orden nativo del procedimiento de valuación
-que Engine orquesta. No calcula Tru. No es CA ni FO ni TX ni CIT.
-Declara la secuencia causal mínima para recoger, puntuar y cerrar
-un ciclo de evaluación bajo el Protocolo (5 pasos) y calculo_variables.
+Definición del orden causal y la lógica de cálculo para las variables C, L, K
+bajo anclas de medición (AM v1.0).
 
-Fundamento:
-  - PROTOCOLO.pdf Abstract + §0.15 (C=1-k/m, L=1-r/p, K=1-f/c)
-  - PROTOCOLO 5 pasos: Octx → premisas → registro/puntuación → taxonomía → reconstrucción
-  - calculo_variables.MECANICA (O → C → L → K → Tru_Ri → Tru_total)
-  - contexto_MC / realidad_MC / citacion_MC (sin invertir nodos)
-  - Def-5.3.1, TA5, TA6, T9, T16, T17
+Versión: 2.0
+Cambio principal respecto a 1.x:
+  - Ancla de inclusión (AM-D2): solo adopción propia entra en m / p / c.
+  - Retícula de severidad (AM-D5): k, r, f son sumas de pesos
+    {1/4, 1/2, 3/4, 1}, no solo enteros binarios.
+  - Base nula (AM-D6 / AM-A3): m=0 / p=0 / c=0 → UNDEFINED (no 1).
+  - Sin O_context → K = UNDEFINED (Def-5.3.1, ya estaba; se refuerza).
+  - Declaraciones nuevas de las anclas para que el grafo MC las conozca.
 
-Relación:
-  - No sustituye calculo_variables: lo precodiciona y lo cierra.
-  - CA ejecuta conteos y factores; FO aplica fórmula; TX clasifica;
-    CIT anuncia; Engine solo sigue este orden + contratos.
-  - Si falta O o conteos, K o Tru no se inventan (límite, no humo).
+Este archivo declara:
+1. El orden nativo en el que se calculan C, L, K.
+2. Las fórmulas teóricas y operacionales (con anclas).
+3. Las dependencias entre variables.
+4. Las anclas de medición que el Calculator (CA) debe respetar.
+
+No ejecuta cálculos. Solo declara cómo deben calcularse.
+CA (conteos / coherencia / logica / correlacion_k v2.0) es quien ejecuta.
+
+Referencias:
+  IlverVillasmil.pdf (Def 5.1–5.3, Def-5.3.1, TA1–TA5, T16, T17)
+  PROTOCOLO.pdf sec. 0.15
+  anclas_medicion_AX (AM-D2, AM-D5, AM-D6, AM-A3, AM-A4)
+  modules/calculator/* v2.0
 """
 
+from __future__ import annotations
+
+from fractions import Fraction
+
 # ===============================================================
-# MECANICA: Orden nativo del ciclo de cálculo
+# CONSTANTES DE LA RETÍCULA (AM-D5)
+# ===============================================================
+PESO_ROCE    = Fraction(1, 4)   # 0.25
+PESO_PARCIAL = Fraction(1, 2)   # 0.50
+PESO_GRAVE   = Fraction(3, 4)   # 0.75
+PESO_TOTAL   = Fraction(1, 1)   # 1.00
+
+RETICULA_SEVERIDAD = (PESO_ROCE, PESO_PARCIAL, PESO_GRAVE, PESO_TOTAL)
+
+VERSION = "2.0"
+
+# ===============================================================
+# DEFINICIÓN DE LA MECÁNICA DE CÁLCULO
 # ===============================================================
 MECANICA = {
-    "nombre": "ciclo_calculo_MC",
-    "version": "1.0",
+    "nombre": "Cálculo de Variables de Verdad (C, L, K) bajo anclas AM",
+    "version": VERSION,
     "orden": [
-        # --- Paso 1 PROTOCOLO: fijar O (sin O no hay K numérico) ---
-        "CC_Ciclo_Id",              # v₀: identidad del ciclo (paquete Engine)
-        "CC_Declaracion_O",         # v₁: O_context explícito (Def-5.3.1, CX-A1)
-        "CC_Estado_O",              # v₂: estable | indefinido | cambio
-        "CC_Permite_K",             # v₃: compuerta; si False → K=∅, no 0
-
-        # --- Paso 2 PROTOCOLO: premisas / evidencia estructural ---
-        "CC_Premisas_Registro",     # v₄: compromisos y posturas del objeto (m, p base)
-        "CC_Evidencia_Estructural", # v₅: lo ya producido (AX/CI/censo/tests) sin reinterpretar
-        "CC_Afirmaciones_D",        # v₆: aserciones verificables del run (c base)
-
-        # --- Paso 3 PROTOCOLO: conteos operacionales + factores ---
-        "CC_Conteo_C",              # v₇: m, k  → entrada CA (C = 1 - k/m)
-        "CC_Conteo_L",              # v₈: p, r  → entrada CA (L = 1 - r/p)
-        "CC_Conteo_K",              # v₉: c, f  → entrada CA (K = 1 - f/c) solo si permite_K
-        "CC_Factores_CA",           # v₁₀: CA entrega C, L, K (o límite SIN_FACTORES / K_SIN_O)
-        "CC_Tru_FO",                # v₁₁: FO: Tru_Ri = C·L·K; Tru_total = (Tru_Ri·α)+β
-
-        # --- Paso 4 PROTOCOLO: taxonomía (TX; none si no hay match) ---
-        "CC_Revision_Afirmaciones", # v₁₂: cada afirmación del objeto, una a una
-        "CC_Taxonomia_TX",          # v₁₃: código TX o none (firma de factor degradado)
-
-        # --- Paso 5 PROTOCOLO: cierre auditable ---
-        "CC_Normas_AX",             # v₁₄: ids que explican o contradicen (sin inventar)
-        "CC_Citacion_CIT",          # v₁₅: anuncio cadena norma + evidencia + O + límites
-        "CC_Deposito_Evidencia",    # v₁₆: evaluaciones / cache del ciclo
-        "CC_Cierre_Ciclo",          # v₁₇: fin de pasada; listo para Omega (solo presenta)
+        "O_context",   # Debe declararse primero (requerido para K)
+        "inclusion",   # Ancla: filtrar solo adopción propia → m, p, c
+        "severidad",   # Ancla: asignar pesos de retícula → k, r, f
+        "C",           # Coherencia (1 - k/m) o UNDEFINED si m=0
+        "L",           # Lógica     (1 - r/p) o UNDEFINED si p=0
+        "K",           # Correlación (1 - f/c) o UNDEFINED si c=0 o sin O
+        "Tru_Ri",      # C * L * K  (solo si los tres están definidos)
+        "Tru_total",   # (Tru_Ri * ALPHA) + BETA
     ],
     "descripcion": (
-        "Orden causal del procedimiento de cálculo que Engine orquesta. "
-        "Integra los 5 pasos del Protocolo con calculo_variables y las "
-        "sub-rutas CX/RE/CIT ya declaradas. "
-        "No calcula: fija cuándo CA, FO, TX y CIT pueden actuar. "
-        "Sin CC_Declaracion_O no hay K numérico. Sin conteos no hay "
-        "factores inventados. TX y CIT no sustituyen FO."
+        "Orden causal para el cálculo de las variables de verdad en el marco VPSI. "
+        "Primero se declara O_context. Luego se aplican las anclas de inclusión y "
+        "severidad. Después se calculan C, L, K. Tru_Ri solo se forma si los tres "
+        "factores están definidos. Tru_total aplica el techo α y el piso β."
     ),
-    "notas": [
-        "Prefijo CC_ evita colisión con contexto_MC, realidad_MC, citacion_MC, MMC_.",
-        "Alineado a calculo_variables: O_context ≺ C ≺ L ≺ K ≺ Tru_Ri ≺ Tru_total.",
-        "Alineado a contexto_MC: Declaracion_O antes de Correlacion_K / factores K.",
-        "Alineado a realidad_MC: evaluación numérica solo tras O y admisibilidad.",
-        "Alineado a citacion_MC: anuncio tras factores o tras Clasificacion_Limite.",
-        "Paso 2 no es 'opinión': son compromisos/posturas/afirmaciones observables del run.",
-        "Conteos k,r,f admiten peso en (0,1) según §0.15 (penalización ponderada).",
-        "Si CC_Permite_K es falso: se instancia límite K_SIN_O / O_INDEFINIDO; no se fuerza K=0.",
-        "Si CA no entrega factores: límite SIN_FACTORES; FO no rellena; CIT puede anunciarlo.",
-        "CC_Taxonomia_TX: match estructural a catálogo TX; si no aplica → none.",
-        "Engine no inventa m,k,p,r,c,f ni C,L,K ni Tru; solo ordena oficios por contrato.",
-        "Omega lee el depósito; no recalcula (presentador).",
-        "Violar el orden (p. ej. Tru sin O, o TX como sustituto de C) es choque mecánico MC.",
-    ],
-    "precondiciones": {
-        "reclamar_K_numerico": [
-            "CC_Ciclo_Id",
-            "CC_Declaracion_O",
-            "CC_Estado_O",
-            "CC_Permite_K",
-        ],
-        "ejecutar_CA_factores": [
-            "CC_Premisas_Registro",
-            "CC_Conteo_C",
-            "CC_Conteo_L",
-            # CC_Conteo_K solo si permite_K; si no, CA puede omitir K numérico
-        ],
-        "ejecutar_FO": [
-            "CC_Factores_CA",
-        ],
-        "aplicar_TX": [
-            "CC_Afirmaciones_D",
-            "CC_Revision_Afirmaciones",
-        ],
-        "emitir_CIT": [
-            "CC_Ciclo_Id",
-            # factores reportados O límites estructurales
-        ],
-        "depositar": [
-            "CC_Citacion_CIT",
-        ],
+    "dependencias": {
+        "inclusion": [],
+        "severidad": ["inclusion"],
+        "C": ["inclusion", "severidad"],
+        "L": ["inclusion", "severidad"],
+        "K": ["O_context", "inclusion", "severidad"],
+        "Tru_Ri": ["C", "L", "K"],
+        "Tru_total": ["Tru_Ri"],
     },
-    "transiciones_prohibidas": [
-        {
-            "desde": "CC_Ciclo_Id",
-            "hacia": "CC_Tru_FO",
-            "motivo": "Sin O, premisas, conteos y factores no hay Tru admisible (T9, Def-5.3.1).",
-        },
-        {
-            "desde": "CC_Declaracion_O",
-            "hacia": "CC_Factores_CA",
-            "motivo": "Faltan premisas y conteos operacionales (§0.15).",
-        },
-        {
-            "desde": "CC_Permite_K=False",
-            "hacia": "CC_Conteo_K_numerico",
-            "motivo": "K sin O estable es ∅, no un número (Def-5.3.1, CX-A1).",
-        },
-        {
-            "desde": "cualquier",
-            "hacia": "inventar_C_L_K",
-            "motivo": "Humo: solo CA a partir de conteos observables.",
-        },
-        {
-            "desde": "cualquier",
-            "hacia": "recalcular_Tru_en_Omega_o_CIT",
-            "motivo": "FO es el único oficio de la fórmula; CIT/Omega no calculan.",
-        },
-        {
-            "desde": "CC_Taxonomia_TX",
-            "hacia": "sustituir_factores",
-            "motivo": "TX clasifica desviación; no reemplaza C, L, K ni Tru.",
-        },
-        {
-            "desde": "sin_match_TX",
-            "hacia": "forzar_codigo_TX",
-            "motivo": "Si no aplica táctica → none; no se inventa etiqueta.",
-        },
-    ],
-    "mapeo_protocolo_5": {
-        "1_Octx": ["CC_Ciclo_Id", "CC_Declaracion_O", "CC_Estado_O", "CC_Permite_K"],
-        "2_premisas": ["CC_Premisas_Registro", "CC_Evidencia_Estructural", "CC_Afirmaciones_D"],
-        "3_registro_puntuacion": [
-            "CC_Conteo_C", "CC_Conteo_L", "CC_Conteo_K",
-            "CC_Factores_CA", "CC_Tru_FO",
-        ],
-        "4_taxonomia": ["CC_Revision_Afirmaciones", "CC_Taxonomia_TX"],
-        "5_reconstruccion_cierre": [
-            "CC_Normas_AX", "CC_Citacion_CIT",
-            "CC_Deposito_Evidencia", "CC_Cierre_Ciclo",
-        ],
+    "anclas": {
+        "inclusion": "AM-D2: solo adopción propia entra en m/p/c; actos no inflan denominador",
+        "severidad": "AM-D5: k/r/f ∈ retícula {1/4, 1/2, 3/4, 1}",
+        "base_nula": "AM-D6 / AM-A3: m=0|p=0|c=0 → UNDEFINED (no 1)",
+        "dominio": "Def-5.3.1: sin O_context → K = UNDEFINED",
+        "ortogonalidad": "AM-A4: un mismo evento no inventa orígenes múltiples",
     },
-    "formulas_operacionales": {
-        "C": "1 - (k / m)",
-        "L": "1 - (r / p)",
-        "K": "1 - (f / c)  si permite_K; else ∅",
-        "Tru_Ri": "C * L * K",
-        "Tru_total": "(Tru_Ri * ALPHA) + BETA",
-        "fuente": "PROTOCOLO.pdf §0.15; IlverVillasmil TA5/TA6",
-    },
-    "oficios_por_nodo": {
-        "CC_Declaracion_O": "CX",
-        "CC_Permite_K": "CX",
-        "CC_Factores_CA": "CA",
-        "CC_Tru_FO": "FO",
-        "CC_Taxonomia_TX": "TX",
-        "CC_Citacion_CIT": "CIT",
-        "CC_Deposito_Evidencia": "CH/Engine registro",
-        "orquestacion": "Engine según contratos + este orden",
-    },
-    "anclas": [
-        "Def-5.3.1", "CX-A1", "CX-A10",
-        "TA1", "TA2", "TA3", "TA5", "TA6",
-        "T9", "T16", "T17",
-        "PROTOCOLO_5_pasos", "PROTOCOLO_0.15",
-        "calculo_variables",
-        "CORR_SEQ_01", "R1",
-    ],
 }
 
+# ===============================================================
+# DEFINICIONES DE CÁLCULO (IlverVillasmil.pdf: Enfoque Teórico)
+# ===============================================================
+DEF_C = {
+    "id": "DEF-C-TEORICO",
+    "tipo": "definicion",
+    "sujeto": "Coherencia (C)",
+    "relacion": "definido_como",
+    "objeto": "C(D) = 1 si no existe P tal que (D ⊢ P) ∧ (D ⊢ ¬P)",
+    "polaridad": True,
+    "enunciado": (
+        "Coherencia interna de D: ausencia de contradicciones lógicas. "
+        "C(D) = 1 si no es posible derivar una proposición P y su negación ¬P de D. "
+        "C(D) = 0 si existe al menos un par contradictorio."
+    ),
+    "formula": "C(D) = 1 si no hay contradicciones; C(D) = 0 si las hay",
+    "fuente": "IlverVillasmil.pdf, Axioma TA1 / Def 5.1",
+}
 
-def orden() -> list:
-    """Lista ordenada del ciclo de cálculo."""
-    return list(MECANICA["orden"])
+DEF_L = {
+    "id": "DEF-L-TEORICO",
+    "tipo": "definicion",
+    "sujeto": "Lógica (L)",
+    "relacion": "definido_como",
+    "objeto": "L(D) = 1 si ∃ espacio Z y transformación T: ∀z ∈ Z, T(z) es único e invariante",
+    "polaridad": True,
+    "enunciado": (
+        "Lógica del proceso: L(D) = 1 si existe un espacio Z y una transformación T "
+        "tal que para todo z en Z, T(z) es único e invariante. "
+        "L(D) = 0 si el proceso admite salidas incompatibles (no-determinismo)."
+    ),
+    "formula": "L(D) = 1 si el proceso es determinista; L(D) = 0 si no lo es",
+    "fuente": "IlverVillasmil.pdf, Axioma TA2 / Def 5.2",
+}
 
+DEF_K = {
+    "id": "DEF-K-TEORICO",
+    "tipo": "definicion",
+    "sujeto": "Correlación (K)",
+    "relacion": "definido_como",
+    "objeto": "K(D) = 1 si ||D(z) - O(z)|| ≤ ε para todo z en el dominio",
+    "polaridad": True,
+    "enunciado": (
+        "Correlación con el dominio observable O_context: K(D) = 1 si para todo z, "
+        "la distancia entre D(z) y O(z) es ≤ ε. "
+        "K(D) = UNDEFINED si no hay O_context explícito (Def-5.3.1)."
+    ),
+    "formula": "K(D) = 1 si D coincide con O; K(D) ∈ [0,1] si hay divergencia parcial; UNDEFINED sin O",
+    "fuente": "IlverVillasmil.pdf, Axioma TA3 y Corolario Def-5.3.1",
+}
 
-def indice(paso: str) -> int:
-    return MECANICA["orden"].index(paso)
+# ===============================================================
+# DEFINICIONES DE CÁLCULO (PROTOCOLO + Anclas AM: Enfoque Operacional)
+# ===============================================================
+DEF_C_OP = {
+    "id": "DEF-C-OPERACIONAL",
+    "tipo": "definicion",
+    "sujeto": "Coherencia (C) - Operacional bajo anclas",
+    "relacion": "definido_como",
+    "objeto": "C = 1 - (k / m)  si m > 0;  UNDEFINED si m = 0",
+    "polaridad": True,
+    "enunciado": (
+        "Coherencia operacional con anclas de medición:\n"
+        "  1. m = número de compromisos de adopción propia (AM-D2).\n"
+        "     Actos ('propongo…') no entran en el denominador.\n"
+        "  2. k = suma de pesos de severidad de las contradicciones (AM-D5).\n"
+        "     Pesos ∈ {1/4, 1/2, 3/4, 1}.\n"
+        "  3. Si m = 0 → C = UNDEFINED (AM-D6 / AM-A3). No se asigna 1.\n"
+        "  4. Si m > 0 → C = 1 - k/m  (Fraction exacta)."
+    ),
+    "formula": "C = 1 - (k / m)  si m > 0;  UNDEFINED si m = 0",
+    "variables": {
+        "m": "Número de compromisos de adopción propia (ancla de inclusión)",
+        "k": "Suma de pesos de severidad de contradicciones (retícula AM-D5)",
+    },
+    "anclas": ["AM-D2", "AM-D5", "AM-D6", "AM-A3"],
+    "fuente": "PROTOCOLO.pdf sec. 0.15 + anclas_medicion_AX + calculator/coherencia.py v2.0",
+}
 
+DEF_L_OP = {
+    "id": "DEF-L-OPERACIONAL",
+    "tipo": "definicion",
+    "sujeto": "Lógica (L) - Operacional bajo anclas",
+    "relacion": "definido_como",
+    "objeto": "L = 1 - (r / p)  si p > 0;  UNDEFINED si p = 0",
+    "polaridad": True,
+    "enunciado": (
+        "Lógica operacional con anclas de medición:\n"
+        "  1. p = número de posturas / puntos de fijación (AM-D2).\n"
+        "  2. r = suma de pesos de severidad de las reversiones (AM-D5).\n"
+        "  3. Si p = 0 → L = UNDEFINED (AM-D6 / AM-A3). No se asigna 1.\n"
+        "  4. Si p > 0 → L = 1 - r/p  (Fraction exacta)."
+    ),
+    "formula": "L = 1 - (r / p)  si p > 0;  UNDEFINED si p = 0",
+    "variables": {
+        "p": "Número de posturas / puntos de fijación (ancla de inclusión)",
+        "r": "Suma de pesos de severidad de reversiones (retícula AM-D5)",
+    },
+    "anclas": ["AM-D2", "AM-D5", "AM-D6", "AM-A3"],
+    "fuente": "PROTOCOLO.pdf sec. 0.15 + anclas_medicion_AX + calculator/logica.py v2.0",
+}
 
-def precondiciones(paso: str) -> list:
-    i = indice(paso)
-    return list(MECANICA["orden"][:i])
+DEF_K_OP = {
+    "id": "DEF-K-OPERACIONAL",
+    "tipo": "definicion",
+    "sujeto": "Correlación (K) - Operacional bajo anclas",
+    "relacion": "definido_como",
+    "objeto": "K = 1 - (f / c)  si c > 0 y O presente;  UNDEFINED si c = 0 o sin O",
+    "polaridad": True,
+    "enunciado": (
+        "Correlación operacional con anclas de medición:\n"
+        "  1. Exige O_context explícito (Def-5.3.1). Sin él → UNDEFINED.\n"
+        "  2. c = número de afirmaciones verificables respecto de O (AM-D2).\n"
+        "  3. f = suma de pesos de severidad de las divergencias (AM-D5).\n"
+        "  4. Si c = 0 → K = UNDEFINED (AM-D6 / AM-A3). No se asigna 1.\n"
+        "  5. Si c > 0 y O presente → K = 1 - f/c  (Fraction exacta)."
+    ),
+    "formula": "K = 1 - (f / c)  si c > 0 ∧ O;  UNDEFINED si c = 0 ∨ ¬O",
+    "variables": {
+        "c": "Número de afirmaciones verificables respecto de O (ancla de inclusión)",
+        "f": "Suma de pesos de severidad de divergencias con O (retícula AM-D5)",
+        "O": "Dominio observable declarado (O_context)",
+    },
+    "anclas": ["AM-D2", "AM-D5", "AM-D6", "AM-A3", "Def-5.3.1"],
+    "fuente": "PROTOCOLO.pdf sec. 0.15 + anclas_medicion_AX + calculator/correlacion_k.py v2.0",
+}
 
+# ===============================================================
+# DEFINICIONES DE LAS FÓRMULAS CANÓNICAS
+# ===============================================================
+DEF_TRU_RI = {
+    "id": "DEF-TRU-RI",
+    "tipo": "definicion",
+    "sujeto": "Tru_Ri",
+    "relacion": "definido_como",
+    "objeto": "Tru_Ri(D) = C(D) · L(D) · K(D)   (solo si C, L, K definidos)",
+    "polaridad": True,
+    "enunciado": (
+        "Contribución del observador (R_i): Tru_Ri(D) = C(D) · L(D) · K(D). "
+        "Si alguno de C, L, K es UNDEFINED, Tru_Ri = UNDEFINED. "
+        "No se forma producto parcial ni se sustituye el factor faltante por 1."
+    ),
+    "formula": "Tru_Ri(D) = C · L · K  si todos definidos;  UNDEFINED en caso contrario",
+    "fuente": "IlverVillasmil.pdf, Axioma TA5 + AM-A3",
+}
 
-def permite_factores_k(instanciados: set) -> bool:
-    """K numérico solo tras O y compuerta permite_K."""
-    req = {
-        "CC_Ciclo_Id",
-        "CC_Declaracion_O",
-        "CC_Estado_O",
-        "CC_Permite_K",
-    }
-    return req.issubset(set(instanciados))
+DEF_TRU_TOTAL = {
+    "id": "DEF-TRU-TOTAL",
+    "tipo": "definicion",
+    "sujeto": "Tru_total",
+    "relacion": "definido_como",
+    "objeto": "Tru_total(D) = (Tru_Ri(D) · ALPHA) + BETA",
+    "polaridad": True,
+    "enunciado": (
+        "Verdad total: Tru_total(D) = (Tru_Ri(D) · α) + β. "
+        "α = 26/27 (techo observable). β = 1/27 (piso estructural). "
+        "Si Tru_Ri es UNDEFINED, Tru_total se reporta UNDEFINED; "
+        "el piso β permanece como referencia estructural (T17)."
+    ),
+    "formula": "Tru_total(D) = (Tru_Ri · α) + β",
+    "fuente": "IlverVillasmil.pdf, Definición 2.14 / Teorema 16 y 17",
+}
 
+# ===============================================================
+# DECLARACIONES (Axiomas, anclas y teoremas relevantes)
+# ===============================================================
+DECLARACIONES = [
+    # --- Anclas de medición (nuevas) ---
+    {
+        "id": "AM-D2",
+        "tipo": "definicion",
+        "sujeto": "Ancla de inclusión",
+        "relacion": "exige",
+        "objeto": "adopcion_propia_para_entrar_en_m_p_c",
+        "polaridad": True,
+        "enunciado": (
+            "AM-D2: Solo las unidades de adopción propia (afirmación, obligación, "
+            "autoatribución, compromiso metodológico) entran en los denominadores "
+            "m, p, c. Los actos ('propongo', 'podríamos') no inflan el denominador."
+        ),
+        "fuente": "anclas_medicion_AX",
+    },
+    {
+        "id": "AM-D5",
+        "tipo": "definicion",
+        "sujeto": "Retícula de severidad",
+        "relacion": "restringe",
+        "objeto": "pesos_de_k_r_f",
+        "polaridad": True,
+        "enunciado": (
+            "AM-D5: k, r, f son sumas de pesos tomados de la retícula "
+            "{1/4, 1/2, 3/4, 1}. No se usan pesos continuos arbitrarios."
+        ),
+        "fuente": "anclas_medicion_AX",
+    },
+    {
+        "id": "AM-D6",
+        "tipo": "definicion",
+        "sujeto": "Base nula",
+        "relacion": "implica",
+        "objeto": "UNDEFINED",
+        "polaridad": True,
+        "enunciado": (
+            "AM-D6: Si tras aplicar el ancla de inclusión m=0 (o p=0, o c=0), "
+            "el factor correspondiente es UNDEFINED. No se asigna 1."
+        ),
+        "fuente": "anclas_medicion_AX",
+    },
+    {
+        "id": "AM-A3",
+        "tipo": "axioma",
+        "sujeto": "Prohibición de maquillaje de base nula",
+        "relacion": "prohíbe",
+        "objeto": "asignar_1_cuando_denominador_es_0",
+        "polaridad": True,
+        "enunciado": (
+            "AM-A3: Está prohibido devolver C=1, L=1 o K=1 cuando el denominador "
+            "respectivo es 0. Eso inflaba Tru_Ri de forma artificial."
+        ),
+        "fuente": "anclas_medicion_AX",
+    },
+    {
+        "id": "AM-A4",
+        "tipo": "axioma",
+        "sujeto": "Ortogonalidad de origen",
+        "relacion": "exige",
+        "objeto": "no_inventar_origenes_multiples_del_mismo_evento",
+        "polaridad": True,
+        "enunciado": (
+            "AM-A4: Un mismo evento causal no inventa orígenes múltiples. "
+            "Puede derivar efectos en más de un factor, pero el origen se declara una vez."
+        ),
+        "fuente": "anclas_medicion_AX",
+    },
+    # --- Ya existentes, reforzados ---
+    {
+        "id": "AX-COTA",
+        "tipo": "axioma",
+        "sujeto": "Cota de Tru_total",
+        "relacion": "≥",
+        "objeto": "BETA",
+        "polaridad": True,
+        "enunciado": "Tru_total(D) ≥ β = 1/27 (Teorema 17: Imposibilidad de Colapso Total).",
+        "fuente": "IlverVillasmil.pdf, Teorema 17",
+    },
+    {
+        "id": "AX-TECHO",
+        "tipo": "axioma",
+        "sujeto": "Techo de Tru_Ri",
+        "relacion": "≤",
+        "objeto": "1",
+        "polaridad": True,
+        "enunciado": (
+            "Tru_Ri(D) ≤ 1. Tras multiplicar por α el aporte observable "
+            "no supera 26/27 (Teorema 16: Techo Estructural)."
+        ),
+        "fuente": "IlverVillasmil.pdf, Teorema 16",
+    },
+    {
+        "id": "AX-K-UNDEFINED",
+        "tipo": "axioma",
+        "sujeto": "K sin O_context",
+        "relacion": "=",
+        "objeto": "UNDEFINED",
+        "polaridad": True,
+        "enunciado": (
+            "K(D) = UNDEFINED si no hay un O_context explícito. "
+            "No es 0, es indefinido (Corolario Def-5.3.1)."
+        ),
+        "fuente": "IlverVillasmil.pdf, Corolario Def-5.3.1",
+    },
+    {
+        "id": "AX-TRU-RI-UNDEFINED",
+        "tipo": "axioma",
+        "sujeto": "Tru_Ri con factor indefinido",
+        "relacion": "=",
+        "objeto": "UNDEFINED",
+        "polaridad": True,
+        "enunciado": (
+            "Si C, L o K es UNDEFINED, Tru_Ri = UNDEFINED. "
+            "No se forma producto parcial ni se sustituye el factor faltante por 1."
+        ),
+        "fuente": "AM-A3 + Axioma TA5",
+    },
+]
 
-def permite_tru(instanciados: set) -> bool:
-    """Tru solo tras factores CA (no inventados)."""
-    return "CC_Factores_CA" in set(instanciados)
-
-
-def ruta_minima_valuacion() -> list:
-    """Hasta Tru_FO, sin TX/CIT/depósito."""
-    return [
-        "CC_Ciclo_Id",
-        "CC_Declaracion_O",
-        "CC_Estado_O",
-        "CC_Permite_K",
-        "CC_Premisas_Registro",
-        "CC_Evidencia_Estructural",
-        "CC_Afirmaciones_D",
-        "CC_Conteo_C",
-        "CC_Conteo_L",
-        "CC_Conteo_K",
-        "CC_Factores_CA",
-        "CC_Tru_FO",
-    ]
-
-
+# ===============================================================
+# EXPORTACIÓN
+# ===============================================================
 __all__ = [
     "MECANICA",
-    "orden",
-    "indice",
-    "precondiciones",
-    "permite_factores_k",
-    "permite_tru",
-    "ruta_minima_valuacion",
+    "VERSION",
+    "PESO_ROCE",
+    "PESO_PARCIAL",
+    "PESO_GRAVE",
+    "PESO_TOTAL",
+    "RETICULA_SEVERIDAD",
+    "DEF_C",
+    "DEF_L",
+    "DEF_K",
+    "DEF_C_OP",
+    "DEF_L_OP",
+    "DEF_K_OP",
+    "DEF_TRU_RI",
+    "DEF_TRU_TOTAL",
+    "DECLARACIONES",
 ]
