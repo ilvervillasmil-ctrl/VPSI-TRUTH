@@ -1,31 +1,31 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 9.8)
-Generado: 2026-08-04 00:49:43 UTC    Commit: 87cf6e1e1f2c
+VPSI-TRUTH (Versión 9.9)
+Generado: 2026-08-04 01:15:53 UTC    Commit: 49e588e88fc8
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
-Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
+Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
 ================================================================================
 
 ══════════════════════════════════════════════════════════════════════════════
   AUDITORÍA DEL VPSI  ·  el repositorio como objeto
-  Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores del ciclo
+  Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
   Estado     : ⚠️ PARCIAL
   Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
   permite_k  : True
 
-  📐  CÁLCULO  (fórmula canónica VPSI)
+  📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
+  Factores leídos: 0/3  (C=⚪ L=⚪ K=⚪)
   ┌─────────────────────────────────────────────────────────┐
-  │  C          =  —                                       │
-  │  L          =  —                                       │
-  │  K          =  —                                       │
+  │  ⚪ C (coherencia  ) =  no depositado                   │
+  │  ⚪ L (lógica      ) =  no depositado                   │
+  │  ⚪ K (correlación ) =  no depositado                   │
   │─────────────────────────────────────────────────────────│
-  │  Tru_Ri     =  C · L · K                              │
-  │             =  —                                       │
-  │─────────────────────────────────────────────────────────│
-  │  Tru_total  =  (Tru_Ri · α) + β                       │
-  │             =  —                                       │
+  │  ⚪ Tru_Ri     =  no depositado                           │
+  │  ⚪ Tru_total  =  no depositado                           │
   └─────────────────────────────────────────────────────────┘
+  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
+        0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
   📎 Citas (teoremas / axiomas / normas):
@@ -37,24 +37,24 @@ Cálculo: sistema (CA/FO/Engine) · Omega solo presenta
 
 ══════════════════════════════════════════════════════════════════════════════
   ÚLTIMO TEST EVALUADO
-  Último ciclo real depositado (tests / uso) · mismos campos
+  Último ciclo real depositado (tests / uso) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
   Estado     : ⚠️ PARCIAL
   Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
   permite_k  : True
 
-  📐  CÁLCULO  (fórmula canónica VPSI)
+  📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
+  Factores leídos: 2/3  (C=⚪ L=✅ K=✅)
   ┌─────────────────────────────────────────────────────────┐
-  │  C          =  —                                       │
-  │  L          =  1                                       │
-  │  K          =  0                                       │
+  │  ⚪ C (coherencia  ) =  no depositado                   │
+  │  ✅ L (lógica      ) =  1                               │
+  │  ✅ K (correlación ) =  0                               │
   │─────────────────────────────────────────────────────────│
-  │  Tru_Ri     =  C · L · K                              │
-  │             =  —                                       │
-  │─────────────────────────────────────────────────────────│
-  │  Tru_total  =  (Tru_Ri · α) + β                       │
-  │             =  —                                       │
+  │  ⚪ Tru_Ri     =  no depositado                           │
+  │  ⚪ Tru_total  =  no depositado                           │
   └─────────────────────────────────────────────────────────┘
+  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
+        0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
   📎 Citas      : — (sin ids/anuncios en el ciclo)
@@ -95,8 +95,8 @@ ESTADO GLOBAL
 ================================================================================
 
   ⚪ 1. [DATOS] auditoria_vpsi
-     Detalle   : Sin valuación de auto-auditoría del repo en el paquete
-     Impacto   : La caja 1 no puede mostrar C/L/K/Tru
+     Detalle   : Ciclo de auto-auditoría sin factores depositados legibles
+     Impacto   : La caja 1 no muestra C/L/K leídos
      Acción    : Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado
 
 ================================================================================
@@ -168,13 +168,14 @@ Rechazado:
 ================================================================================
 ✅  CIERRE
 ================================================================================
-  Versión Omega      : 9.8
+  Versión Omega      : 9.9
   Salud              : ✅ OPERATIVO — listo para avanzar
   Acciones abiertas  : 1
   Bloqueantes        : 0
-  Caja 1             : Auditoría del VPSI (sistema)
-  Caja 2             : Último test evaluado
-  Omega no inventa C/L/K/Tru; los lanza el ciclo del sistema.
+  Caja 1             : Auditoría del VPSI (sistema) — LECTURA
+  Caja 2             : Último test evaluado — LECTURA
+  Omega no inventa C/L/K/Tru; lee lo que el ciclo depositó.
+  0 = cero real · UNDEFINED = base nula · no depositado = no vino
 ================================================================================
 
 JSON: /home/runner/work/VPSI-TRUTH/VPSI-TRUTH/diagnostics/omega_report_data.json

@@ -3084,7 +3084,14 @@
     "origen": "omega_report:PETICION_AUDITORIA_VPSI",
     "secuencia": 1,
     "n_citas": 1,
-    "n_anuncios": 1
+    "n_anuncios": 1,
+    "lectura": {
+      "C": false,
+      "L": false,
+      "K": false,
+      "tru_ri": false,
+      "tru_total": false
+    }
   },
   "ultimo_test": {
     "estado": "PARCIAL",
@@ -3102,7 +3109,14 @@
     "origen": "test_conversacion",
     "secuencia": 6,
     "n_citas": null,
-    "n_anuncios": null
+    "n_anuncios": null,
+    "lectura": {
+      "C": false,
+      "L": true,
+      "K": true,
+      "tru_ri": false,
+      "tru_total": false
+    }
   },
   "informe_mecanica": {
     "contenedor": "correlacion_mecanica",
