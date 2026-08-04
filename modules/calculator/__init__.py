@@ -3,13 +3,18 @@ VPSI-TRUTH --- modules/calculator/__init__.py
 
 Rol CA: calcula factores C, L, K.
 No calcula Tru_Ri ni Tru_total (eso es FO).
-Sin O_context / contexto, K queda UNDEFINED (Def-5.3.1).
+
+Contrato público de K:
+  - Sin O_context / contexto → K is None  (tests + Engine histórico)
+  - Con O y base nula        → UNDEFINED
+  - Con O y datos            → Fraction
 
 Versión: 2.0
 Cambio principal respecto a 1.2:
   - Integra conteos.py v2.0 (anclas de inclusión + retícula + base nula).
   - Integra coherencia / logica / correlacion_k v2.0
-    (C/L/K = UNDEFINED cuando base nula; k/r/f como Fraction).
+    (C/L = UNDEFINED cuando base nula; k/r/f como Fraction).
+  - Sin O → K = None (contrato público; no UNDEFINED).
   - El init sigue siendo centinela: descubre, exige APIs, reporta choques.
   - calcular() orquesta solo C, L, K; no forma Tru.
   - requiere: []  (CA no depende de CT ni FO para arrancar).
@@ -122,7 +127,6 @@ def _importar_apis() -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
                 })
                 continue
             apis[factor] = fn
-            # Leer versión del submódulo si existe (para auditoría)
             ver = getattr(mod, "VERSION", None)
             if ver is not None:
                 apis["_{0}_version".format(factor)] = ver
@@ -177,7 +181,6 @@ def _asegurar_conteos(peticion: Dict[str, Any]) -> Dict[str, Any]:
     """
     if _CONTEOS is None:
         return peticion
-    # Si ya hay meta de conteos v2, no regenerar
     meta = peticion.get("_conteos_meta")
     if isinstance(meta, dict) and meta.get("version"):
         return peticion
@@ -243,7 +246,9 @@ def barrer() -> Dict[str, Any]:
     - APIs de factores canónicos resolubles
     - Choque: dos stems mapeados al mismo factor
     - Presencia de conteos.py
-    - Smoke de anclas: base nula debe producir UNDEFINED en C/L/K
+    - Smoke de anclas:
+        * C/L base nula → UNDEFINED
+        * K sin O        → None  (contrato público)
     No calcula Tru. No exige valores numéricos sin petición.
     """
     errores: List[Dict[str, str]] = list(_ERRORES_CARGA)
@@ -280,23 +285,28 @@ def barrer() -> Dict[str, Any]:
     conteos_ok = _CONTEOS is not None
     conteos_ver = (_CONTEOS or {}).get("version")
 
-    # ----- Smoke de anclas (base nula → UNDEFINED) -----
+    # ----- Smoke de anclas -----
     if all(f in _APIS for f in _FACTORES_CANONICOS) and conteos_ok:
         try:
-            vacio = calcular({"mensaje": "", "contexto": None, "metodo": "operacional"})
+            vacio = calcular({
+                "mensaje": "",
+                "contexto": None,
+                "metodo": "operacional",
+            })
             for factor in _FACTORES_CANONICOS:
                 val = vacio.get(factor)
-                # K sin O también debe ser UNDEFINED/None
                 if factor == "K":
-                    if val is not None and not es_undefined(val):
+                    # Contrato público: sin O → None
+                    if val is not None:
                         errores.append({
-                            "archivo": "correlacion_k.py",
+                            "archivo": "correlacion_k.py / orquestador",
                             "error": (
-                                "ancla Def-5.3.1 violada: sin O_context "
-                                "K debió ser UNDEFINED/None y fue {0}".format(val)
+                                "contrato público violado: sin O_context "
+                                "K debió ser None y fue {0}".format(val)
                             ),
                         })
                 else:
+                    # Ancla AM: base nula → UNDEFINED
                     if val is not None and not es_undefined(val):
                         errores.append({
                             "archivo": "?",
@@ -312,7 +322,6 @@ def barrer() -> Dict[str, Any]:
                 "smoke de anclas no pudo ejecutarse: {0}".format(e)
             )
 
-    # Versiones de submódulos
     versiones = {
         "C": _APIS.get("_C_version"),
         "L": _APIS.get("_L_version"),
@@ -337,7 +346,7 @@ def barrer() -> Dict[str, Any]:
         "versiones": versiones,
         "nota": (
             "conteos.py produce k/m, r/p, f/c bajo anclas AM; "
-            "base nula → UNDEFINED; sin O → K UNDEFINED; "
+            "base nula C/L → UNDEFINED; sin O → K is None; "
             "CA no calcula Tru (FO)."
         ),
     }
@@ -356,7 +365,8 @@ def inventario(peticion: Any = None) -> Dict[str, Any]:
         "coherente": b.get("coherente"),
         "funcion": (
             "Calcula C, L, K bajo anclas de medición (AM). "
-            "UNDEFINED = base nula o sin O (Def-5.3.1 / AM-D6). "
+            "C/L UNDEFINED = base nula (AM-D6). "
+            "K is None = sin O_context (contrato público / Def-5.3.1). "
             "No calcula Tru_total (FO). "
             "Si metodo=operacional y faltan conteos, los produce conteos.py. "
             "barrer = centinela de carpeta + smoke de anclas."
@@ -375,6 +385,7 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
       - Si metodo=operacional y faltan conteos → conteos.inyectar_en_peticion
       - Cada factor recibe la petición completa (dict) y devuelve dict
       - Se extrae C / L / K (Fraction | UNDEFINED | None)
+      - Sin O_context → K is None  (contrato público histórico)
       - No se forma Tru_Ri ni Tru_total (eso es FO)
 
     None / UNDEFINED = dato no disponible (legítimo), no es fallo del contenedor.
@@ -393,7 +404,6 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if isinstance(meta_conteos, dict):
             notas.extend(meta_conteos.get("notas") or [])
 
-    # Asegurar que metodo viaje dentro de la petición
     peticion["metodo"] = metodo
 
     C = L = K = None
@@ -438,7 +448,9 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     else:
         errores.append("API L no disponible")
 
-    # ----- K (exige contexto / O; sin él → UNDEFINED) -----
+    # ----- K -----
+    # Contrato público: sin O_context → K is None.
+    # Con O: se delega a correlacion_k (Fraction | UNDEFINED).
     fn_k = _APIS.get("K")
     o_ctx = (
         peticion.get("contexto")
@@ -447,25 +459,33 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     )
     if callable(fn_k):
         try:
-            # Aun sin O dejamos que correlacion_k decida (devuelve UNDEFINED)
-            raw = fn_k(peticion)
-            K = _extraer_factor(raw, "K")
-            notas.extend(_notas_factor(raw))
-            if isinstance(raw, dict):
-                detalle["K"] = {
-                    "c": raw.get("c"),
-                    "f": raw.get("f"),
-                    "o_presente": raw.get("o_presente"),
-                    "ruta": raw.get("ruta"),
-                    "version": raw.get("version"),
-                }
-            if o_ctx is None and not es_undefined(K) and K is not None:
-                # Defensa extra del orquestador (Def-5.3.1)
-                K = UNDEFINED
+            if o_ctx is None or (isinstance(o_ctx, str) and not str(o_ctx).strip()):
+                # Contrato público histórico + tests:
+                # sin O_context → K is None (no UNDEFINED).
+                # Def-5.3.1 se respeta: no se inventa correspondencia.
+                K = None
                 notas.append(
-                    "K forzado a UNDEFINED por orquestador: O_context ausente "
-                    "(Def-5.3.1)"
+                    "K = None (sin O_context; contrato público CA / Def-5.3.1)"
                 )
+                detalle["K"] = {
+                    "c": None,
+                    "f": None,
+                    "o_presente": False,
+                    "ruta": "orquestador",
+                    "version": _APIS.get("_K_version"),
+                }
+            else:
+                raw = fn_k(peticion)
+                K = _extraer_factor(raw, "K")
+                notas.extend(_notas_factor(raw))
+                if isinstance(raw, dict):
+                    detalle["K"] = {
+                        "c": raw.get("c"),
+                        "f": raw.get("f"),
+                        "o_presente": raw.get("o_presente"),
+                        "ruta": raw.get("ruta"),
+                        "version": raw.get("version"),
+                    }
         except Exception as e:
             errores.append("Error en K: {0}".format(e))
             K = None
@@ -506,8 +526,8 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
 def verificar_salida(salida: Any) -> bool:
     """
     Forma mínima de salida de calcular: dict con C, L, K.
-    None / UNDEFINED en un factor es legítimo (sobre todo K sin O,
-    o base nula en C/L).
+    None / UNDEFINED en un factor es legítimo
+    (K sin O = None; C/L base nula = UNDEFINED).
     """
     if not isinstance(salida, dict):
         return False
@@ -524,7 +544,8 @@ CONTENEDOR = {
     "requiere": [],
     "descripcion": (
         "Calcula C, L, K bajo anclas de medición (AM v1.0). "
-        "UNDEFINED = base nula (AM-D6) o sin O_context (Def-5.3.1). "
+        "C/L UNDEFINED = base nula (AM-D6 / AM-A3). "
+        "K is None = sin O_context (contrato público / Def-5.3.1). "
         "No calcula Tru_Ri ni Tru_total (FO). "
         "Si metodo=operacional y faltan conteos, los produce conteos.py v2. "
         "barrer = centinela de carpeta + smoke de anclas. "
@@ -538,7 +559,6 @@ CONTENEDOR = {
     },
 }
 
-# Exponer oficio de conteos solo si el archivo cargó
 if _CONTEOS is not None:
     CONTENEDOR["capacidades"]["extraer_conteos"] = _CONTEOS["extraer_conteos"]
     CONTENEDOR["capacidades"]["inyectar_conteos"] = _CONTEOS["inyectar_en_peticion"]
