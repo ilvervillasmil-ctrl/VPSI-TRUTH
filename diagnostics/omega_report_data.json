@@ -338,10 +338,10 @@
         "factores": {
           "C": "19/20",
           "L": "1",
-          "K": "6393/264620"
+          "K": "1/40"
         },
-        "tru_ri": "121467/5292400",
-        "tru_total": "4225271/71447400",
+        "tru_ri": "19/800",
+        "tru_total": "647/10800",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -367,9 +367,9 @@
       "estado": "OK",
       "C": "19/20",
       "L": "1",
-      "K": "6393/264620",
-      "tru_ri": "121467/5292400",
-      "tru_total": "4225271/71447400",
+      "K": "1/40",
+      "tru_ri": "19/800",
+      "tru_total": "647/10800",
       "origen": "test_contradiccion_estructural_interna",
       "invocador_id": "test_contradiccion_estructural_interna",
       "secuencia": 2
@@ -440,10 +440,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "31/131"
+          "K": "1/4"
         },
-        "tru_ri": "31/131",
-        "tru_total": "937/3537",
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -469,9 +469,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "31/131",
-      "tru_ri": "31/131",
-      "tru_total": "937/3537",
+      "K": "1/4",
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 4
@@ -490,10 +490,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "31/131"
+          "K": "1/4"
         },
-        "tru_ri": "31/131",
-        "tru_total": "937/3537",
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -519,9 +519,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "31/131",
-      "tru_ri": "31/131",
-      "tru_total": "937/3537",
+      "K": "1/4",
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 5
@@ -786,10 +786,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "293/393"
+          "K": "3/4"
         },
-        "tru_ri": "293/393",
-        "tru_total": "8011/10611",
+        "tru_ri": "3/4",
+        "tru_total": "41/54",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -815,9 +815,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "293/393",
-      "tru_ri": "293/393",
-      "tru_total": "8011/10611",
+      "K": "3/4",
+      "tru_ri": "3/4",
+      "tru_total": "41/54",
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
       "secuencia": 11
@@ -1462,7 +1462,7 @@
           "C": "2.0",
           "L": "2.0",
           "K": "2.0",
-          "conteos": "3.4.0",
+          "conteos": "3.5.0",
           "orquestador": "2.0"
         },
         "coherente": true,
@@ -2511,10 +2511,10 @@
           "factores": {
             "C": "1",
             "L": "1",
-            "K": "5843/20043"
+            "K": "7/24"
           },
-          "tru_ri": "5843/20043",
-          "tru_total": "171961/541161",
+          "tru_ri": "7/24",
+          "tru_total": "103/324",
           "alpha": "26/27",
           "beta": "1/27",
           "R_i_equals_R": false,
@@ -3775,9 +3775,9 @@
     "estado": "OK",
     "C": "1",
     "L": "1",
-    "K": "5843/20043",
-    "tru_ri": "5843/20043",
-    "tru_total": "171961/541161",
+    "K": "7/24",
+    "tru_ri": "7/24",
+    "tru_total": "103/324",
     "alpha": "26/27",
     "beta": "1/27",
     "taxonomia": null,
@@ -3827,9 +3827,9 @@
     "estado": "OK",
     "C": "1",
     "L": "1",
-    "K": "293/393",
-    "tru_ri": "293/393",
-    "tru_total": "8011/10611",
+    "K": "3/4",
+    "tru_ri": "3/4",
+    "tru_total": "41/54",
     "alpha": "26/27",
     "beta": "1/27",
     "taxonomia": null,
@@ -4746,7 +4746,7 @@
       "C": "2.0",
       "L": "2.0",
       "K": "2.0",
-      "conteos": "3.4.0",
+      "conteos": "3.5.0",
       "orquestador": "2.0"
     },
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
