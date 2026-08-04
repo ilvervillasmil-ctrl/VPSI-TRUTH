@@ -23,8 +23,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": null,
-          "K": null
+          "L": "1",
+          "K": "1/4"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -36,8 +36,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": null,
-      "K": null,
+      "L": "1",
+      "K": "1/4",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -58,8 +58,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": null,
-          "K": null
+          "L": "1",
+          "K": "1/4"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -71,8 +71,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": null,
-      "K": null,
+      "L": "1",
+      "K": "1/4",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -93,8 +93,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": null,
-          "K": null
+          "L": "1",
+          "K": "0"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -106,8 +106,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": null,
-      "K": null,
+      "L": "1",
+      "K": "0",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -128,8 +128,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": null,
-          "K": null
+          "L": "1",
+          "K": "0"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -141,8 +141,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": null,
-      "K": null,
+      "L": "1",
+      "K": "0",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -163,8 +163,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": null,
-          "K": null
+          "L": "1",
+          "K": "0"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -176,8 +176,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": null,
-      "K": null,
+      "L": "1",
+      "K": "0",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",
@@ -198,8 +198,8 @@
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
           "C": null,
-          "L": null,
-          "K": null
+          "L": "1",
+          "K": "0"
         },
         "fallos": [],
         "engine_version": "11.1",
@@ -211,8 +211,8 @@
       },
       "estado": "PARCIAL",
       "C": null,
-      "L": null,
-      "K": null,
+      "L": "1",
+      "K": "0",
       "tru_ri": null,
       "tru_total": null,
       "origen": "test_conversacion",

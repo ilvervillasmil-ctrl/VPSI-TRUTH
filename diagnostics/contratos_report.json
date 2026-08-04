@@ -397,7 +397,7 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.2",
+          "version": "2.0",
           "ok": true,
           "fn_name": "calcular"
         },
@@ -406,7 +406,7 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.2",
+          "version": "2.0",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -415,7 +415,7 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.2",
+          "version": "2.0",
           "ok": true,
           "fn_name": "inventario"
         },
@@ -424,7 +424,7 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.2",
+          "version": "2.0",
           "ok": true,
           "fn_name": "extraer_conteos"
         },
@@ -433,13 +433,13 @@
           "callable": true,
           "modulo": "calculator",
           "rol": "CA",
-          "version": "1.2",
+          "version": "2.0",
           "ok": true,
           "fn_name": "inyectar_en_peticion"
         }
       ],
       "nombre": "calculator",
-      "version": "1.2"
+      "version": "2.0"
     },
     "CX": {
       "modulos": [
