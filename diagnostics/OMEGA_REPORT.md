@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 9.9)
-Generado: 2026-08-04 01:58:31 UTC    Commit: 89789384d8c7
+Generado: 2026-08-04 03:45:59 UTC    Commit: 2a59214fb131
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
 ================================================================================
@@ -65,7 +65,7 @@ Contrato: Omega SOLO LEE lo que el ciclo depositó · no calcula · no rellena
 ESTADO GLOBAL
   ✅ Engine       : OPERATIVO
   ✅ Axiomas      : coherente
-  📦 Contenedores : 14
+  📦 Contenedores : 15
   ✅ Roles vacíos : 0
   ✅ Rechazados   : 0
   ✅ Salud        : OPERATIVO — listo para avanzar
@@ -81,6 +81,7 @@ ESTADO GLOBAL
   | CT   | CARGADO   | 1   | constante                            |
   | CX   | CARGADO   | 1   | contexto                             |
   | DG   | CARGADO   | 1   | diagnostico                          |
+  | DI   | CARGADO   | 1   | diccionario                          |
   | FO   | CARGADO   | 1   | formulas                             |
   | MC   | CARGADO   | 1   | correlacion_mecanica                 |
   | RE   | CARGADO   | 1   | realidad                             |
@@ -122,7 +123,7 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=14  caps_ok=67  caps_fallo=0
+      coherente=True  validos=15  caps_ok=78  caps_fallo=0
 
   ✅ Tests (pytest — forma)
       total=134  pasados=133  fallidos=0  tasa=99.25%
@@ -153,6 +154,7 @@ Presente:
   ✅ CT: constante
   ✅ CX: contexto
   ✅ DG: diagnostico
+  ✅ DI: diccionario
   ✅ FO: formulas
   ✅ MC: correlacion_mecanica
   ✅ RE: realidad

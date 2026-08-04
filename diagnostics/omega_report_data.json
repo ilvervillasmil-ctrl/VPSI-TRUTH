@@ -524,6 +524,9 @@
         "CX": [
           "contexto"
         ],
+        "DI": [
+          "diccionario"
+        ],
         "RE": [
           "realidad"
         ],
@@ -674,6 +677,27 @@
           }
         },
         {
+          "nombre": "diccionario",
+          "rol": "DI",
+          "version": "1.0",
+          "requiere": [],
+          "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/diccionario/__init__.py",
+          "descripcion": "Biblioteca de definiciones. Rol DI. Materia prima léxica: palabra → definición → significado. Herramienta para contrastar y correlacionar a nivel de significado. Auto-carga todos los archivos debajo (es, en, glosario_vpsi, …). Engine puede solicitar y distribuir definiciones a cualquier módulo según el contexto del ciclo; el resultado final (C, L, K, Tru) no depende de que Engine invente significados. No calcula Tru. No clasifica O. No trae dominios externos (RE).",
+          "capacidades": {
+            "verificar": "barrer",
+            "barrer": "barrer",
+            "inventario": "inventario",
+            "axiomas": "axiomas",
+            "resolver": "resolver",
+            "listar": "listar",
+            "cargar": "cargar",
+            "cargar_todos": "cargar_todos",
+            "definir": "definir",
+            "significado": "significado",
+            "inyectar_en_peticion": "inyectar_en_peticion"
+          }
+        },
+        {
           "nombre": "formulas",
           "rol": "FO",
           "version": "1.0",
@@ -763,7 +787,7 @@
           }
         }
       ],
-      "total": 14
+      "total": 15
     },
     "contenido": {
       "axiomas": {
@@ -1267,6 +1291,16 @@
           "tests_ok": 0.1
         },
         "nota": "Enlace puro; lógica canónica en core/diagnostico.py"
+      },
+      "diccionario": {
+        "contenedor": "diccionario",
+        "version": "1.0",
+        "rol": "DI",
+        "total": 0,
+        "diccionarios": [],
+        "por_idioma": {},
+        "coherente": true,
+        "funcion": "Biblioteca de definiciones (materia prima léxica). Engine puede solicitar y distribuir definiciones según contexto; el resultado final no depende de que Engine invente significados. Auto-carga todo lo que está debajo. No calcula Tru. No clasifica O."
       },
       "formulas": {
         "contenedor": "formulas",
@@ -2623,6 +2657,131 @@
         "nombre": "contexto",
         "version": "1.3"
       },
+      "DI": {
+        "modulos": [
+          "diccionario"
+        ],
+        "obligatorio": false,
+        "presente": true,
+        "n_modulos": 1,
+        "claves_contrato": [
+          "verificar",
+          "barrer",
+          "inventario",
+          "axiomas",
+          "resolver",
+          "listar",
+          "cargar",
+          "cargar_todos",
+          "definir",
+          "significado",
+          "inyectar_en_peticion"
+        ],
+        "esperado": [],
+        "resolucion": [
+          {
+            "clave": "verificar",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "barrer",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "barrer"
+          },
+          {
+            "clave": "inventario",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "inventario"
+          },
+          {
+            "clave": "axiomas",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "axiomas"
+          },
+          {
+            "clave": "resolver",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "resolver"
+          },
+          {
+            "clave": "listar",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "listar"
+          },
+          {
+            "clave": "cargar",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "cargar"
+          },
+          {
+            "clave": "cargar_todos",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "cargar_todos"
+          },
+          {
+            "clave": "definir",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "definir"
+          },
+          {
+            "clave": "significado",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "significado"
+          },
+          {
+            "clave": "inyectar_en_peticion",
+            "callable": true,
+            "modulo": "diccionario",
+            "rol": "DI",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "inyectar_en_peticion"
+          }
+        ],
+        "nombre": "diccionario",
+        "version": "1.0"
+      },
       "RE": {
         "modulos": [
           "realidad"
@@ -3044,12 +3203,12 @@
       }
     },
     "resumen": {
-      "roles_totales": 14,
-      "roles_presentes": 14,
+      "roles_totales": 15,
+      "roles_presentes": 15,
       "roles_obligatorios": 5,
-      "contratos_validos": 14,
+      "contratos_validos": 15,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 67,
+      "capacidades_verificadas": 78,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 0,
@@ -3322,6 +3481,9 @@
       "CX": [
         "contexto"
       ],
+      "DI": [
+        "diccionario"
+      ],
       "RE": [
         "realidad"
       ],
@@ -3472,6 +3634,27 @@
         }
       },
       {
+        "nombre": "diccionario",
+        "rol": "DI",
+        "version": "1.0",
+        "requiere": [],
+        "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/diccionario/__init__.py",
+        "descripcion": "Biblioteca de definiciones. Rol DI. Materia prima léxica: palabra → definición → significado. Herramienta para contrastar y correlacionar a nivel de significado. Auto-carga todos los archivos debajo (es, en, glosario_vpsi, …). Engine puede solicitar y distribuir definiciones a cualquier módulo según el contexto del ciclo; el resultado final (C, L, K, Tru) no depende de que Engine invente significados. No calcula Tru. No clasifica O. No trae dominios externos (RE).",
+        "capacidades": {
+          "verificar": "barrer",
+          "barrer": "barrer",
+          "inventario": "inventario",
+          "axiomas": "axiomas",
+          "resolver": "resolver",
+          "listar": "listar",
+          "cargar": "cargar",
+          "cargar_todos": "cargar_todos",
+          "definir": "definir",
+          "significado": "significado",
+          "inyectar_en_peticion": "inyectar_en_peticion"
+        }
+      },
+      {
         "nombre": "formulas",
         "rol": "FO",
         "version": "1.0",
@@ -3561,7 +3744,7 @@
         }
       }
     ],
-    "total": 14
+    "total": 15
   },
   "informe_formulas": {
     "contenedor": "formulas",
