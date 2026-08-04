@@ -8,12 +8,13 @@
     "coherente": true,
     "choques": [],
     "errores": [],
-    "declaraciones": 467,
+    "declaraciones": 487,
     "cuerpos": [
       "Anclas_de_Medicion_AM_AX",
       "VPSI_AX",
       "contexto_AX",
       "correlacion",
+      "diccionario_AX",
       "indefinido_AX",
       "peticion_anuncio_AX",
       "realidad_AX",
@@ -25,11 +26,11 @@
       "sm_precision_AX"
     ],
     "por_tipo": {
-      "axioma": 155,
-      "lema": 51,
-      "teorema": 118,
-      "corolario": 112,
-      "definicion": 31
+      "axioma": 161,
+      "lema": 54,
+      "teorema": 121,
+      "corolario": 116,
+      "definicion": 35
     },
     "ids_dominio_k_o": [
       "A1",
@@ -145,6 +146,10 @@
       "CX-T7",
       "CX-T8",
       "CX-T9",
+      "DIC-A2",
+      "DIC-D1",
+      "DIC-L1",
+      "DIC-L2",
       "Def-5.3.1",
       "E1",
       "E2",
@@ -771,19 +776,20 @@
           "corolario",
           "definicion"
         ],
-        "declaraciones": 467,
+        "declaraciones": 487,
         "por_tipo": {
-          "axioma": 155,
-          "lema": 51,
-          "teorema": 118,
-          "corolario": 112,
-          "definicion": 31
+          "axioma": 161,
+          "lema": 54,
+          "teorema": 121,
+          "corolario": 116,
+          "definicion": 35
         },
         "cuerpos": [
           "Anclas_de_Medicion_AM_AX",
           "VPSI_AX",
           "contexto_AX",
           "correlacion",
+          "diccionario_AX",
           "indefinido_AX",
           "peticion_anuncio_AX",
           "realidad_AX",
@@ -913,6 +919,10 @@
           "CX-T7",
           "CX-T8",
           "CX-T9",
+          "DIC-A2",
+          "DIC-D1",
+          "DIC-L1",
+          "DIC-L2",
           "Def-5.3.1",
           "E1",
           "E2",
@@ -1613,12 +1623,13 @@
       "coherente": true,
       "choques": [],
       "errores": [],
-      "declaraciones": 467,
+      "declaraciones": 487,
       "cuerpos": [
         "Anclas_de_Medicion_AM_AX",
         "VPSI_AX",
         "contexto_AX",
         "correlacion",
+        "diccionario_AX",
         "indefinido_AX",
         "peticion_anuncio_AX",
         "realidad_AX",
@@ -1630,11 +1641,11 @@
         "sm_precision_AX"
       ],
       "por_tipo": {
-        "axioma": 155,
-        "lema": 51,
-        "teorema": 118,
-        "corolario": 112,
-        "definicion": 31
+        "axioma": 161,
+        "lema": 54,
+        "teorema": 121,
+        "corolario": 116,
+        "definicion": 35
       },
       "ids_dominio_k_o": [
         "A1",
@@ -1750,6 +1761,10 @@
         "CX-T7",
         "CX-T8",
         "CX-T9",
+        "DIC-A2",
+        "DIC-D1",
+        "DIC-L1",
+        "DIC-L2",
         "Def-5.3.1",
         "E1",
         "E2",
@@ -3560,10 +3575,10 @@
   },
   "generatividad": {
     "contenedor": "axiomas",
-    "theta_n": 273,
-    "pares_totales": 37128,
-    "pares_compatibles": 9172,
-    "pares_novedosos": 5278,
+    "theta_n": 282,
+    "pares_totales": 39621,
+    "pares_compatibles": 10010,
+    "pares_novedosos": 5959,
     "im_vs_theta": "GENERATIVO",
     "dominios": [
       "K",
@@ -3593,6 +3608,7 @@
       "exactitud_memoria",
       "formulas",
       "frontera_disenador",
+      "indefinido",
       "inferencia_causal",
       "informacion",
       "invarianza_significado",
@@ -3621,8 +3637,8 @@
     "u1_proxy": "NO_STAGNANT",
     "errores_recoleccion": 0,
     "por_tipo_theta": {
-      "axioma": 155,
-      "teorema": 118
+      "axioma": 161,
+      "teorema": 121
     },
     "canonica": {
       "theta_n": 24,
@@ -3787,6 +3803,10 @@
       "CX-T7",
       "CX-T8",
       "CX-T9",
+      "DIC-A2",
+      "DIC-D1",
+      "DIC-L1",
+      "DIC-L2",
       "Def-5.3.1",
       "E1",
       "E2",
