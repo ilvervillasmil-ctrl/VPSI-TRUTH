@@ -2,8 +2,9 @@
   "coherente": true,
   "choques": [],
   "errores": [],
-  "declaraciones": 445,
+  "declaraciones": 467,
   "cuerpos": [
+    "Anclas_de_Medicion_AM_AX",
     "VPSI_AX",
     "contexto_AX",
     "correlacion",
@@ -18,11 +19,11 @@
     "sm_precision_AX"
   ],
   "por_tipo": {
-    "axioma": 150,
-    "lema": 48,
-    "teorema": 115,
-    "corolario": 107,
-    "definicion": 25
+    "axioma": 155,
+    "lema": 51,
+    "teorema": 118,
+    "corolario": 112,
+    "definicion": 31
   },
   "ids_dominio_k_o": [
     "A1",
@@ -50,6 +51,14 @@
     "AF-T5",
     "AF-T6",
     "AF-T7",
+    "AM-A3",
+    "AM-C3",
+    "AM-D1",
+    "AM-D3",
+    "AM-D4",
+    "AM-D6",
+    "AM-L3",
+    "AM-T1",
     "B-Canonical",
     "CX-A1",
     "CX-A10",
