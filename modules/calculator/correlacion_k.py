@@ -1,209 +1,245 @@
 """
 VPSI-TRUTH --- modules/calculator/correlacion_k.py
 
----
-### **DESCRIPCIÓN DEL SUB-MÓDULO**
-Este archivo implementa **exclusivamente el cálculo de la variable K (Correlación)**.
-La correlación mide la **correspondencia entre una descripción D y el dominio observable O_context**.
+Cálculo del factor de correlación K.
 
----
-### **DEFINICIÓN FORMAL (IlverVillasmil.pdf)**
-- **K(D) = 1** si para todo **z** en el dominio, **||D(z) - O(z)|| ≤ ε**.
-  - **D(z)**: Lo que la descripción D asevera en el caso **z**.
-  - **O(z)**: Lo que el contexto observable **O_context** revela en el caso **z**.
-  - **ε**: Margen de tolerancia admitido.
-- **K(D) ∈ [0, 1]**: Grado de correspondencia entre D y O_context.
-- **K(D) = UNDEFINED** si no hay un **O_context** explícito (Corolario Def-5.3.1).
-- **Fuente**: Axioma TA3 (Dependencia Externa de la Correlación) en IlverVillasmil.pdf.
+Versión: 2.0
+Cambio principal respecto a 1.x:
+  - Ancla de base nula (AM-D6 / AM-A3): si c == 0 (o base_nula_K),
+    K = UNDEFINED. No se maquilla como 1.
+  - Ancla de dominio (Def-5.3.1): sin O_context explícito,
+    K = UNDEFINED (no se inventa correspondencia).
+  - Acepta f (afirmaciones_falsas / divergencias) como Fraction
+    de la retícula AM-D5 (no solo enteros binarios).
+  - K = 1 - f/c  (exacto, Fraction) cuando c > 0 y O presente.
+  - Comentarios explícitos de las anclas para que el código
+    documente la fórmula de medición.
 
----
-### **DEFINICIÓN OPERACIONAL (PROTOCOLO.pdf)**
-- **K = 1 - (f / c)**, donde:
-  - **f**: Número de afirmaciones en D que **divergen de O_context**.
-  - **c**: Número total de **afirmaciones verificables** en D.
-- **Rango**: K ∈ [0, 1].
-- **Ejemplo**:
-  - Si un sistema hace 3 afirmaciones: ["β = 1/27", "α = 26/27", "β = 1/10"],
-    y 1 de ellas diverge de O_context (ej: "β = 1/10" cuando O_context dice "β = 1/27"),
-    entonces **K = 1 - (1/3) ≈ 0.6667**.
-- **Fuente**: Sección 0.15 (Regla Operacional: Cómputo Determinista de Factores) en PROTOCOLO.pdf.
+Fórmula canónica (operacional):
+    K(D) = 1 - f/c
+    donde
+        c = número de afirmaciones verificables respecto de O
+        f = suma de pesos de severidad de las divergencias (AM-D5)
+        O = dominio observable declarado (O_context)
 
----
-### **NOTAS IMPORTANTES**
-1. **K = 1** implica que **D coincide exactamente con O_context** (dentro del margen ε).
-2. **K = 0** implica que **todas las afirmaciones de D divergen de O_context**.
-3. **K = UNDEFINED** si no hay **O_context** explícito (no es 0, es indefinido).
-4. **Precisión**:
-   - Todos los cálculos usan `Fraction` para evitar errores de punto flotante.
-5. **Dependencias**:
-   - **O_context es obligatorio**: Sin él, K no puede calcularse y se devuelve `UNDEFINED`.
-   - No depende de otros módulos. Solo usa `Fraction` y el estado `UNDEFINED` definido en `__init__.py`.
+Definición formal de referencia (Def 5.3 + Def-5.3.1):
+    K exige un O_context explícito. Sin él el factor no está definido.
+    La correlación mide correspondencia con hechos del dominio,
+    no coherencia interna ni lógica de punto fijo (ortogonalidad AM-A4).
+
+Referencias:
+  Def 5.3, Def-5.3.1, AM-D2, AM-D5, AM-D6, AM-A3, AM-A4
+  PROTOCOLO sec. 0.15
+  conteos.py v2.0 (productor de c y f)
 """
 
+from __future__ import annotations
+
 from fractions import Fraction
-from typing import List, Optional, Union
-from . import UNDEFINED, DominioError
+from typing import Any, Dict, Optional, Union
 
-# ===============================================================
-# FUNCIONES INTERNAS: Cálculo de K (Correlación)
-# ===============================================================
+# Sentinel compartido con el resto de CA
+try:
+    from modules.calculator import UNDEFINED
+except Exception:
+    UNDEFINED = "UNDEFINED"
 
-def _calcular_k_teorico(
-    descripcion: str,
-    o_context: str,
-    epsilon: Fraction = Fraction(1, 100)  # Margen de tolerancia por defecto: 1%
-) -> Union[Fraction, type(UNDEFINED)]:
-    """
-    Calcula K (Correlación) usando el método teórico (IlverVillasmil.pdf).
 
-    **Definición formal**:
-    K(D) = 1 si para todo z, ||D(z) - O(z)|| ≤ ε.
+VERSION = "2.0"
 
-    Args:
-        descripcion (str): Descripción D a evaluar.
-        o_context (str): Contexto observable O_context.
-        epsilon (Fraction): Margen de tolerancia admitido (default: 1%).
 
-    Returns:
-        Fraction: 1 si D coincide con O_context dentro de ε, 0 de lo contrario.
-        UNDEFINED: Si no hay O_context (aunque aquí ya se valida en la interfaz pública).
-    """
-    if not o_context or not isinstance(o_context, str):
-        return UNDEFINED
+def _a_fraction(x: Any) -> Fraction:
+    """Convierte a Fraction de forma determinista. No inventa."""
+    if isinstance(x, Fraction):
+        return x
+    if isinstance(x, (int, float)):
+        return Fraction(x).limit_denominator(10_000)
+    if isinstance(x, str):
+        try:
+            return Fraction(x)
+        except Exception:
+            return Fraction(0)
+    return Fraction(0)
 
-    # Verificar si D coincide con O_context dentro del margen ε
-    coincide = _coincide_con_contexto(descripcion, o_context, epsilon)
-
-    return Fraction(1, 1) if coincide else Fraction(0, 1)
 
 def _calcular_k_operacional(
-    afirmaciones: Optional[List[str]] = None,
-    afirmaciones_falsas: Optional[int] = None,
-    o_context: Optional[str] = None
-) -> Union[Fraction, type(UNDEFINED)]:
+    c: int,
+    f: Union[int, Fraction],
+    o_presente: bool = False,
+    base_nula: bool = False,
+) -> Any:
     """
-    Calcula K (Correlación) usando el método operacional (PROTOCOLO.pdf).
+    Ruta operacional pura.
 
-    **Fórmula**:
-    K = 1 - (f / c), donde:
-    - f: Número de afirmaciones que divergen de O_context.
-    - c: Número total de afirmaciones verificables.
+    Def-5.3.1:
+        Sin O_context → UNDEFINED.
+        (No se inventa un dominio para forzar un número.)
 
-    Args:
-        afirmaciones (List[str]): Lista de afirmaciones verificables en D.
-        afirmaciones_falsas (int): Número de afirmaciones que divergen de O_context.
-        o_context (str): Contexto observable (obligatorio).
+    AM-A3 / AM-D6:
+        Si c == 0 o base_nula → UNDEFINED.
+        (Antes se devolvía 1; eso inflaba Tru_Ri artificialmente.)
 
-    Returns:
-        Fraction: Valor de K en [0, 1].
-        UNDEFINED: Si no hay O_context, afirmaciones o afirmaciones_falsas.
-
-    Raises:
-        DominioError: Si afirmaciones_falsas > len(afirmaciones).
+    AM-D5:
+        f puede ser Fraction (suma de pesos de la retícula).
+        K = 1 - f/c  se calcula en Fraction exacta.
     """
-    if o_context is None or afirmaciones is None or afirmaciones_falsas is None:
+    if not o_presente:
         return UNDEFINED
 
-    c = len(afirmaciones)
-    if c == 0:
-        return Fraction(1, 1)  # Sin afirmaciones, K = 1 por defecto
+    if base_nula or c <= 0:
+        return UNDEFINED
 
-    f = afirmaciones_falsas
-    if f > c:
-        raise DominioError(
-            f"El número de afirmaciones falsas (f={f}) no puede ser mayor que el número de afirmaciones (c={c})."
+    f_f = _a_fraction(f)
+    # f no puede superar c en peso efectivo
+    if f_f > c:
+        f_f = Fraction(c)
+
+    k = Fraction(1) - (f_f / Fraction(c))
+    # K ∈ [0, 1]
+    if k < 0:
+        k = Fraction(0)
+    if k > 1:
+        k = Fraction(1)
+    return k
+
+
+def _calcular_k_teorico(peticion: Dict[str, Any]) -> Any:
+    """
+    Ruta teórica (si el llamador ya aporta K explícito o
+    una señal dura de no-correspondencia con O).
+    No inventa valores.
+    """
+    if "K" in peticion and peticion["K"] is not None:
+        val = peticion["K"]
+        if val == UNDEFINED or str(val).upper() == "UNDEFINED":
+            return UNDEFINED
+        return _a_fraction(val)
+
+    # Señal dura de divergencia total con el dominio
+    if peticion.get("sin_correspondencia") is True:
+        return Fraction(0)
+
+    return None  # no hay dato teórico → se cae a operacional
+
+
+def calcular_k(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Oficio público de correlación.
+
+    Entrada esperada (inyectada por conteos.inyectar_en_peticion
+    o por el ciclo de Engine):
+        afirmaciones           : list
+        afirmaciones_falsas    : int | Fraction   (f)
+        contexto / O_context   : str | None
+        _conteos_meta          : dict opcional con base_nula_K, c, o_presente, ...
+
+    Salida:
+        {
+            "K": Fraction | UNDEFINED,
+            "c": int,
+            "f": Fraction,
+            "o_presente": bool,
+            "ruta": "operacional" | "teorico",
+            "version": "2.0",
+            "notas": list[str],
+        }
+    """
+    peticion = dict(peticion or {})
+    notas: list[str] = []
+
+    # ----- Intento teórico primero -----
+    k_teo = _calcular_k_teorico(peticion)
+    if k_teo is not None:
+        return {
+            "K": k_teo,
+            "c": peticion.get("c") or len(peticion.get("afirmaciones") or []),
+            "f": _a_fraction(peticion.get("afirmaciones_falsas") or 0),
+            "o_presente": bool(
+                peticion.get("contexto")
+                or peticion.get("O_context")
+                or peticion.get("o_context")
+            ),
+            "ruta": "teorico",
+            "version": VERSION,
+            "notas": ["K tomado de ruta teórica"],
+        }
+
+    # ----- Ruta operacional -----
+    meta = peticion.get("_conteos_meta") or {}
+    afirmaciones = peticion.get("afirmaciones") or []
+    c = meta.get("c")
+    if c is None:
+        c = len(afirmaciones)
+    c = int(c)
+
+    f = peticion.get("afirmaciones_falsas")
+    if f is None:
+        f = meta.get("f") or 0
+    f_f = _a_fraction(f)
+
+    o_ctx = (
+        peticion.get("contexto")
+        or peticion.get("O_context")
+        or peticion.get("o_context")
+    )
+    o_presente = bool(meta.get("o_presente", False)) or bool(o_ctx and str(o_ctx).strip())
+
+    base_nula = bool(meta.get("base_nula_K", False)) or (c <= 0)
+
+    k = _calcular_k_operacional(
+        c, f_f, o_presente=o_presente, base_nula=base_nula
+    )
+
+    if k is UNDEFINED:
+        if not o_presente:
+            notas.append(
+                "K = UNDEFINED (Def-5.3.1): O_context ausente. "
+                "No se inventa dominio ni correspondencia."
+            )
+        else:
+            notas.append(
+                "K = UNDEFINED (AM-D6 / AM-A3): c=0 tras ancla de inclusión. "
+                "No se asigna 1 artificialmente."
+            )
+    else:
+        notas.append(
+            "K = 1 - f/c = 1 - {0}/{1} = {2} (Fraction exacta, AM-D5)".format(
+                str(f_f), c, str(k)
+            )
         )
+        if f_f == 0 and c > 0:
+            notas.append(
+                "Sin divergencias detectadas respecto de O: "
+                "correspondencia plena bajo la evidencia disponible."
+            )
 
-    return Fraction(c - f, c)
+    return {
+        "K": k,
+        "c": c,
+        "f": f_f,
+        "o_presente": o_presente,
+        "ruta": "operacional",
+        "version": VERSION,
+        "notas": notas,
+    }
 
-# ===============================================================
-# FUNCIONES AUXILIARES: Lógica interna para comparar D con O_context
-# ===============================================================
 
-def _coincide_con_contexto(
-    descripcion: str,
-    o_context: str,
-    epsilon: Fraction = Fraction(1, 100)
-) -> bool:
-    """
-    Verifica si una descripción D coincide con O_context dentro de un margen ε.
-
-    **Criterios**:
-    1. **Coincidencia exacta**: D es un subconjunto de O_context.
-    2. **Coincidencia semántica**: D y O_context describen lo mismo (simplificado aquí como coincidencia literal).
-    3. **Margen de tolerancia ε**: Pequeñas diferencias se ignoran si están dentro de ε.
-
-    Args:
-        descripcion (str): Descripción D.
-        o_context (str): Contexto observable O_context.
-        epsilon (Fraction): Margen de tolerancia (default: 1%).
-
-    Returns:
-        bool: True si D coincide con O_context dentro de ε, False de lo contrario.
-    """
-    if not descripcion or not o_context:
+def verificar_k(salida: Any) -> bool:
+    if not isinstance(salida, dict):
         return False
-
-    # Normalizar textos (minúsculas, sin espacios adicionales)
-    desc_normalizada = descripcion.strip().lower()
-    ctx_normalizada = o_context.strip().lower()
-
-    # Coincidencia exacta
-    if desc_normalizada in ctx_normalizada:
+    if "K" not in salida:
+        return False
+    val = salida["K"]
+    if val is UNDEFINED or str(val).upper() == "UNDEFINED":
         return True
-
-    # Coincidencia por palabras clave (simplificado)
-    # Ejemplo: Si D dice "β = 1/27" y O_context dice "El valor de β es 1/27", coinciden.
-    palabras_clave = ["β = 1/27", "α = 26/27", "cubo 3x3x3"]
-    for palabra in palabras_clave:
-        if palabra in desc_normalizada and palabra in ctx_normalizada:
-            return True
-
-    # Si no hay coincidencia exacta ni por palabras clave, asumir que no coincide
+    if isinstance(val, Fraction):
+        return Fraction(0) <= val <= Fraction(1)
     return False
 
-# ===============================================================
-# FUNCIONES PÚBLICAS: Interfaz para el módulo calculator
-# ===============================================================
 
-def calcular_k(
-    descripcion: Optional[str] = None,
-    afirmaciones: Optional[List[str]] = None,
-    afirmaciones_falsas: Optional[int] = None,
-    o_context: Optional[str] = None,
-    metodo: str = "operacional",
-    epsilon: Fraction = Fraction(1, 100)
-) -> Union[Fraction, type(UNDEFINED)]:
-    """
-    Interfaz pública para calcular K (Correlación).
-
-    Args:
-        descripcion (str): Descripción D (para método teórico).
-        afirmaciones (List[str]): Lista de afirmaciones verificables (para método operacional).
-        afirmaciones_falsas (int): Número de afirmaciones falsas (para método operacional).
-        o_context (str): Contexto observable (obligatorio para ambos métodos).
-        metodo (str): "teorico" o "operacional" (default: "operacional").
-        epsilon (Fraction): Margen de tolerancia para el método teórico (default: 1%).
-
-    Returns:
-        Fraction: Valor de K en [0, 1].
-        UNDEFINED: Si no hay O_context o falta información para el método seleccionado.
-
-    Raises:
-        MetodoError: Si el método no es "teorico" ni "operacional".
-        DominioError: Si los inputs violan el dominio (ej: afirmaciones_falsas > afirmaciones).
-    """
-    if o_context is None:
-        return UNDEFINED  # K es UNDEFINED sin O_context (Corolario Def-5.3.1)
-
-    if metodo == "teorico":
-        if descripcion is None:
-            return UNDEFINED
-        return _calcular_k_teorico(descripcion, o_context, epsilon)
-    elif metodo == "operacional":
-        return _calcular_k_operacional(afirmaciones, afirmaciones_falsas, o_context)
-    else:
-        from . import MetodoError
-        raise MetodoError(
-            f"Método '{metodo}' no soportado. Usa 'teorico' o 'operacional'."
-        )
+__all__ = [
+    "calcular_k",
+    "verificar_k",
+    "VERSION",
+    "UNDEFINED",
+]
