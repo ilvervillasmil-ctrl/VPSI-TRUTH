@@ -1296,9 +1296,22 @@
         "contenedor": "diccionario",
         "version": "1.0",
         "rol": "DI",
-        "total": 0,
-        "diccionarios": [],
-        "por_idioma": {},
+        "total": 1,
+        "diccionarios": [
+          {
+            "nombre": "es",
+            "idioma": "es",
+            "tipo": "registro_wordnet",
+            "size": 0,
+            "version": "2.0",
+            "archivo": "es.py"
+          }
+        ],
+        "por_idioma": {
+          "es": [
+            "es"
+          ]
+        },
         "coherente": true,
         "funcion": "Biblioteca de definiciones (materia prima léxica). Engine puede solicitar y distribuir definiciones según contexto; el resultado final no depende de que Engine invente significados. Auto-carga todo lo que está debajo. No calcula Tru. No clasifica O."
       },
