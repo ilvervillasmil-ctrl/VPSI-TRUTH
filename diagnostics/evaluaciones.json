@@ -1,15 +1,16 @@
 {
   "tipo": "evidencia_evaluacion",
   "version": "1.1",
-  "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion",
+  "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso",
   "origenes": [
     "test_claude_dentro_del_repo",
     "test_contradiccion_estructural_interna",
-    "test_conversacion"
+    "test_conversacion",
+    "test_paradoja_mentiroso"
   ],
   "invocador_id": "ci_auditoria",
   "estado_engine": "OPERATIVO",
-  "n": 8,
+  "n": 9,
   "resultados": [
     {
       "entrada": {
@@ -403,6 +404,54 @@
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 8
+    },
+    {
+      "entrada": {
+        "quien": "Paradoja",
+        "texto": "Todo lo que digo es una mentira absoluta, excepto esta única afirmación que es completamente verdadera.",
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna."
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "0"
+        },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "0",
+      "tru_ri": "0",
+      "tru_total": "1/27",
+      "origen": "test_paradoja_mentiroso",
+      "invocador_id": "test_paradoja_mentiroso",
+      "secuencia": 9
     }
   ]
 }

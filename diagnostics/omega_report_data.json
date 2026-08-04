@@ -673,6 +673,54 @@
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 8
+    },
+    {
+      "entrada": {
+        "quien": "Paradoja",
+        "texto": "Todo lo que digo es una mentira absoluta, excepto esta única afirmación que es completamente verdadera.",
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna."
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "0"
+        },
+        "tru_ri": "0",
+        "tru_total": "1/27",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "C": "1",
+      "L": "1",
+      "K": "0",
+      "tru_ri": "0",
+      "tru_total": "1/27",
+      "origen": "test_paradoja_mentiroso",
+      "invocador_id": "test_paradoja_mentiroso",
+      "secuencia": 9
     }
   ],
   "fallos_engine": [],
@@ -3604,19 +3652,20 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 8,
+      "n": 9,
       "propios": 0,
       "origenes": [
         "test_claude_dentro_del_repo",
         "test_contradiccion_estructural_interna",
-        "test_conversacion"
+        "test_conversacion",
+        "test_paradoja_mentiroso"
       ],
       "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion",
-    "n": 8,
+    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso",
+    "n": 9,
     "path": "evaluaciones.json",
     "invocador_id": "ci_auditoria"
   },
@@ -3689,8 +3738,8 @@
     ],
     "razon": null,
     "permite_k": true,
-    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion",
-    "secuencia": 8,
+    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso",
+    "secuencia": 9,
     "n_citas": null,
     "n_anuncios": null,
     "fuentes_usadas": [
@@ -3706,7 +3755,7 @@
       "CX-C4"
     ],
     "coherente_cx": false,
-    "contexto_texto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+    "contexto_texto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
     "lectura": {
       "C": true,
       "L": true,
@@ -4601,10 +4650,10 @@
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
   },
   "tests": {
-    "total": 136,
-    "pasados": 135,
+    "total": 137,
+    "pasados": 136,
     "fallidos": 0,
     "omitidos": 1,
-    "tasa": 99.26
+    "tasa": 99.27
   }
 }

@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 07:53:50 UTC    Commit: 73dee9cbd6b3
+Generado: 2026-08-04 08:01:59 UTC    Commit: 23f24efa8490
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -74,14 +74,14 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
        1. CX-A14
        2. CX-A1
        3. CX-C4
-  Origen     : test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion
-  Secuencia  : 8
+  Origen     : test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso
+  Secuencia  : 9
   Engine     : 11.1
   modo_entrada: auditoria
   coherente_cx: False
   Fuentes    : X, O_context
   ids_cx     : CX-A14, CX-A1, CX-C4
-  Contexto   : Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuv...
+  Contexto   : Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consi...
 ══════════════════════════════════════════════════════════════════════════════
 
 ESTADO GLOBAL
@@ -146,7 +146,7 @@ ESTADO GLOBAL
       coherente=True  validos=16  caps_ok=87  caps_fallo=0
 
   ✅ Tests (pytest — forma)
-      total=136  pasados=135  fallidos=0  tasa=99.26%
+      total=137  pasados=136  fallidos=0  tasa=99.27%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
