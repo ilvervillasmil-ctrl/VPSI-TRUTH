@@ -1,75 +1,50 @@
-============================================================
-TEST — Contradicción estructural interna
-============================================================
+"""
+Test de contradicción estructural interna.
 
 Objetivo:
-Evaluar si el sistema detecta una contradicción entre dos
-compromisos asumidos por el mismo hablante y degrada la
-coherencia (C), manteniendo la trazabilidad completa.
+Verificar que el sistema detecta una contradicción entre
+dos compromisos asumidos por el mismo hablante y degrade
+la coherencia estructural.
 
-Instrucciones:
+No fija valores exactos de C, L o K, porque éstos pertenecen
+al mecanismo del VPSI. El test únicamente verifica propiedades
+estructurales esperadas.
+"""
 
-1. Construya automáticamente el O_context únicamente a partir
-   del texto proporcionado.
+from core.engine import Engine
 
-2. Identifique:
-   - compromisos
-   - contradicciones
-   - posturas
-   - reversiones
-   - afirmaciones
-   - afirmaciones falsas (si existen)
 
-3. Calcule:
-   - C
-   - L
-   - K
-   - Tru_Ri
-   - Tru_total
+def test_contradiccion_estructural_interna():
 
-4. Justifique cada degradación indicando exactamente qué tramo
-   produjo cada conteo.
+    engine = Engine()
 
-------------------------------------------------------------
-Texto a evaluar
-------------------------------------------------------------
+    texto = """
+    Yo soy una persona sumamente inteligente porque desarrollé un
+    sistema capaz de realizar auditorías estructurales complejas.
 
-Yo soy una persona sumamente inteligente porque desarrollé un
-sistema capaz de realizar auditorías estructurales complejas.
+    Sin embargo, yo no soy una persona inteligente.
+    """
 
-Sin embargo, yo no soy una persona inteligente.
+    peticion = {
+        "descripcion": texto,
+        "modo": "auditoria",
+    }
 
-------------------------------------------------------------
-Se espera observar
-------------------------------------------------------------
+    resultado = engine.evaluar(peticion)
 
-• O_context construido automáticamente.
+    assert resultado is not None
 
-• Identificación de ambos compromisos.
+    # Deben existir factores
+    assert "C" in resultado
+    assert "L" in resultado
+    assert "K" in resultado
 
-• Detección de contradicción interna.
+    # Debe existir Tru
+    assert "Tru_Ri" in resultado
+    assert "Tru_total" in resultado
 
-• Disminución de C.
+    # Debe detectarse pérdida de coherencia
+    assert resultado["C"] < 1
 
-• Explicación de por qué ocurre la contradicción.
-
-• Cálculo completo de:
-
-m =
-k =
-p =
-r =
-c =
-f =
-
-C =
-L =
-K =
-
-Tru_Ri =
-
-Tru_total =
-
-------------------------------------------------------------
-Fin del test
-------------------------------------------------------------
+    # El resultado final no debe ser máximo
+    assert resultado["Tru_total"] < 1
