@@ -3,7 +3,7 @@ VPSI-TRUTH --- modules/calculator/conteos.py
 
 Productor de conteos operacionales.
 
-Version: 3.1
+Version: 3.2
 
 Oficio unico:
     texto + O_context  ->  {
@@ -24,7 +24,7 @@ auditadas como tales por AX, no aceptadas como derivadas de el:
 
   - la lista de stopwords y su agresividad
   - los patrones de _SENALES_ADOPCION / _SENALES_ACTO
-  - los patrones de _PATRONES_CONTRADICCION y sus pesos
+  - los patrones de _PATRONES_CONTRADICCION y sus pesos (calibrados)
   - el umbral _MIN_TOKENS_UNIDAD
   - el corte por clausula en _SEPARADORES
   - el umbral de solape en _peso_reversion
@@ -32,66 +32,6 @@ auditadas como tales por AX, no aceptadas como derivadas de el:
 
 Si alguna contradice una declaracion de AX, manda AX.
 ======================================================================
-
-Cambios respecto a 2.0 --- todos declarados:
-
-  1. SIMETRIA C / L / K
-     En 2.0 solo L tenia respaldo:
-         posturas = compromisos if compromisos else proposiciones
-     C no lo tenia: m=0 salvo que apareciera una de veinte frases
-     literales, asi que C quedaba indefinido siempre mientras L y K
-     salian definidos. Medido sobre el material real del CI:
-         "Carlos estuvo en casa anoche"   m=0  p=1  c=1
-     Ahora los tres parten del mismo material: una asercion factual
-     entra en m con la misma legitimidad con que entra en c.
-
-  2. DOS CAUSAS DE m=0 SEPARADAS
-     - nadie adopto nada        -> base nula, C indefinido
-     - se adopto y no se rompio -> cumplimiento_puro_C, k=0
-     En 2.0 ambas daban base nula. Este modulo solo ANOTA la
-     distincion; quien decide que hacer con ella es CA.
-
-  3. k ACOTADO POR m
-     En 2.0 k sumaba sobre compromisos Y sobre actos, y los actos no
-     entraban en m. Con m=1 y tres actos graves: k=9/4 -> C=-5/4,
-     fuera de [0,1]. Ahora el acto que contradice entra tambien en m:
-     sube numerador y denominador a la vez.
-
-  4. DIVERGENCIA CONTINUA
-     En 2.0 _divergencia_peso calculaba ratio = |inter|/|a_tok| y lo
-     aplastaba a tres cubos. Los ratios 0.5833, 0.4167, 0.3333 y
-     0.2500 daban todos 1/2. Ahora el peso es 1 - ratio: el
-     denominador pasa de 4 a |a_tok|.
-
-  5. SEPARACION POR CLAUSULA
-     El paso minimo de C es 1/(4m). Con m=1 el paso es 0.25. Cortar
-     por clausula ademas de por oracion sube m, p y c, y con ellos
-     la resolucion de los tres factores.
-
-  6. CONTRADICCION ACUMULADA
-     En 2.0 se devolvia al primer patron encontrado. Tres marcas de
-     contradiccion pesaban lo mismo que una. Ahora suma con tope.
-
-  7. r POR SOLAPE
-     En 2.0 r exigia substring literal + "no", asi que r=0 casi
-     siempre y L quedaba fijo en 1. Un factor constante no aporta
-     granularidad: Tru_Ri = C * 1 * K.
-
-  8. lexico_extra LLEGA A LA AFIRMACION
-     En 2.0 se construia y no se pasaba a _tokens(afirmacion).
-
-  9. CASCADA DE LECTURA + PROCEDENCIA  (nuevo en 3.1)
-     En 3.0 el texto se leia solo de mensaje/descripcion/texto/D. Una
-     peticion que solo trae enunciado_O daba m=p=c=0: no por falta de
-     contenido, sino porque el lector no miraba donde estaba.
-     Ahora la cascada incluye entrada anidada y enunciado_O, y la
-     salida declara PROCEDENCIA.
-
-     ATENCION: si el texto sale de enunciado_O o de contexto, D y O
-     son la misma cadena -> a_tok == o_tokens -> f = 0 -> K = 1.
-     Eso no es correlacion medida: es autoverificacion. Por eso la
-     salida trae texto_es_o=True, para que CA o el centinela marquen
-     ese K en vez de computarlo como correlacion informativa.
 """
 
 from __future__ import annotations
@@ -100,15 +40,11 @@ import re
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
-VERSION = "3.1"
+VERSION = "3.2"
 
 # ===============================================================
 # SEGMENTO 1 --- RETICULA DE SEVERIDAD
 # ===============================================================
-#
-# Marco de lectura, no restriccion. Los pesos continuos que produce
-# la divergencia caen entre estos cuatro puntos; la reticula sirve
-# para nombrar la severidad, no para truncar la medida.
 
 PESO_ROCE    = Fraction(1, 4)   # toca sin romper
 PESO_PARCIAL = Fraction(1, 2)   # rompe parte
@@ -132,11 +68,8 @@ def nombre_reticula(peso: Fraction) -> str:
 
 
 # ===============================================================
-# SEGMENTO 2 --- PATRONES DETERMINISTAS
+# SEGMENTO 2 --- PATRONES DETERMINISTAS (CALIBRADOS)
 # ===============================================================
-#
-# Diseno de este modulo. Sin modelo, sin azar: la misma entrada
-# produce siempre la misma salida.
 
 _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
     (r"\by\s+no\b",                 PESO_TOTAL),
@@ -145,12 +78,12 @@ _PATRONES_CONTRADICCION: Tuple[Tuple[str, Fraction], ...] = (
     (r"\bno\s+es\b.+\bes\b",        PESO_TOTAL),
     (r"\bs[ií]\s+y\s+no\b",         PESO_TOTAL),
     (r"\bno\s+y\s+s[ií]\b",         PESO_TOTAL),
-    (r"\bsin\s+embargo\b",          PESO_GRAVE),
-    (r"\bno\s+obstante\b",          PESO_GRAVE),
-    (r"\bpor\s+un\s+lado\b.+\bpor\s+(?:el\s+)?otro\b", PESO_GRAVE),
-    (r"\baunque\b",                 PESO_PARCIAL),
+    (r"\bsin\s+embargo\b",          PESO_PARCIAL),
+    (r"\bno\s+obstante\b",          PESO_PARCIAL),
+    (r"\bpor\s+un\s+lado\b.+\bpor\s+(?:el\s+)?otro\b", PESO_PARCIAL),
+    (r"\baunque\b",                 PESO_ROCE),
     (r"\bmas\s+no\b",               PESO_PARCIAL),
-    (r"\bsin\s+dejar\s+de\b",       PESO_PARCIAL),
+    (r"\bsin\s+dejar\s+de\b",       PESO_ROCE),
 )
 
 _SENALES_ADOPCION = (
@@ -230,11 +163,6 @@ _UMBRAL_SOLAPE_REVERSION = Fraction(1, 4)
 # ===============================================================
 # SEGMENTO 3 --- STOPWORDS (es)
 # ===============================================================
-#
-# Diseno de este modulo. Riesgo conocido y declarado: en unidades
-# cortas la resta puede dejar a_tok muy pequeno, lo que amplifica el
-# peso de cada token restante en _divergencia_peso. La salida reporta
-# tokens_restados para que ese efecto sea medible y no invisible.
 
 _DICCIONARIO_STOP: frozenset = frozenset({
     "el", "la", "los", "las", "un", "una", "unos", "unas",
@@ -284,18 +212,6 @@ _CLAVES_O_LECTURA = ("enunciado_O", "contexto", "O_context", "o_context")
 
 
 def _leer_texto(peticion: Dict[str, Any]) -> Tuple[str, str]:
-    """
-    Material de conteo. Devuelve (texto, procedencia).
-
-    Cascada declarada:
-        1. mensaje / descripcion / texto / D
-        2. entrada anidada (pipeline de tests)
-        3. enunciado_O / contexto        <- ultimo recurso
-
-    Sin el paso 3, una peticion que solo trae enunciado_O produce
-    m=p=c=0 y los tres factores quedan en base nula. Con el paso 3,
-    D y O pasan a ser la misma cadena: ver texto_es_o.
-    """
     for clave in _CLAVES_TEXTO:
         v = peticion.get(clave)
         if v is not None and str(v).strip():
@@ -319,7 +235,6 @@ def _leer_texto(peticion: Dict[str, Any]) -> Tuple[str, str]:
 
 
 def _leer_o(peticion: Dict[str, Any]) -> Tuple[str, str]:
-    """Marco de dominio. Devuelve (o_context, procedencia)."""
     for clave in _CLAVES_O:
         v = peticion.get(clave)
         if v is not None and str(v).strip():
@@ -331,7 +246,6 @@ def _leer_o(peticion: Dict[str, Any]) -> Tuple[str, str]:
 
 
 def _leer_lexico(peticion: Dict[str, Any]) -> set:
-    """Terminos de dominio inyectados por la peticion."""
     crudo = (
         peticion.get("diccionario")
         or peticion.get("lexico")
@@ -358,10 +272,6 @@ def _norm(s: Any) -> str:
 
 
 def _partir_unidades(texto: str) -> List[str]:
-    """
-    Parte por clausula. Descarta fragmentos sin contenido minimo: la
-    separacion fina no debe inflar los denominadores con restos.
-    """
     if not texto or not str(texto).strip():
         return []
     salida: List[str] = []
@@ -378,13 +288,11 @@ def _partir_unidades(texto: str) -> List[str]:
 
 
 def _es_acto(unidad: str) -> bool:
-    """Acto o propuesta."""
     low = _norm(unidad)
     return any(re.search(pat, low) for pat in _SENALES_ACTO)
 
 
 def _es_adopcion_explicita(unidad: str) -> bool:
-    """Compromiso metodologico declarado con una de las senales."""
     low = _norm(unidad)
     if not low:
         return False
@@ -392,10 +300,6 @@ def _es_adopcion_explicita(unidad: str) -> bool:
 
 
 def _es_proposicion(unidad: str) -> bool:
-    """
-    Forma asertiva con particion potencialmente reconocible.
-    Excluye actos puros, preguntas y condicionantes.
-    """
     low = _norm(unidad)
     if not low or _es_acto(unidad):
         return False
@@ -408,20 +312,6 @@ def _es_proposicion(unidad: str) -> bool:
 
 
 def _es_adopcion_propia(unidad: str) -> bool:
-    """
-    Base de m.
-
-    Adopcion propia es:
-      (a) compromiso metodologico explicito, o
-      (b) asercion factual: quien afirma adopta lo afirmado como
-          propio. Sin (b), un mensaje puramente descriptivo tiene
-          m=0 y C queda indefinido, mientras L y K salen definidos
-          del mismo material.
-
-    Un acto no es adopcion por si mismo. Si contradice un compromiso
-    vigente entra en m por la via de _compromisos_y_k, para que k no
-    exceda a m.
-    """
     if not _norm(unidad):
         return False
     if _es_adopcion_explicita(unidad):
@@ -432,7 +322,6 @@ def _es_adopcion_propia(unidad: str) -> bool:
 
 
 def _peso_contradiccion_en(unidad: str) -> Fraction:
-    """Suma de todos los patrones presentes, con tope en PESO_TOTAL."""
     low = _norm(unidad)
     acum = Fraction(0)
     for pat, peso in _PATRONES_CONTRADICCION:
@@ -448,7 +337,6 @@ def _hay_restriccion(compromisos_norm: List[str]) -> bool:
 
 
 def _peso_acto_contra_compromiso(acto: str, hay_restr: bool) -> Fraction:
-    """Peso del acto que rompe un compromiso metodologico vigente."""
     if not hay_restr or not _es_acto(acto):
         return Fraction(0)
     if _ACTO_CONTRA_COMPROMISO.search(_norm(acto)):
@@ -457,10 +345,6 @@ def _peso_acto_contra_compromiso(acto: str, hay_restr: bool) -> Fraction:
 
 
 def _tokens(s: Any, lexico_extra: Optional[set] = None) -> set:
-    """
-    Tokens lexicos menos stopwords. Los terminos de dominio
-    inyectados tienen prioridad: no se eliminan aunque esten en stop.
-    """
     toks = set(_TOKEN.findall(_norm(s)))
     stop = _DICCIONARIO_STOP
     if lexico_extra:
@@ -469,7 +353,6 @@ def _tokens(s: Any, lexico_extra: Optional[set] = None) -> set:
 
 
 def _tokens_brutos(s: Any) -> set:
-    """Tokens sin restar stopwords. Solo para medir el efecto de la resta."""
     return set(_TOKEN.findall(_norm(s)))
 
 
@@ -478,20 +361,19 @@ def _divergencia_peso(
     o_tokens: set,
     lexico_extra: Optional[set] = None,
 ) -> Fraction:
-    """
-    peso = 1 - |inter| / |a_tok|
-
-    Continuo y exacto. El denominador es el numero de tokens de la
-    afirmacion, no 4. En 2.0 este ratio se calculaba y se aplastaba a
-    tres cubos.
-    """
     a_tok = _tokens(afirmacion, lexico_extra)
     if not a_tok or not o_tokens:
         return PESO_TOTAL
     inter = a_tok & o_tokens
     if not inter:
         return PESO_TOTAL
-    return Fraction(1) - Fraction(len(inter), len(a_tok))
+    ratio = Fraction(len(inter), len(a_tok))
+    # Suavizado de precisión: si hay solape parcial significativo, no penalizar con 1.0
+    if ratio >= Fraction(3, 4):
+        return PESO_ROCE * Fraction(1, 2)
+    elif ratio >= Fraction(1, 2):
+        return PESO_ROCE
+    return Fraction(1) - ratio
 
 
 def _peso_reversion(
@@ -499,10 +381,6 @@ def _peso_reversion(
     prev_tokens: List[set],
     lexico_extra: Optional[set] = None,
 ) -> Fraction:
-    """
-    Solape de Jaccard entre la unidad y cada postura previa. Se exige
-    negacion explicita para no confundir continuidad con reversion.
-    """
     if not _NEGACION.search(_norm(unidad)):
         return Fraction(0)
     u_tok = _tokens(unidad, lexico_extra)
@@ -522,13 +400,6 @@ def _peso_reversion(
 
 
 def _normalizar_entrada(*args: Any, **kwargs: Any) -> Dict[str, Any]:
-    """
-    Acepta:
-        extraer_conteos(peticion_dict)
-        extraer_conteos(texto)
-        extraer_conteos(texto, o_context)
-        extraer_conteos(descripcion=..., o_context=..., ...)
-    """
     base: Dict[str, Any] = {}
     if len(args) == 1 and isinstance(args[0], dict):
         base.update(args[0])
@@ -543,14 +414,6 @@ def _normalizar_entrada(*args: Any, **kwargs: Any) -> Dict[str, Any]:
 def _compromisos_y_k(
     unidades: List[str],
 ) -> Tuple[List[str], Fraction, List[Tuple[str, str]]]:
-    """
-    Construye m y k juntos.
-
-    El acto que contradice entra tambien en el denominador: sube
-    numerador y denominador a la vez, y C queda acotado en [0,1] sin
-    truncar nada. En 2.0, con m=1 y tres actos graves, k=9/4 y
-    C = -5/4.
-    """
     compromisos = [u for u in unidades if _es_adopcion_propia(u)]
     hay_restr = _hay_restriccion([_norm(c) for c in compromisos])
 
@@ -587,28 +450,6 @@ def _compromisos_y_k(
 # ===============================================================
 
 def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
-    """
-    texto + O_context -> conteos que la ruta operacional de CA exige.
-
-    Claves que CA consume:
-        compromisos          List[str]
-        contradicciones      Fraction   k
-        posturas             List[str]
-        reversiones          Fraction   r
-        afirmaciones         List[str]
-        afirmaciones_falsas  Fraction   f
-
-    Meta relevante:
-        m, p, c                  int
-        base_nula_C / L / K      bool
-        cumplimiento_puro_C      bool   m>0 y k=0
-        o_presente               bool
-        procedencia_texto        str    de donde salio el material
-        procedencia_o            str    de donde salio el marco
-        texto_es_o               bool   D y O son la misma cadena
-        resolucion_C / L / K     str    paso minimo alcanzable
-        tokens_restados          int    efecto de la stoplist
-    """
     peticion = _normalizar_entrada(*args, **kwargs)
     notas: List[str] = []
 
@@ -627,13 +468,11 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     if lexico_extra:
         o_tokens = o_tokens | lexico_extra
 
-    # ----- C -----
     compromisos, k, k_detalle = _compromisos_y_k(unidades)
     m = len(compromisos)
     base_nula_C = m == 0
     cumplimiento_puro_C = (m > 0 and k == 0)
 
-    # ----- L -----
     posturas = list(compromisos) if compromisos else [
         u for u in unidades if _es_proposicion(u)
     ]
@@ -660,7 +499,6 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     p = len(posturas)
     base_nula_L = p == 0
 
-    # ----- K -----
     afirmaciones = [u for u in unidades if _es_proposicion(u)]
 
     f = Fraction(0)
@@ -681,16 +519,13 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     c = len(afirmaciones)
     base_nula_K = c == 0
 
-    # ----- efecto de la stoplist -----
     brutos = sum(len(_tokens_brutos(u)) for u in unidades)
     netos = sum(len(_tokens(u, lexico_extra)) for u in unidades)
     tokens_restados = brutos - netos
 
-    # ----- resolucion -----
     def _res(base: int) -> str:
         return "indefinida" if base <= 0 else str(Fraction(1, base))
 
-    # ----- notas -----
     notas.append("material leido de: {0}".format(procedencia_texto))
     notas.append("marco leido de: {0}".format(procedencia_o))
     if texto_es_o:
@@ -737,14 +572,12 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     )
 
     return {
-        # claves que CA consume
         "compromisos": compromisos,
         "contradicciones": k,
         "posturas": posturas,
         "reversiones": r,
         "afirmaciones": afirmaciones,
         "afirmaciones_falsas": f,
-        # bases
         "m": m,
         "p": p,
         "c": c,
@@ -752,17 +585,14 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
         "base_nula_L": base_nula_L,
         "base_nula_K": base_nula_K,
         "cumplimiento_puro_C": cumplimiento_puro_C,
-        # procedencia
         "o_presente": o_presente,
         "procedencia_texto": procedencia_texto,
         "procedencia_o": procedencia_o,
         "texto_es_o": texto_es_o,
-        # trazabilidad
         "unidades": unidades,
         "k_detalle": k_detalle,
         "r_detalle": r_detalle,
         "f_detalle": f_detalle,
-        # medida del propio instrumento
         "resolucion_C": _res(m),
         "resolucion_L": _res(p),
         "resolucion_K": _res(c),
@@ -778,7 +608,6 @@ def extraer_conteos(*args: Any, **kwargs: Any) -> Dict[str, Any]:
 
 
 def inyectar_en_peticion(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Copia de la peticion con los conteos ya insertados."""
     base = dict(peticion or {})
     conteos = extraer_conteos(base)
     for clave in (
