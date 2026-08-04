@@ -368,9 +368,10 @@ def _divergencia_peso(
     if not inter:
         return PESO_TOTAL
     ratio = Fraction(len(inter), len(a_tok))
-    # Suavizado de precisión: si hay solape parcial significativo, no penalizar con 1.0
-    if ratio >= Fraction(3, 4):
-        return PESO_ROCE * Fraction(1, 2)
+    
+    # Si el solape es alto (>= 60%), se considera coincidencia convergente pura (f = 0)
+    if ratio >= Fraction(3, 5):
+        return Fraction(0)
     elif ratio >= Fraction(1, 2):
         return PESO_ROCE
     return Fraction(1) - ratio
