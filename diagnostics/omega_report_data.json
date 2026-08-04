@@ -376,6 +376,58 @@
     },
     {
       "entrada": {
+        "secuencia": [
+          {
+            "hablante": "Carlos",
+            "mensaje": "Las galaxias, las estrellas y los planetas existen.",
+            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
+          },
+          {
+            "hablante": "María",
+            "mensaje": "Sí, es verdad, Carlos, las galaxias y los planetas y las estrellas sí existen.",
+            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
+          }
+        ]
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1"
+        },
+        "tru_ri": "1",
+        "tru_total": "1",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "secuencia",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "origen": "test_conversacion_estrellas",
+      "invocador_id": "test_conversacion_estrellas",
+      "secuencia": 3
+    },
+    {
+      "entrada": {
         "quien": "Carlos",
         "texto": "Anoche me quedé en casa todo el tiempo.",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
@@ -422,7 +474,7 @@
       "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 3
+      "secuencia": 4
     },
     {
       "entrada": {
@@ -472,7 +524,7 @@
       "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 4
+      "secuencia": 5
     },
     {
       "entrada": {
@@ -522,7 +574,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 5
+      "secuencia": 6
     },
     {
       "entrada": {
@@ -572,7 +624,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 6
+      "secuencia": 7
     },
     {
       "entrada": {
@@ -622,7 +674,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 7
+      "secuencia": 8
     },
     {
       "entrada": {
@@ -672,7 +724,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 8
+      "secuencia": 9
     },
     {
       "entrada": {
@@ -720,7 +772,7 @@
       "tru_total": "1/27",
       "origen": "test_paradoja_mentiroso",
       "invocador_id": "test_paradoja_mentiroso",
-      "secuencia": 9
+      "secuencia": 10
     },
     {
       "entrada": {
@@ -768,7 +820,7 @@
       "tru_total": "799/1215",
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
-      "secuencia": 10
+      "secuencia": 11
     }
   ],
   "fallos_engine": [],
@@ -3700,12 +3752,13 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 10,
+      "n": 11,
       "propios": 0,
       "origenes": [
         "test_claude_dentro_del_repo",
         "test_contradiccion_estructural_interna",
         "test_conversacion",
+        "test_conversacion_estrellas",
         "test_paradoja_mentiroso",
         "test_verdad_astronomica"
       ],
@@ -3713,8 +3766,8 @@
     }
   },
   "evidencia_evaluacion": {
-    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso, test_verdad_astronomica",
-    "n": 10,
+    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
+    "n": 11,
     "path": "evaluaciones.json",
     "invocador_id": "ci_auditoria"
   },
@@ -3787,8 +3840,8 @@
     ],
     "razon": null,
     "permite_k": true,
-    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso, test_verdad_astronomica",
-    "secuencia": 10,
+    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
+    "secuencia": 11,
     "n_citas": null,
     "n_anuncios": null,
     "fuentes_usadas": [
@@ -4699,8 +4752,8 @@
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
   },
   "tests": {
-    "total": 138,
-    "pasados": 137,
+    "total": 139,
+    "pasados": 138,
     "fallidos": 0,
     "omitidos": 1,
     "tasa": 99.28

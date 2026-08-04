@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 08:06:45 UTC    Commit: fb398e025d73
+Generado: 2026-08-04 08:12:26 UTC    Commit: a1eca87b2715
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -74,8 +74,8 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
        1. CX-A14
        2. CX-A1
        3. CX-C4
-  Origen     : test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_paradoja_mentiroso, test_verdad_astronomica
-  Secuencia  : 10
+  Origen     : test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica
+  Secuencia  : 11
   Engine     : 11.1
   modo_entrada: auditoria
   coherente_cx: False
@@ -146,7 +146,7 @@ ESTADO GLOBAL
       coherente=True  validos=16  caps_ok=87  caps_fallo=0
 
   ✅ Tests (pytest — forma)
-      total=138  pasados=137  fallidos=0  tasa=99.28%
+      total=139  pasados=138  fallidos=0  tasa=99.28%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
