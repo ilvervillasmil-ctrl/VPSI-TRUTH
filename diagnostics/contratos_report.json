@@ -1149,10 +1149,19 @@
       ],
       "nombre": "glosario",
       "version": "1.0"
+    },
+    "TT": {
+      "modulos": [],
+      "obligatorio": false,
+      "presente": false,
+      "n_modulos": 0,
+      "claves_contrato": [],
+      "esperado": [],
+      "resolucion": []
     }
   },
   "resumen": {
-    "roles_totales": 16,
+    "roles_totales": 17,
     "roles_presentes": 16,
     "roles_obligatorios": 5,
     "contratos_validos": 16,

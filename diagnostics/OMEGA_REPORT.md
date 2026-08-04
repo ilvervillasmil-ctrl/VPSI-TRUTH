@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 22:07:57 UTC    Commit: 8dfd77f90532
+Generado: 2026-08-04 23:29:18 UTC    Commit: 9c97db95810d
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -88,7 +88,7 @@ ESTADO GLOBAL
   ✅ Engine       : OPERATIVO
   ✅ Axiomas      : coherente
   📦 Contenedores : 16
-  ✅ Roles vacíos : 0
+  ⚠️ Roles vacíos : 1
   ✅ Rechazados   : 0
   ✅ Salud        : OPERATIVO — listo para avanzar
 
@@ -109,6 +109,7 @@ ESTADO GLOBAL
   | MC   | CARGADO   | 1   | correlacion_mecanica                 |
   | RE   | CARGADO   | 1   | realidad                             |
   | SF   | CARGADO   | 1   | self                                 |
+  | TT   | VACÍO     | 0   | (sin módulo)                         |
   | TX   | CARGADO   | 1   | taxonomia                            |
   | UI   | CARGADO   | 1   | interfaz                             |
   | VX   | CARGADO   | 1   | verificacion                         |
@@ -118,7 +119,10 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ✅ Sin acciones pendientes.
+  ⚠️ 1. [VACÍO] TT
+     Detalle   : rol sin módulo
+     Impacto   : Capacidad ausente
+     Acción    : Montar módulo rol=TT
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -184,7 +188,7 @@ Presente:
   ✅ UI: interfaz
   ✅ VX: verificacion
 Ausente:
-  ✅ (ninguno)
+  ⚪ TT
 Rechazado:
   ✅ (ninguno)
 
@@ -193,7 +197,7 @@ Rechazado:
 ================================================================================
   Versión Omega      : 10.0
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 0
+  Acciones abiertas  : 1
   Bloqueantes        : 0
   Sección 1          : Auditoría del VPSI (sistema) — LECTURA ABIERTA
   Sección 2          : Último test evaluado — LECTURA ABIERTA
