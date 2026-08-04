@@ -293,10 +293,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "3/32"
+          "K": "1/8"
         },
-        "tru_ri": "3/32",
-        "tru_total": "55/432",
+        "tru_ri": "1/8",
+        "tru_total": "17/108",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -320,8 +320,8 @@
         }
       },
       "estado": "OK",
-      "tru_ri": "3/32",
-      "tru_total": "55/432",
+      "tru_ri": "1/8",
+      "tru_total": "17/108",
       "origen": "test_claude_dentro_del_repo",
       "invocador_id": "test_claude_dentro_del_repo",
       "secuencia": 1
@@ -395,10 +395,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "7/8"
+          "K": "1"
         },
-        "tru_ri": "7/8",
-        "tru_total": "95/108",
+        "tru_ri": "1",
+        "tru_total": "1",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -786,10 +786,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "47/72"
+          "K": "7/9"
         },
-        "tru_ri": "47/72",
-        "tru_total": "647/972",
+        "tru_ri": "7/9",
+        "tru_total": "191/243",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -815,9 +815,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "47/72",
-      "tru_ri": "47/72",
-      "tru_total": "647/972",
+      "K": "7/9",
+      "tru_ri": "7/9",
+      "tru_total": "191/243",
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
       "secuencia": 11
@@ -3827,9 +3827,9 @@
     "estado": "OK",
     "C": "1",
     "L": "1",
-    "K": "47/72",
-    "tru_ri": "47/72",
-    "tru_total": "647/972",
+    "K": "7/9",
+    "tru_ri": "7/9",
+    "tru_total": "191/243",
     "alpha": "26/27",
     "beta": "1/27",
     "taxonomia": null,
@@ -4752,10 +4752,10 @@
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
   },
   "tests": {
-    "total": 139,
-    "pasados": 138,
+    "total": 141,
+    "pasados": 140,
     "fallidos": 0,
     "omitidos": 1,
-    "tasa": 99.28
+    "tasa": 99.29
   }
 }

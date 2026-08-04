@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-04 08:34:18 UTC    Commit: f44c39a1354f
+Generado: 2026-08-04 08:47:01 UTC    Commit: 31ca48d01ac9
 Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
 Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
 ================================================================================
@@ -60,10 +60,10 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   ┌─────────────────────────────────────────────────────────┐
   │  ✅ C (coherencia  ) =  1                               │
   │  ✅ L (lógica      ) =  1                               │
-  │  ✅ K (correlación ) =  47/72                           │
+  │  ✅ K (correlación ) =  7/9                             │
   │─────────────────────────────────────────────────────────│
-  │  ✅ Tru_Ri     =  47/72                                   │
-  │  ✅ Tru_total  =  647/972                                 │
+  │  ✅ Tru_Ri     =  7/9                                     │
+  │  ✅ Tru_total  =  191/243                                 │
   │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
@@ -146,7 +146,7 @@ ESTADO GLOBAL
       coherente=True  validos=16  caps_ok=87  caps_fallo=0
 
   ✅ Tests (pytest — forma)
-      total=139  pasados=138  fallidos=0  tasa=99.28%
+      total=141  pasados=140  fallidos=0  tasa=99.29%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
