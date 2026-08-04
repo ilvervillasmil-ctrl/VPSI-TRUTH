@@ -290,10 +290,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "1"
+          "K": "1/4"
         },
-        "tru_ri": "1",
-        "tru_total": "1",
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -319,9 +319,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "1",
-      "tru_ri": "1",
-      "tru_total": "1",
+      "K": "1/4",
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 1
@@ -340,10 +340,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "1"
+          "K": "1/4"
         },
-        "tru_ri": "1",
-        "tru_total": "1",
+        "tru_ri": "1/4",
+        "tru_total": "5/18",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -369,9 +369,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "1",
-      "tru_ri": "1",
-      "tru_total": "1",
+      "K": "1/4",
+      "tru_ri": "1/4",
+      "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 2
@@ -438,12 +438,12 @@
         "estado": "OK",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1/2",
+          "C": "1",
           "L": "1",
-          "K": "1/2"
+          "K": "0"
         },
-        "tru_ri": "1/4",
-        "tru_total": "5/18",
+        "tru_ri": "0",
+        "tru_total": "1/27",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -467,11 +467,11 @@
         }
       },
       "estado": "OK",
-      "C": "1/2",
+      "C": "1",
       "L": "1",
-      "K": "1/2",
-      "tru_ri": "1/4",
-      "tru_total": "5/18",
+      "K": "0",
+      "tru_ri": "0",
+      "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 4
