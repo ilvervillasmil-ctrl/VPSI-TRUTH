@@ -2136,8 +2136,24 @@
           "version": "1.1",
           "mensaje": "Capacidades de categorías de Tru_Ri y Tru_total. Úsenlas cuando quieran. Este módulo no calcula.",
           "como_usar": "Omega declara el total a mostrar; Engine resuelve la categoría con resolver_pedido / por_id; CX aporta O; conteos + Calculator aplican la fórmula sobre el segmento.",
-          "categorias": [],
-          "total": 0,
+          "categorias": [
+            {
+              "id": "tru_atomo",
+              "nombre": "Tru de átomo",
+              "unidad": "atomo",
+              "nivel_fractal": 1,
+              "factores_evaluables": [
+                "Tru_Ri",
+                "Tru_total"
+              ],
+              "requiere": [
+                "segmento_atomo",
+                "O_id",
+                "enunciado_O"
+              ]
+            }
+          ],
+          "total": 1,
           "coherente": true,
           "errores": []
         },
