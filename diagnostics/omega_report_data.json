@@ -283,6 +283,51 @@
   "resultados_evaluacion": [
     {
       "entrada": {
+        "quien": "Claude",
+        "texto": "Estuve dentro del repositorio. Ejecuté el engine y medí sus factores. Leí conteos punto py línea por línea. No inventé el rol RE, aunque sí lo escribí sin verificarlo. Corrí el barrido axiomático y dio 487 declaraciones sin choques. No leí los 487 axiomas.",
+        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
+      },
+      "resultado": {
+        "estado": "OK",
+        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
+        "factores": {
+          "C": "1",
+          "L": "1",
+          "K": "1/12"
+        },
+        "tru_ri": "1/12",
+        "tru_total": "19/162",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
+        ],
+        "fallos": [],
+        "engine_version": "11.1",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
+        }
+      },
+      "estado": "OK",
+      "tru_ri": "1/12",
+      "tru_total": "19/162",
+      "origen": "test_claude_dentro_del_repo",
+      "invocador_id": "test_claude_dentro_del_repo",
+      "secuencia": 1
+    },
+    {
+      "entrada": {
         "quien": "Carlos",
         "texto": "Anoche me quedé en casa todo el tiempo.",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
@@ -329,7 +374,7 @@
       "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 1
+      "secuencia": 2
     },
     {
       "entrada": {
@@ -379,7 +424,7 @@
       "tru_total": "5/18",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 2
+      "secuencia": 3
     },
     {
       "entrada": {
@@ -429,7 +474,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 3
+      "secuencia": 4
     },
     {
       "entrada": {
@@ -479,7 +524,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 4
+      "secuencia": 5
     },
     {
       "entrada": {
@@ -529,7 +574,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 5
+      "secuencia": 6
     },
     {
       "entrada": {
@@ -579,7 +624,7 @@
       "tru_total": "1/27",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
-      "secuencia": 6
+      "secuencia": 7
     }
   ],
   "fallos_engine": [],
@@ -3511,17 +3556,18 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 6,
+      "n": 7,
       "propios": 0,
       "origenes": [
+        "test_claude_dentro_del_repo",
         "test_conversacion"
       ],
       "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": "test_conversacion",
-    "n": 6,
+    "origen": "test_claude_dentro_del_repo, test_conversacion",
+    "n": 7,
     "path": "evaluaciones.json",
     "invocador_id": "ci_auditoria"
   },
@@ -3594,8 +3640,8 @@
     ],
     "razon": null,
     "permite_k": true,
-    "origen": "test_conversacion",
-    "secuencia": 6,
+    "origen": "test_claude_dentro_del_repo, test_conversacion",
+    "secuencia": 7,
     "n_citas": null,
     "n_anuncios": null,
     "fuentes_usadas": [
@@ -4506,10 +4552,10 @@
     "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
   },
   "tests": {
-    "total": 134,
-    "pasados": 133,
+    "total": 135,
+    "pasados": 134,
     "fallidos": 0,
     "omitidos": 1,
-    "tasa": 99.25
+    "tasa": 99.26
   }
 }
