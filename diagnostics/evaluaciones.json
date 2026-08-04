@@ -66,36 +66,43 @@
         "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones."
       },
       "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+        "estado": "OK",
         "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
         "factores": {
-          "C": null,
-          "L": null,
-          "K": null
+          "C": "19/20",
+          "L": "1",
+          "K": "53/2000"
         },
-        "fallos": [
-          {
-            "contenedor": "calculator",
-            "rol": "CA",
-            "capacidad": "calcular",
-            "razon": "KeyError: '1/1.01'",
-            "traza": "Traceback (most recent call last):\n  File \"/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/core/engine.py\", line 418, in _ejecutar_capacidad\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/calculator/__init__.py\", line 402, in calcular\n    peticion = _asegurar_conteos(peticion)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/calculator/__init__.py\", line 189, in _asegurar_conteos\n    return _CONTEOS[\"inyectar_en_peticion\"](peticion)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: '1/1.01'\n"
-          }
+        "tru_ri": "1007/40000",
+        "tru_total": "33091/540000",
+        "alpha": "26/27",
+        "beta": "1/27",
+        "R_i_equals_R": false,
+        "fuentes_usadas": [
+          "X",
+          "O_context"
         ],
+        "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": []
+          "tipos_peticion": [],
+          "modo_entrada": "auditoria",
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4"
+          ],
+          "coherente": false
         }
       },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
+      "estado": "OK",
+      "C": "19/20",
+      "L": "1",
+      "K": "53/2000",
+      "tru_ri": "1007/40000",
+      "tru_total": "33091/540000",
       "origen": "test_contradiccion_estructural_interna",
       "invocador_id": "test_contradiccion_estructural_interna",
       "secuencia": 2
@@ -166,10 +173,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "3/13"
+          "K": "19/100"
         },
-        "tru_ri": "3/13",
-        "tru_total": "7/27",
+        "tru_ri": "19/100",
+        "tru_total": "11/50",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -195,9 +202,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "3/13",
-      "tru_ri": "3/13",
-      "tru_total": "7/27",
+      "K": "19/100",
+      "tru_ri": "19/100",
+      "tru_total": "11/50",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 4
@@ -216,10 +223,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "3/13"
+          "K": "19/100"
         },
-        "tru_ri": "3/13",
-        "tru_total": "7/27",
+        "tru_ri": "19/100",
+        "tru_total": "11/50",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -245,9 +252,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "3/13",
-      "tru_ri": "3/13",
-      "tru_total": "7/27",
+      "K": "19/100",
+      "tru_ri": "19/100",
+      "tru_total": "11/50",
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 5
@@ -512,10 +519,10 @@
         "factores": {
           "C": "1",
           "L": "1",
-          "K": "29/39"
+          "K": "3/4"
         },
-        "tru_ri": "29/39",
-        "tru_total": "61/81",
+        "tru_ri": "3/4",
+        "tru_total": "41/54",
         "alpha": "26/27",
         "beta": "1/27",
         "R_i_equals_R": false,
@@ -541,9 +548,9 @@
       "estado": "OK",
       "C": "1",
       "L": "1",
-      "K": "29/39",
-      "tru_ri": "29/39",
-      "tru_total": "61/81",
+      "K": "3/4",
+      "tru_ri": "3/4",
+      "tru_total": "41/54",
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
       "secuencia": 11
