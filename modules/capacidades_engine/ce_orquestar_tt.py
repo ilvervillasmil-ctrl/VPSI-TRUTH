@@ -1,38 +1,19 @@
-# modules/capacidades_engine/ce_mandato_catalogo.py
 # -*- coding: utf-8 -*-
 """
-Skill CE — exclusivo Engine.
+modules/capacidades_engine/mandato_escala_tt.py
 
-Mandato de sincronización: lectura del catálogo de escalas.
-Engine exige conocer las categorías disponibles.
+ID: ce_mandato_escala_tt
 CE no calcula.
 """
 
 SKILL = {
-    "id": "ce_mandato_catalogo",
-    "nombre": "Mandato: leer inventario del catálogo TT",
-    "enunciado": (
-        "Mandato del Engine para descubrir las escalas de verdad declaradas. "
-        "El módulo TT expone sus IDs de categoría y CA las registra para el ciclo. "
-        "CE no calcula ni inventa escalas."
-    ),
+    "id": "ce_mandato_escala_tt",
+    "nombre": "Mandato: escala TT por id",
     "version": "1.0",
-    "modulos_objetivo": [
-        "tru_totales",
-        "calculator",
-    ],
-    "requiere_roles": ["TT", "CA"],
-    "entrada": [],
-    "salida_esperada": [
-        "escalas_disponibles",
-        "ids_tt",
-    ],
-    "sincroniza_con": [
-        "ce_mandato_escala_tt",
-    ],
-    "prioridad": 1,
-    "notas": (
-        "Es el paso previo a cualquier cálculo de escala. "
-        "Sin este mandato, Engine no sabe qué escalas puede exigir a CA."
+    "enunciado": (
+        "Mandato del Engine: valuacion en la escala indicada por id "
+        "(tru_atomo, tru_frase, tru_sujeto, tru_conversacion, "
+        "tru_repositorio u otro id del catalogo TT). "
+        "CE no calcula. CA produce C/L/K; FO Tru; Engine deposita."
     ),
 }
