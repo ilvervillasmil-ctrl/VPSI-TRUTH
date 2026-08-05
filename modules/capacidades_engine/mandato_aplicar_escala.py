@@ -1,3 +1,4 @@
+# modules/capacidades_engine/ce_mandato_aplicar_escala.py
 # -*- coding: utf-8 -*-
 """
 Skill CE — exclusivo Engine.
