@@ -1533,6 +1533,499 @@ class Engine:
             "items": items,
             "engine_version": getattr(self, "VERSION", "12.0"),
         }
+
+    # ===========================================================
+    # JOHNSON — AUDITOR ESTRUCTURAL INDEPENDIENTE (capa superior)
+    #
+    # Jerarquia:
+    #   auditar_estructura()  →  coherencia basica (AST, SELF, ROL,
+    #                            CONTENEDOR, CAPACIDAD, DEPENDENCIA, IDS)
+    #   johnson()             →  ejecuta auditar_estructura +
+    #                            FLUJO, MEMORIA, PERSISTENCIA,
+    #                            SNAPSHOT, EVIDENCIA, OMEGA,
+    #                            AUTOCONSISTENCIA
+    #
+    # No calcula. No repara. No escribe. No interpreta.
+    # Veredictos: APROBADO | RETENIDO
+    #
+    # Invariante:
+    #   self.resultados_evaluacion (este origen)
+    #            ==
+    #   evidencia persistida (mismo origen)
+    # ===========================================================
+
+    def johnson(self) -> Dict[str, Any]:
+        """
+        Auditor de nivel superior.
+        Incorpora auditar_estructura y anade capas de flujo/memoria/persistencia.
+        """
+        import ast
+        import inspect
+        from copy import deepcopy
+
+        items: List[Dict[str, Any]] = []
+        contador: Dict[str, int] = {
+            "AST": 0, "SELF": 0, "ROL": 0, "CONTENEDOR": 0,
+            "CAPACIDAD": 0, "DEPENDENCIA": 0, "IDS": 0, "ALIAS": 0,
+            "FLUJO": 0, "MEMORIA": 0, "PERSISTENCIA": 0,
+            "EVIDENCIA": 0, "SNAPSHOT": 0, "OMEGA": 0,
+            "AUTO": 0, "EXCEPCION": 0,
+        }
+
+        def ok(tipo: str, evidencia: str, linea: int = None) -> None:
+            d: Dict[str, Any] = {
+                "tipo": tipo, "estado": "APROBADO", "evidencia": evidencia,
+            }
+            if linea is not None:
+                d["linea"] = int(linea)
+            items.append(d)
+
+        def retenido(tipo: str, evidencia: str, linea: int = None) -> None:
+            d: Dict[str, Any] = {
+                "tipo": tipo, "estado": "RETENIDO", "evidencia": evidencia,
+            }
+            if linea is not None:
+                d["linea"] = int(linea)
+            items.append(d)
+            if tipo in contador:
+                contador[tipo] += 1
+
+        def _incorporar(informe: Dict[str, Any]) -> None:
+            """Fusiona items/tipos de auditar_estructura sin reinterpretar."""
+            for it in informe.get("items") or []:
+                if not isinstance(it, dict):
+                    continue
+                items.append(dict(it))
+                t = str(it.get("tipo") or "")
+                if it.get("estado") == "RETENIDO" and t in contador:
+                    contador[t] += 1
+            for t, n in (informe.get("tipos") or {}).items():
+                if t in contador and isinstance(n, int):
+                    # ya contados via items; no doble-suma si tipos
+                    # solo informativo de la capa basica
+                    pass
+
+        # -------------------------------------------------------
+        # 0) AUTOCONSISTENCIA DE JOHNSON
+        # -------------------------------------------------------
+        metodos_req = (
+            "johnson",
+            "_johnson_cierre",
+            "auditar_estructura",
+            "_emit",
+            "_persistir_evaluaciones",
+            "_origen_evidencia",
+            "_filtrar_registros_depositables",
+        )
+        for m in metodos_req:
+            if not hasattr(self, m) or not callable(getattr(self, m, None)):
+                retenido("AUTO", "Metodo requerido ausente: {0}".format(m))
+            else:
+                ok("AUTO", "Metodo presente: {0}".format(m))
+
+        # -------------------------------------------------------
+        # 1) CAPA BASICA — auditar_estructura (sin duplicar)
+        # -------------------------------------------------------
+        if hasattr(self, "auditar_estructura") and callable(
+            self.auditar_estructura
+        ):
+            try:
+                base = self.auditar_estructura()
+                if isinstance(base, dict):
+                    _incorporar(base)
+                    if base.get("estado") == "CONTRADICCION":
+                        ok(
+                            "AUTO",
+                            "Capa basica reporto CONTRADICCION; "
+                            "Johnson la conserva y continua",
+                        )
+                else:
+                    retenido(
+                        "AUTO",
+                        "auditar_estructura no devolvio dict",
+                    )
+            except Exception as e:
+                retenido(
+                    "EXCEPCION",
+                    "auditar_estructura: {0}: {1}".format(
+                        type(e).__name__, e
+                    ),
+                )
+        else:
+            retenido("AUTO", "auditar_estructura no disponible")
+
+        # -------------------------------------------------------
+        # 2) FLUJO — contrato AST de _emit y _persistir
+        # -------------------------------------------------------
+        try:
+            fuente_cls = inspect.getsource(type(self))
+            tree = ast.parse(fuente_cls)
+        except Exception as e:
+            retenido(
+                "FLUJO",
+                "No se pudo parsear fuente Engine: {0}: {1}".format(
+                    type(e).__name__, e
+                ),
+            )
+            tree = None
+
+        def _buscar_metodo(nombre: str):
+            if tree is None:
+                return None
+            for nodo in tree.body:
+                # class Engine: ...
+                if isinstance(nodo, ast.ClassDef):
+                    for item in nodo.body:
+                        if (
+                            isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+                            and item.name == nombre
+                        ):
+                            return item
+            # por si el parse fue del metodo suelto
+            for nodo in ast.walk(tree):
+                if (
+                    isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and nodo.name == nombre
+                ):
+                    return nodo
+            return None
+
+        # ----- 2a) _emit: append → _persistir_evaluaciones → return -----
+        fn_emit = _buscar_metodo("_emit")
+        if fn_emit is None:
+            retenido("FLUJO", "_emit no encontrado en AST")
+        else:
+            orden: List[str] = []
+            for n in ast.walk(fn_emit):
+                # self.resultados_evaluacion.append(...)
+                if isinstance(n, ast.Call):
+                    f = n.func
+                    if (
+                        isinstance(f, ast.Attribute)
+                        and f.attr == "append"
+                    ):
+                        orden.append("append")
+                    if (
+                        isinstance(f, ast.Attribute)
+                        and isinstance(f.value, ast.Name)
+                        and f.value.id == "self"
+                        and f.attr == "_persistir_evaluaciones"
+                    ):
+                        orden.append("persistir")
+                    if (
+                        isinstance(f, ast.Name)
+                        and f.id == "_persistir_evaluaciones"
+                    ):
+                        orden.append("persistir")
+                if isinstance(n, ast.Return):
+                    orden.append("return")
+
+            if "append" not in orden:
+                retenido(
+                    "FLUJO",
+                    "_emit no contiene append a resultados_evaluacion",
+                )
+            if "persistir" not in orden:
+                retenido(
+                    "FLUJO",
+                    "_emit no llama _persistir_evaluaciones",
+                )
+            if "return" not in orden:
+                retenido("FLUJO", "_emit no tiene return")
+
+            if (
+                "append" in orden
+                and "persistir" in orden
+                and orden.index("append") > orden.index("persistir")
+            ):
+                retenido(
+                    "FLUJO",
+                    "Contrato _emit roto: persistir antes de append",
+                )
+            elif (
+                "append" in orden
+                and "persistir" in orden
+                and "return" in orden
+                and orden.index("append") < orden.index("persistir")
+            ):
+                ok(
+                    "FLUJO",
+                    "_emit: append → persistir (orden contractual)",
+                )
+
+            # deepcopy(resultado) en _emit
+            tiene_deepcopy = False
+            for n in ast.walk(fn_emit):
+                if isinstance(n, ast.Call):
+                    f = n.func
+                    if isinstance(f, ast.Name) and f.id == "deepcopy":
+                        tiene_deepcopy = True
+                    if (
+                        isinstance(f, ast.Attribute)
+                        and f.attr == "deepcopy"
+                    ):
+                        tiene_deepcopy = True
+            if not tiene_deepcopy:
+                retenido(
+                    "FLUJO",
+                    "_emit no usa deepcopy(resultado) "
+                    "(contrato: no mutar ni compartir refs)",
+                )
+            else:
+                ok("FLUJO", "_emit usa deepcopy")
+
+        # ----- 2b) _persistir: llama depositar; no write_text -----
+        fn_pers = _buscar_metodo("_persistir_evaluaciones")
+        if fn_pers is None:
+            retenido("FLUJO", "_persistir_evaluaciones no encontrado en AST")
+        else:
+            src_pers = ast.get_source_segment(fuente_cls, fn_pers) or ""
+            llama_depositar = False
+            llama_write = False
+            for n in ast.walk(fn_pers):
+                if isinstance(n, ast.Call):
+                    f = n.func
+                    nombre = None
+                    if isinstance(f, ast.Name):
+                        nombre = f.id
+                    elif isinstance(f, ast.Attribute):
+                        nombre = f.attr
+                    if nombre == "depositar":
+                        llama_depositar = True
+                    if nombre in ("write_text", "write", "open"):
+                        # open/write_text directo = escritor propio
+                        if nombre == "write_text" or nombre == "open":
+                            llama_write = True
+            if not llama_depositar:
+                retenido(
+                    "PERSISTENCIA",
+                    "_persistir_evaluaciones no llama depositar()",
+                )
+            else:
+                ok(
+                    "PERSISTENCIA",
+                    "_persistir_evaluaciones llama depositar()",
+                )
+            if llama_write:
+                retenido(
+                    "PERSISTENCIA",
+                    "_persistir_evaluaciones escribe archivo directo "
+                    "(contrato: solo diagnostics.evidencia)",
+                )
+            else:
+                ok(
+                    "PERSISTENCIA",
+                    "_persistir_evaluaciones sin write_text/open propio",
+                )
+
+        # -------------------------------------------------------
+        # 3) MEMORIA — secuencias 1..n sin saltos ni duplicados
+        # -------------------------------------------------------
+        memoria = list(getattr(self, "resultados_evaluacion", None) or [])
+        seqs: List[int] = []
+        for i, reg in enumerate(memoria):
+            if not isinstance(reg, dict):
+                retenido(
+                    "MEMORIA",
+                    "resultados_evaluacion[{0}] no es dict".format(i),
+                )
+                continue
+            if "resultado" not in reg:
+                retenido(
+                    "MEMORIA",
+                    "resultados_evaluacion[{0}] sin 'resultado'".format(i),
+                )
+            sc = reg.get("secuencia")
+            if isinstance(sc, int):
+                seqs.append(sc)
+            elif sc is not None:
+                try:
+                    seqs.append(int(sc))
+                except Exception:
+                    retenido(
+                        "MEMORIA",
+                        "secuencia no numerica en indice {0}".format(i),
+                    )
+
+        if seqs:
+            if len(seqs) != len(set(seqs)):
+                retenido("MEMORIA", "secuencias duplicadas: {0}".format(seqs))
+            esperado = list(range(1, len(seqs) + 1))
+            if sorted(seqs) != esperado:
+                retenido(
+                    "MEMORIA",
+                    "secuencias no contiguas 1..n: {0}".format(seqs),
+                )
+            else:
+                ok(
+                    "MEMORIA",
+                    "secuencias contiguas 1..{0}".format(len(seqs)),
+                )
+        elif not memoria:
+            ok("MEMORIA", "sin ciclos; secuencias no aplicables")
+
+        # -------------------------------------------------------
+        # 4) DEPOSITARIO — API contractual
+        # -------------------------------------------------------
+        leer_fn = None
+        try:
+            from diagnostics import evidencia as _ev
+        except (ImportError, ModuleNotFoundError):
+            try:
+                import importlib
+                _ev = importlib.import_module("diagnostics.evidencia")
+            except (ImportError, ModuleNotFoundError) as e:
+                retenido(
+                    "PERSISTENCIA",
+                    "diagnostics.evidencia no importable: {0}".format(e),
+                )
+                _ev = None
+
+        if _ev is not None:
+            for api in ("depositar", "leer", "_normalizar_origen"):
+                if not callable(getattr(_ev, api, None)):
+                    # _normalizar_origen puede ser privado; depositar/leer obligatorios
+                    if api in ("depositar", "leer"):
+                        retenido(
+                            "PERSISTENCIA",
+                            "depositario sin API '{0}'".format(api),
+                        )
+                    else:
+                        # opcional documentado
+                        pass
+                else:
+                    if api in ("depositar", "leer"):
+                        ok(
+                            "PERSISTENCIA",
+                            "API depositario '{0}' presente".format(api),
+                        )
+            leer_fn = getattr(_ev, "leer", None)
+
+        # -------------------------------------------------------
+        # 5) INVARIANTE memoria == persistencia (mismo origen)
+        #    Comparacion estructural por claves del body (sin lista fija)
+        # -------------------------------------------------------
+        if callable(leer_fn) and memoria:
+            try:
+                doc = leer_fn() or {}
+                resultados_disco = list(doc.get("resultados") or [])
+                origen = (
+                    self._origen_evidencia()
+                    if callable(getattr(self, "_origen_evidencia", None))
+                    else str(getattr(self, "invocador_id", None) or "engine")
+                )
+                del_origen = [
+                    r for r in resultados_disco
+                    if isinstance(r, dict) and r.get("origen") == origen
+                ]
+
+                if len(del_origen) != len(memoria):
+                    retenido(
+                        "EVIDENCIA",
+                        "Invariante: memoria n={0} != disco origen={1} n={2}".format(
+                            len(memoria), origen, len(del_origen)
+                        ),
+                    )
+                else:
+                    for idx, (reg_m, reg_d) in enumerate(
+                        zip(memoria, del_origen)
+                    ):
+                        body_m = reg_m.get("resultado")
+                        body_d = reg_d.get("resultado")
+                        if not isinstance(body_m, dict):
+                            body_m = {}
+                        if not isinstance(body_d, dict):
+                            body_d = {}
+
+                        # obligatorias de forma
+                        for obl in ("estado",):
+                            if obl in body_m and obl not in body_d:
+                                retenido(
+                                    "SNAPSHOT",
+                                    "Ciclo[{0}]: clave obligatoria '{1}' "
+                                    "en memoria ausente en disco".format(
+                                        idx, obl
+                                    ),
+                                )
+
+                        # conservacion: toda clave de memoria debe estar en disco
+                        solo_m = set(body_m.keys()) - set(body_d.keys())
+                        for k in sorted(solo_m):
+                            retenido(
+                                "SNAPSHOT",
+                                "Ciclo[{0}]: clave '{1}' en memoria "
+                                "ausente en persistencia".format(idx, k),
+                            )
+
+                    if not any(
+                        x.get("estado") == "RETENIDO"
+                        and x.get("tipo") in ("EVIDENCIA", "SNAPSHOT")
+                        for x in items
+                    ):
+                        ok(
+                            "EVIDENCIA",
+                            "Invariante memoria == persistencia "
+                            "(origen={0}, claves conservadas)".format(origen),
+                        )
+            except Exception as e:
+                retenido(
+                    "EXCEPCION",
+                    "Comparacion memoria/persistencia: {0}: {1}".format(
+                        type(e).__name__, e
+                    ),
+                )
+        elif not memoria:
+            ok("EVIDENCIA", "Sin ciclos; invariante no aplicable")
+
+        # -------------------------------------------------------
+        # 6) OMEGA — esquema minimo legible
+        # -------------------------------------------------------
+        if callable(leer_fn):
+            try:
+                doc = leer_fn() or {}
+                if not isinstance(doc, dict):
+                    retenido("OMEGA", "evidencia.leer() no devolvio dict")
+                else:
+                    for k in ("resultados", "n"):
+                        if k not in doc:
+                            retenido(
+                                "OMEGA",
+                                "Esquema evidencia sin '{0}'".format(k),
+                            )
+                    if "resultados" in doc and "n" in doc:
+                        ok("OMEGA", "Esquema evidencia legible por Omega")
+            except Exception as e:
+                retenido(
+                    "OMEGA",
+                    "Lectura esquema: {0}: {1}".format(type(e).__name__, e),
+                )
+
+        # -------------------------------------------------------
+        # cierre
+        # -------------------------------------------------------
+        return self._johnson_cierre(items, contador)
+
+    def _johnson_cierre(
+        self,
+        items: List[Dict[str, Any]],
+        contador: Dict[str, int],
+    ) -> Dict[str, Any]:
+        retenidos = sum(1 for x in items if x.get("estado") == "RETENIDO")
+        aprobados = sum(1 for x in items if x.get("estado") == "APROBADO")
+        return {
+            "auditor": "JOHNSON",
+            "estado": "COHERENTE" if retenidos == 0 else "CONTRADICCION",
+            "n_aprobados": aprobados,
+            "n_retenidos": retenidos,
+            "tipos": contador,
+            "items": items,
+            "engine_version": getattr(self, "VERSION", "12.0"),
+            "invocador_id": getattr(self, "invocador_id", None),
+            "nota": (
+                "Johnson = capa superior sobre auditar_estructura. "
+                "No calcula, no repara, no escribe evidencia."
+            ),
+        }
       
 # ===========================================================
 # EXPORTS
