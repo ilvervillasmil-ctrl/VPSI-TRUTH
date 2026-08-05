@@ -140,6 +140,94 @@ def _cargar_conteos():
 _CONTEOS = _cargar_conteos()
 
 
+# ===============================================================
+# Ids de escala (lectura — no cambia la lógica de C/L/K)
+# ===============================================================
+# Mapa en escalas_ids.py (y TT si existe). CA lee los ids para saber
+# qué recorte pide el ciclo (sujeto, frase, conversación, átomo, repo).
+# El cálculo de factores sigue siendo el mismo: conteos + C/L/K.
+# Tru_Ri / Tru_total siguen en FO.
+
+def _cargar_escalas_ids():
+    try:
+        mod = importlib.import_module("modules.calculator.escalas_ids")
+        ids_fn = getattr(mod, "ids", None)
+        por_id = getattr(mod, "por_id", None)
+        version = getattr(mod, "VERSION", None)
+        if callable(ids_fn):
+            return {
+                "ids": ids_fn,
+                "por_id": por_id if callable(por_id) else None,
+                "version": version,
+            }
+    except Exception:
+        pass
+    return None
+
+
+_ESCALAS = _cargar_escalas_ids()
+
+
+def _leer_ids_tt():
+    try:
+        mod = importlib.import_module("modules.tru_totales")
+        for nombre in ("ids", "categorias"):
+            fn = getattr(mod, nombre, None)
+            if not callable(fn):
+                continue
+            out = fn()
+            if not isinstance(out, list):
+                continue
+            ids = []
+            for item in out:
+                if isinstance(item, str) and item.strip():
+                    ids.append(item.strip().lower())
+                elif isinstance(item, dict) and item.get("id"):
+                    ids.append(str(item["id"]).strip().lower())
+            return [i for i in ids if i]
+    except Exception:
+        pass
+    return []
+
+
+def leer_ids_escala():
+    """Todos los ids de escala que CA puede reconocer para el pedido."""
+    ids_local = []
+    origenes = []
+    if _ESCALAS is not None:
+        try:
+            ids_local = list(_ESCALAS["ids"]())
+            origenes.append("escalas_ids")
+        except Exception:
+            pass
+    ids_tt = _leer_ids_tt()
+    if ids_tt:
+        origenes.append("tru_totales")
+    unidos = []
+    vistos = set()
+    for i in list(ids_local) + list(ids_tt):
+        k = str(i).strip().lower()
+        if k and k not in vistos:
+            vistos.add(k)
+            unidos.append(k)
+    return {
+        "ids": unidos,
+        "n": len(unidos),
+        "origenes": origenes,
+        "disponible": bool(unidos),
+    }
+
+
+def _id_escala_pedido(peticion):
+    for clave in ("escala_id", "categoria_tru", "id_escala", "escala"):
+        v = peticion.get(clave)
+        if v is not None and str(v).strip():
+            return str(v).strip().lower()
+    return None
+
+
+
+
 def _faltan_conteos(peticion: Dict[str, Any]) -> bool:
     """True si falta alguna clave que la ruta operacional necesita."""
     for k in _CLAVES_CONTEO:
@@ -209,13 +297,14 @@ def barrer() -> Dict[str, Any]:
                 )
             )
 
-    stems_conocidos = set(_ARCHIVO_FACTOR.keys()) | {"conteos"}
+    stems_conocidos = set(_ARCHIVO_FACTOR.keys()) | {"conteos", "escalas_ids"}
     extra = [
         p.stem for p in _listar_py()
         if p.stem not in stems_conocidos
     ]
 
     conteos_ok = _CONTEOS is not None
+    ids_info = leer_ids_escala()
 
     limpio = not errores and not choques
     return {
@@ -228,9 +317,12 @@ def barrer() -> Dict[str, Any]:
         "factores_api": factores_ok,
         "archivos_extra": extra,
         "conteos_disponible": conteos_ok,
+        "escalas_ids_disponible": _ESCALAS is not None,
+        "ids_escala": ids_info,
         "nota": (
             "conteos.py produce k/m, r/p, f/c para la ruta operacional; "
-            "archivos_extra son candidatos a nuevos factores"
+            "ids_escala = sujeto/frase/conversacion/atomo/repo leidos del mapa; "
+            "CA calcula C/L/K; Tru en FO; archivos_extra = candidatos"
         ),
     }
 
@@ -244,11 +336,15 @@ def inventario(peticion: Any = None) -> Dict[str, Any]:
         "archivos": b.get("archivos"),
         "factores_api": b.get("factores_api"),
         "conteos_disponible": b.get("conteos_disponible"),
+        "escalas_ids_disponible": b.get("escalas_ids_disponible"),
+        "ids_escala": b.get("ids_escala"),
         "coherente": b.get("coherente"),
         "funcion": (
-            "Calcula C, L, K. No calcula Tru. "
+            "Calcula C, L, K. No calcula Tru (FO). "
             "K ausente sin contexto/O (Def-5.3.1). "
-            "Si metodo=operacional y faltan conteos, los produce conteos.py."
+            "Si metodo=operacional y faltan conteos, los produce conteos.py. "
+            "Lee todos los ids de escala (sujeto, frase, conversacion, atomo, repo) "
+            "para el pedido; el recorte del material lo trae quien orquesta."
         ),
     }
 
@@ -270,6 +366,28 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     metodo = str(peticion.get("metodo") or "operacional")
     errores: List[str] = []
     meta_conteos = None
+
+    # ----- id de escala del pedido (lectura; no cambia C/L/K) -----
+    escala_id = _id_escala_pedido(peticion)
+    escala_meta = None
+    if escala_id:
+        inv = leer_ids_escala()
+        conocido = escala_id in (inv.get("ids") or [])
+        desc = None
+        if _ESCALAS and callable(_ESCALAS.get("por_id")):
+            try:
+                desc = _ESCALAS["por_id"](escala_id)
+            except Exception:
+                desc = None
+        escala_meta = {
+            "escala_id": escala_id,
+            "conocido": conocido,
+            "ids_disponibles": list(inv.get("ids") or []),
+        }
+        if isinstance(desc, dict):
+            escala_meta["material"] = desc.get("material")
+            escala_meta["repetir_por"] = desc.get("repetir_por")
+            escala_meta["nombre"] = desc.get("nombre")
 
     # ----- producir conteos si hace falta (solo operacional) -----
     if metodo == "operacional":
@@ -391,6 +509,8 @@ def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     }
     if meta_conteos is not None:
         salida["conteos"] = meta_conteos
+    if escala_meta is not None:
+        salida["escala"] = escala_meta
     return salida
 
 
@@ -417,12 +537,14 @@ CONTENEDOR = {
         "Sin contexto/O, K queda None (Def-5.3.1). "
         "No calcula Tru_total (FO). "
         "Si metodo=operacional y faltan conteos, los produce conteos.py. "
-        "verificar = centinela de carpeta; calcular = oficio de factores."
+        "Lee ids de escala (sujeto, frase, conversacion, atomo, repo) del mapa. "
+        "verificar = centinela de carpeta; calcular = oficio de factores C/L/K."
     ),
     "capacidades": {
         "calcular": calcular,
         "verificar": barrer,
         "inventario": inventario,
+        "leer_ids_escala": leer_ids_escala,
     },
 }
 
@@ -441,5 +563,6 @@ __all__ = [
     "calcular",
     "barrer",
     "inventario",
+    "leer_ids_escala",
     "verificar_salida",
 ]
