@@ -1,3 +1,4 @@
+# modules/capacidades_engine/ce_mandato_sujetos.py
 # -*- coding: utf-8 -*-
 """
 Skill CE — exclusivo Engine.
@@ -41,6 +42,7 @@ SKILL = {
     "salida_esperada": [
         "sujetos",
         "n_sujetos",
+        "por_sujeto",
     ],
     "sincroniza_con": [
         "ce_mandato_escala_tt",
@@ -49,7 +51,7 @@ SKILL = {
     "notas": (
         "Engine lanza el mandato a todo el conjunto. "
         "No es solo CA+FO: CX, MC, TT, CIT, CH, TX, AX participan "
-        "según su contrato. Omega 10.1 lee resultado.sujetos. "
+        "según su contrato. Omega 10.1 lee resultado.sujetos y resultado.por_sujeto. "
         "CE solo declara el mandato."
     ),
 }
