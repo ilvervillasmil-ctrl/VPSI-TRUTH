@@ -1,34 +1,32 @@
+# -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Versión 11.1 — orquestador por contrato.
+Version 12.0 — orquestador por contrato + extension CE.
 
-Principio (no cambia)
-  - Conoce la arquitectura (módulos, roles, contratos, capacidades).
-  - Actúa solo por lo que cada CONTENEDOR declara.
-  - No inventa operaciones ni interpreta resultados.
-  - No sustituye la lógica interna de un módulo.
-  - No re-enuncia teoremas (IND-T1 / Def-5.3.1 / TR1 viven en AX).
-  - CT: ancla ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
+Principio
+  - Conoce la arquitectura solo por CONTENEDOR (roles, capacidades).
+  - Actua solo por lo que cada contrato declara.
+  - No inventa operaciones ni interpreta resultados de oficio ajeno.
+  - No sustituye la logica interna de un modulo.
+  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
   - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
   - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
-  - MC: coherencia de orden en compuerta.
+  - CE: extension del Engine (mandatos). CE no calcula.
+  - TT / CC / demas: se usan si el contrato y el mandato lo permiten.
 
-Lo que 11.1 corrige (sin “imponer” teoría al orquestador)
-  - O de contenido solo si viene en la petición o si CX declara
-    permite_k is True y aporta O estable. Si no, no hay dominio.
-  - Sin O usable → resultado de ciclo UNDEFINED (no crash, no OK).
-  - Nunca bool(UNDEFINED). Nunca fabricar K=0 ni O fantasma.
-  - Eso es cumplir el contrato de CX + el grafo que AX ya carga;
-    no es interpretar el meta-teorema dentro de Engine.
-
-Esquema del ciclo:
-  Sustrato → Marco (CX) → Factores (CA) → Fórmula (FO)
-  → Cierre (CIT si pedir_anuncio) → Evidencia.
+12.0
+  - Lee CE (ids/skills) en el ciclo.
+  - Recombina ciclos de oficio ya permitido (p. ej. por sujeto).
+  - Deposita resultado.sujetos / n_sujetos cuando aplica.
+  - Nuevos modulos/roles con CONTENEDOR valido se descubren al arrancar.
+  - La secuencia no es una jaula: el esqueleto seguro se mantiene;
+    los mandatos CE abren recortes adicionales dentro del contrato.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 import traceback
 from fractions import Fraction
@@ -46,7 +44,7 @@ class _Undefined:
         return "UNDEFINED"
 
     def __bool__(self):
-        raise TypeError("UNDEFINED no admite conversión a booleano")
+        raise TypeError("UNDEFINED no admite conversion a booleano")
 
     def __eq__(self, other):
         return isinstance(other, _Undefined)
@@ -63,11 +61,6 @@ def es_undefined(v: Any) -> bool:
 
 
 def _o_ausente(o: Any) -> bool:
-    """
-    True si no hay O usable como dominio de contenido.
-    Nunca evalúa bool(UNDEFINED).
-    Rótulos de estado ("undefined", "indefinido") no son dominio.
-    """
     if o is None:
         return True
     if es_undefined(o):
@@ -76,13 +69,12 @@ def _o_ausente(o: Any) -> bool:
         s = o.strip()
         if not s:
             return True
-        if s.lower() in ("undefined", "indefinido", "∅", "none", "null"):
+        if s.lower() in ("undefined", "indefinido", "none", "null"):
             return True
     return False
 
 
 def _truthy_pedido(v: Any) -> bool:
-    """Pedido de anuncio sin bool(UNDEFINED)."""
     if v is None or es_undefined(v):
         return False
     if isinstance(v, bool):
@@ -90,7 +82,7 @@ def _truthy_pedido(v: Any) -> bool:
     if isinstance(v, (int, float)):
         return v != 0
     if isinstance(v, str):
-        return v.strip().lower() in ("1", "true", "si", "sí", "yes", "on")
+        return v.strip().lower() in ("1", "true", "si", "yes", "on")
     return bool(v)
 
 
@@ -98,11 +90,11 @@ def _truthy_pedido(v: Any) -> bool:
 # EXCEPCIONES
 # ===============================================================
 class ArranqueError(Exception):
-    """Incoherencia axiomática, mecánica o dependencias faltantes."""
+    """Incoherencia axiomatica, mecanica o dependencias faltantes."""
 
 
 class EvaluacionError(Exception):
-    """Error en el camino de evaluación."""
+    """Error en el camino de evaluacion."""
 
 
 class DominioError(Exception):
@@ -110,15 +102,15 @@ class DominioError(Exception):
 
 
 class ContratoError(Exception):
-    """Contrato CONTENEDOR inválido o capacidad no resoluble."""
+    """Contrato CONTENEDOR invalido o capacidad no resoluble."""
 
 
 # ===============================================================
-# ROLES
+# ROLES (admitidos al registrar; nuevos se agregan aqui cuando existan)
 # ===============================================================
 ROLES: Tuple[str, ...] = (
     "CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "DI",
-    "RE", "VX", "TX", "CH", "CIT", "UI", "GL", "TT", "CE", "CC",
+    "RE", "VX", "TX", "CH", "CIT", "UI", "GL", "TT", "CC", "CE",
 )
 OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
 
@@ -136,11 +128,14 @@ ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "reportar": ("reportar",),
     "anunciar": ("anunciar", "registrar", "evaluar", "verificar"),
     "registrar": ("registrar", "anunciar", "evaluar"),
+    "ids": ("ids",),
+    "skills": ("skills",),
+    "por_id": ("por_id",),
 }
 
 
 # ===============================================================
-# CONTENEDOR
+# CONTENEDOR / REGISTRO
 # ===============================================================
 class Contenedor:
     __slots__ = (
@@ -208,9 +203,6 @@ class Contenedor:
         }
 
 
-# ===============================================================
-# REGISTRO
-# ===============================================================
 class Registro:
     def __init__(self) -> None:
         self.contenedores: Dict[str, Contenedor] = {}
@@ -246,17 +238,63 @@ class Registro:
 
 
 # ===============================================================
+# SEGMENTACION DETERMINISTA DE SUJETOS (recorte de material)
+# ===============================================================
+_RE_HABLANTE = re.compile(
+    r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
+)
+
+
+def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
+    """
+    Recorte determinista. No es semantica libre:
+    lineas 'Nombre: enunciado'. Si no hay, lista vacia.
+    """
+    if not texto or not str(texto).strip():
+        return []
+    hallados: List[Dict[str, Any]] = []
+    for m in _RE_HABLANTE.finditer(str(texto)):
+        nombre = m.group(1).strip()
+        cuerpo = m.group(2).strip()
+        if not nombre or not cuerpo:
+            continue
+        hallados.append({
+            "nombre": nombre,
+            "texto": cuerpo,
+            "indice": len(hallados) + 1,
+        })
+    return hallados
+
+
+def _texto_peticion(peticion: Dict[str, Any]) -> str:
+    for k in ("mensaje", "descripcion", "texto", "D", "material"):
+        v = peticion.get(k)
+        if v is not None and str(v).strip():
+            return str(v)
+    entrada = peticion.get("entrada")
+    if isinstance(entrada, dict):
+        for k in ("mensaje", "descripcion", "texto"):
+            v = entrada.get(k)
+            if v is not None and str(v).strip():
+                return str(v)
+    elif entrada is not None and str(entrada).strip():
+        return str(entrada)
+    return ""
+
+
+# ===============================================================
 # ENGINE
 # ===============================================================
 class Engine:
     """
-    Orquestador v11.1
+    Orquestador v12.0
 
-    No interpreta IND-T1 ni Def-5.3.1.
-    Solo: contratos, oficios, permite_k de CX, no fabricar O/K.
+    Descubre modulos por CONTENEDOR.
+    Consulta CE (mandatos) y recombina ciclos de oficio permitido.
+    No interpreta teoremas. No fabrica O/K.
     """
 
-    VERSION = "11.1"
+    VERSION = "12.0"
 
     def __init__(
         self,
@@ -294,136 +332,13 @@ class Engine:
         else:
             self.estado = "OPERATIVO"
 
-# ===============================================================
-# SUJETOS (ciclo — no gramatica)
-# Sujeto = hablante "Nombre: mensaje". Ver CE.DEFINICION_SUJETO.
-# CE declara; Engine extrae y deposita. No calcula Tru.
-# ===============================================================
-def _texto_peticion(peticion: Dict[str, Any]) -> str:
-    """Material conversacional de la peticion (mensaje / material / texto)."""
-    if not isinstance(peticion, dict):
-        return ""
-    for key in ("mensaje", "material", "texto", "conversacion", "entrada"):
-        v = peticion.get(key)
-        if isinstance(v, str) and v.strip():
-            return v
-        if isinstance(v, list):
-            partes = [str(x).strip() for x in v if str(x).strip()]
-            if partes:
-                return "\n".join(partes)
-    return ""
-
-
-def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
-    """
-    Segmenta hablantes con forma 'Nombre: mensaje'.
-    No es analisis gramatical: solo etiqueta antes de ':' al inicio de linea.
-    """
-    segs: List[Dict[str, Any]] = []
-    if not isinstance(texto, str) or not texto.strip():
-        return segs
-    vistos: Dict[str, int] = {}
-    for raw in texto.splitlines():
-        line = raw.strip()
-        if not line or ":" not in line:
-            continue
-        nombre, _, resto = line.partition(":")
-        nombre = nombre.strip()
-        mensaje = resto.strip()
-        if not nombre or not mensaje:
-            continue
-        # Evitar falsos positivos tipo "http:" / "O_Context:"
-        if " " in nombre or len(nombre) > 40:
-            continue
-        if not nombre[0].isalpha():
-            continue
-        key = nombre.lower()
-        if key not in vistos:
-            vistos[key] = len(segs) + 1
-            segs.append({
-                "indice": vistos[key],
-                "nombre": nombre,
-                "texto": mensaje,
-                "estado": "OK",
-            })
-        else:
-            # Acumula texto del mismo hablante
-            idx = vistos[key] - 1
-            prev = segs[idx].get("texto") or ""
-            segs[idx]["texto"] = (prev + "\n" + mensaje).strip()
-    return segs
-
-
-# Dentro de class Engine:  (junto a seccion Ciclo / antes de evaluar)
-
-    def _extraer_sujetos_conversacion(
-        self, peticion: Dict[str, Any]
-    ) -> Tuple[List[Dict[str, Any]], int]:
-        """
-        Extrae sujetos conversacionales (hablantes 'Nombre: mensaje')
-        y n_sujetos. Cumple DEFINICION_SUJETO del rol CE.
-
-        Prioridad:
-          1) peticion['sujetos'] si ya viene lista
-          2) segmentacion del material (mensaje / material / texto)
-
-        No calcula Tru. No escribe evaluaciones.json.
-        """
-        segs: List[Dict[str, Any]] = []
-        sujetos_in = (peticion or {}).get("sujetos")
-
-        if isinstance(sujetos_in, list) and sujetos_in:
-            for i, s in enumerate(sujetos_in, start=1):
-                if isinstance(s, dict):
-                    nombre = str(
-                        s.get("nombre") or s.get("id") or "S{0}".format(i)
-                    ).strip()
-                    texto = str(s.get("texto") or s.get("mensaje") or "")
-                else:
-                    nombre = str(s).strip() or "S{0}".format(i)
-                    texto = ""
-                if not nombre:
-                    continue
-                segs.append({
-                    "indice": i,
-                    "nombre": nombre,
-                    "texto": texto,
-                    "estado": "OK",
-                })
-
-        if not segs:
-            segs = _segmentar_sujetos(_texto_peticion(peticion or {}))
-
-        return segs, len(segs)
-
-    def _depositar_sujetos_en_body(
-        self,
-        body: Dict[str, Any],
-        peticion: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """
-        Deposito de bornes CE (sujetos, n_sujetos) en el resultado del ciclo.
-        Lista de nombres (contrato DEFINICION_SUJETO) + detalle opcional.
-        """
-        if not isinstance(body, dict):
-            return body
-        segs, n = self._extraer_sujetos_conversacion(peticion or {})
-        nombres = [str(s.get("nombre") or "").strip() for s in segs if s.get("nombre")]
-        nombres = [x for x in nombres if x]
-        body["sujetos"] = list(nombres)
-        body["n_sujetos"] = int(n) if n else len(nombres)
-        if segs:
-            body["sujetos_detalle"] = list(segs)
-        return body
-      
-    
     # -----------------------------------------------------------
-    # Sustrato
+    # Descubrimiento de modulos (todos los CONTENEDOR validos)
     # -----------------------------------------------------------
     def _descubrir(self) -> None:
         if not self.raiz.exists():
             self.errores_arranque.append(
-                "Raíz de módulos no existe: {0}".format(self.raiz)
+                "Raiz de modulos no existe: {0}".format(self.raiz)
             )
             return
 
@@ -513,13 +428,13 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                         faltan.append("modulo:{0}".format(req))
             if faltan:
                 self.errores_arranque.append(
-                    "{0} ({1}) requiere {2} y no están disponibles".format(
+                    "{0} ({1}) requiere {2} y no estan disponibles".format(
                         cont.nombre, cont.rol, faltan
                     )
                 )
 
     # -----------------------------------------------------------
-    # Ejecución fail-closed
+    # Ejecucion fail-closed por contrato
     # -----------------------------------------------------------
     def _ejecutar_capacidad(
         self,
@@ -666,8 +581,94 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
             return tru_ri, tru_total
         except ImportError as e:
             raise ArranqueError(
-                "Fórmulas tru_ri/tru_total no disponibles: {0}".format(e)
+                "Formulas tru_ri/tru_total no disponibles: {0}".format(e)
             )
+
+    # -----------------------------------------------------------
+    # CE — brazo del Engine (solo lectura de mandatos)
+    # -----------------------------------------------------------
+    def _ce_ids_skills(self) -> Dict[str, Any]:
+        cont = self.registro.primero("CE")
+        if cont is None:
+            return {"ids": [], "skills": [], "disponible": False}
+        ids: List[str] = []
+        skills: List[Dict[str, Any]] = []
+        if cont.tiene("ids"):
+            out = self._ejecutar_capacidad(cont, "ids")
+            if isinstance(out, list):
+                ids = [str(x).strip().lower() for x in out if str(x).strip()]
+        if cont.tiene("skills"):
+            out = self._ejecutar_capacidad(cont, "skills")
+            if isinstance(out, list):
+                for s in out:
+                    if isinstance(s, dict) and s.get("id"):
+                        skills.append(dict(s))
+        if not ids and skills:
+            ids = [str(s["id"]).strip().lower() for s in skills if s.get("id")]
+        # dedup estable
+        vistos = set()
+        ids_u = []
+        for i in ids:
+            if i not in vistos:
+                vistos.add(i)
+                ids_u.append(i)
+        return {
+            "ids": ids_u,
+            "skills": skills,
+            "disponible": True,
+            "n": len(ids_u),
+        }
+
+    def _mandatos_aplicables(
+        self,
+        peticion: Dict[str, Any],
+        ce: Dict[str, Any],
+    ) -> List[str]:
+        """
+        Que mandatos CE aplican a esta peticion.
+        No ejecuta skills: solo selecciona ids declarados.
+        """
+        ids = set(ce.get("ids") or [])
+        if not ids:
+            return []
+        aplicables: List[str] = []
+        escala = None
+        for k in ("escala_id", "categoria_tru", "id_escala", "escala"):
+            v = peticion.get(k)
+            if v is not None and str(v).strip():
+                escala = str(v).strip().lower()
+                break
+        pedido = peticion.get("mandatos") or peticion.get("ce_mandatos") or []
+        if isinstance(pedido, str):
+            pedido = [pedido]
+        pedido_l = {str(x).strip().lower() for x in pedido if str(x).strip()}
+
+        # explicitos
+        for mid in pedido_l:
+            if mid in ids and mid not in aplicables:
+                aplicables.append(mid)
+
+        # por escala / material
+        if "ce_mandato_catalogo" in ids and "ce_mandato_catalogo" not in aplicables:
+            aplicables.append("ce_mandato_catalogo")
+        if escala and "ce_mandato_escala_tt" in ids and "ce_mandato_escala_tt" not in aplicables:
+            aplicables.append("ce_mandato_escala_tt")
+        if escala and "ce_mandato_aplicar_escala" in ids and "ce_mandato_aplicar_escala" not in aplicables:
+            aplicables.append("ce_mandato_aplicar_escala")
+
+        texto = _texto_peticion(peticion)
+        segs = _segmentar_sujetos(texto)
+        sujetos_en_pet = peticion.get("sujetos")
+        multi = bool(segs) or (
+            isinstance(sujetos_en_pet, list) and len(sujetos_en_pet) > 0
+        )
+        if multi or escala == "tru_sujeto":
+            if "ce_mandato_sujetos" in ids and "ce_mandato_sujetos" not in aplicables:
+                aplicables.append("ce_mandato_sujetos")
+            if "ce_mandato_aplicar_escala" in ids and "ce_mandato_aplicar_escala" not in aplicables:
+                aplicables.append("ce_mandato_aplicar_escala")
+
+        return aplicables
 
     # -----------------------------------------------------------
     # API de oficio
@@ -726,7 +727,6 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
     # Ciclo
     # -----------------------------------------------------------
     def _peticion_con_meta(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        """Meta de acto (invocador, versión). No es O de contenido."""
         p = dict(peticion or {})
         p.setdefault("invocador_id", self.invocador_id)
         p.setdefault("engine_version", self.VERSION)
@@ -748,30 +748,14 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
         peticion: Dict[str, Any],
         cx: Optional[Dict[str, Any]],
     ) -> Any:
-        """
-        Dominio O para reclamar K / Tru de contenido.
-
-        Regla de orquestación (contrato, no teorema embebido):
-          1) O explícito en la petición.
-          2) Si no, solo lo que CX autorice con permite_k is True
-             y O/registro estable.
-          3) C, L, K, invocador_id, engine_version NUNCA son O.
-
-        Si CX no autoriza K, no hay dominio evaluable → el ciclo
-        reporta UNDEFINED (resultado), no inventa camino OK.
-        """
         for key in ("contexto", "O_context", "Octx", "enunciado_O", "O_id"):
             o = peticion.get(key)
             if not _o_ausente(o):
                 return o
-
         if not cx:
             return None
-
-        # Contrato CX: sin permite_k no hay dominio de contenido
         if cx.get("permite_k") is not True:
             return None
-
         reg = cx.get("registro") or {}
         if isinstance(reg, dict):
             if reg.get("estado") and reg.get("estado") != "estable":
@@ -780,12 +764,135 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 v = reg.get(key)
                 if not _o_ausente(v):
                     return v
-
         o_cx = cx.get("O_context")
         if not _o_ausente(o_cx):
             return o_cx
-
         return None
+
+    def _factores_ca(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        C = L = K = None
+        ca = self.registro.primero("CA")
+        if ca is not None and ca.tiene("calcular"):
+            calc = self._ejecutar_capacidad(ca, "calcular", peticion)
+            if not es_undefined(calc) and isinstance(calc, dict):
+                C = calc.get("C")
+                L = calc.get("L")
+                K = calc.get("K")
+        try:
+            if "C" in peticion and peticion["C"] is not None:
+                C = Fraction(str(peticion["C"]))
+            if "L" in peticion and peticion["L"] is not None:
+                L = Fraction(str(peticion["L"]))
+            if "K" in peticion and peticion["K"] is not None:
+                K = Fraction(str(peticion["K"]))
+        except Exception as e:
+            return {"error": "C, L o K invalidos: {0}".format(e)}
+        return {"C": C, "L": L, "K": K}
+
+    def _tru_fo(self, C: Any, L: Any, K: Any) -> Dict[str, Any]:
+        try:
+            tru_ri_fn, tru_total_fn = self.get_formulas()
+            constantes = self.get_constantes()
+            ri = tru_ri_fn(C, L, K)
+            tt = tru_total_fn(C, L, K)
+            return {
+                "tru_ri": ri,
+                "tru_total": tt,
+                "alpha": constantes["ALPHA"],
+                "beta": constantes["BETA"],
+            }
+        except Exception as e:
+            return {"error": "calculo Tru: {0}: {1}".format(type(e).__name__, e)}
+
+    def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        fac = self._factores_ca(peticion)
+        if fac.get("error"):
+            return {"estado": "ERROR", "razon": fac["error"]}
+        C, L, K = fac.get("C"), fac.get("L"), fac.get("K")
+        if C is None or L is None or K is None:
+            return {
+                "estado": "PARCIAL",
+                "razon": (
+                    "Faltan factores C/L/K "
+                    "(CA no los entrego o no vinieron en la peticion)"
+                ),
+                "factores": {
+                    "C": str(C) if C is not None else None,
+                    "L": str(L) if L is not None else None,
+                    "K": str(K) if K is not None else None,
+                },
+            }
+        tru = self._tru_fo(C, L, K)
+        if tru.get("error"):
+            return {"estado": "ERROR", "razon": tru["error"]}
+        return {
+            "estado": "OK",
+            "factores": {"C": str(C), "L": str(L), "K": str(K)},
+            "tru_ri": str(tru["tru_ri"]),
+            "tru_total": str(tru["tru_total"]),
+            "alpha": str(tru["alpha"]),
+            "beta": str(tru["beta"]),
+            "C": C,
+            "L": L,
+            "K": K,
+        }
+
+    def _ciclo_por_sujetos(
+        self,
+        peticion: Dict[str, Any],
+        o_ctx: Any,
+    ) -> List[Dict[str, Any]]:
+        """
+        Recombina: un ciclo CA+FO por sujeto.
+        Segmentacion determinista o lista en peticion['sujetos'].
+        """
+        sujetos_in = peticion.get("sujetos")
+        segs: List[Dict[str, Any]] = []
+        if isinstance(sujetos_in, list) and sujetos_in:
+            for i, s in enumerate(sujetos_in, start=1):
+                if isinstance(s, dict):
+                    nombre = str(s.get("nombre") or s.get("id") or "S{0}".format(i))
+                    texto = str(s.get("texto") or s.get("mensaje") or "")
+                else:
+                    nombre = "S{0}".format(i)
+                    texto = str(s)
+                if texto.strip():
+                    segs.append({"indice": i, "nombre": nombre, "texto": texto})
+        if not segs:
+            segs = _segmentar_sujetos(_texto_peticion(peticion))
+
+        out: List[Dict[str, Any]] = []
+        for seg in segs:
+            p = dict(peticion)
+            p["mensaje"] = seg["texto"]
+            p["texto"] = seg["texto"]
+            p["descripcion"] = seg["texto"]
+            p.setdefault("escala_id", "tru_sujeto")
+            p.setdefault("categoria_tru", "tru_sujeto")
+            if not _o_ausente(o_ctx):
+                p.setdefault("contexto", o_ctx)
+                p.setdefault("O_context", o_ctx)
+            # no reutilizar C/L/K globales del padre
+            for k in ("C", "L", "K"):
+                p.pop(k, None)
+            ciclo = self._ciclo_factores_tru(p)
+            item = {
+                "indice": seg["indice"],
+                "nombre": seg["nombre"],
+                "texto": seg["texto"],
+                "estado": ciclo.get("estado"),
+            }
+            if ciclo.get("estado") == "OK":
+                item["C"] = ciclo["factores"]["C"]
+                item["L"] = ciclo["factores"]["L"]
+                item["K"] = ciclo["factores"]["K"]
+                item["tru_ri"] = ciclo["tru_ri"]
+                item["tru_total"] = ciclo["tru_total"]
+            else:
+                item["razon"] = ciclo.get("razon")
+                item["factores"] = ciclo.get("factores")
+            out.append(item)
+        return out
 
     def _cierre_cit(
         self,
@@ -846,8 +953,8 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Orquesta un ciclo.
-        No interpreta Tru. No inventa O ni factores. No embebe teoremas.
+        Orquesta un ciclo por contratos disponibles + mandatos CE.
+        No interpreta Tru. No inventa O ni factores.
         """
         self.fallos = []
         peticion = self._peticion_con_meta(peticion)
@@ -861,11 +968,15 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 "engine_version": self.VERSION,
             }, peticion)
 
-        # 1. Marco CX (clasifica; no calcula Tru)
+        # --- CE: extension (mandatos a disposicion) ---
+        ce = self._ce_ids_skills()
+        mandatos = self._mandatos_aplicables(peticion, ce)
+
+        # 1. Marco CX
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        # 2. Sin O usable → resultado UNDEFINED (ciclo completo, no crash)
+        # 2. Sin O usable
         if _o_ausente(o_ctx):
             ids_cx = []
             if cx is not None:
@@ -879,6 +990,8 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 "factores": {"C": None, "L": None, "K": "UNDEFINED"},
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
+                "ce_ids": ce.get("ids") or [],
+                "mandatos_aplicados": mandatos,
                 "valuacion": {
                     "capa_objeto": "indefinido",
                     "capa_meta": "anuncio_de_indefinido",
@@ -918,31 +1031,35 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # 3. Factores (CA y/o petición explícita)
-        C = L = K = None
-        ca = self.registro.primero("CA")
-        if ca is not None and ca.tiene("calcular"):
-            calc = self._ejecutar_capacidad(ca, "calcular", peticion)
-            if not es_undefined(calc) and isinstance(calc, dict):
-                C = calc.get("C")
-                L = calc.get("L")
-                K = calc.get("K")
+        # 3. Recombinacion por mandato de sujetos (si aplica)
+        sujetos: List[Dict[str, Any]] = []
+        if "ce_mandato_sujetos" in mandatos or (
+            str(peticion.get("escala_id") or peticion.get("categoria_tru") or "")
+            .strip()
+            .lower()
+            == "tru_sujeto"
+        ):
+            sujetos = self._ciclo_por_sujetos(peticion, o_ctx)
 
-        try:
-            if "C" in peticion and peticion["C"] is not None:
-                C = Fraction(str(peticion["C"]))
-            if "L" in peticion and peticion["L"] is not None:
-                L = Fraction(str(peticion["L"]))
-            if "K" in peticion and peticion["K"] is not None:
-                K = Fraction(str(peticion["K"]))
-        except Exception as e:
+        # 4. Ciclo principal CA + FO (material completo / factores explicitos)
+        ciclo = self._ciclo_factores_tru(peticion)
+        if ciclo.get("estado") == "ERROR":
             body = {
                 "estado": "ERROR",
-                "razon": "C, L o K inválidos: {0}".format(e),
+                "razon": ciclo.get("razon"),
                 "contexto": o_ctx,
+                "ce_ids": ce.get("ids") or [],
+                "mandatos_aplicados": mandatos,
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
+            if sujetos:
+                body["sujetos"] = sujetos
+                body["n_sujetos"] = len(sujetos)
+                body["por_sujeto"] = {
+                    s.get("nombre") or "S{0}".format(s.get("indice")): s
+                    for s in sujetos
+                }
             if cx is not None:
                 body["contexto_cx"] = {
                     "permite_k": cx.get("permite_k"),
@@ -950,22 +1067,24 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 }
             return self._emit(body, peticion)
 
-        if C is None or L is None or K is None:
+        if ciclo.get("estado") == "PARCIAL":
             body = {
                 "estado": "PARCIAL",
-                "razon": (
-                    "Faltan factores C/L/K "
-                    "(CA no los entregó o no vinieron en la petición)"
-                ),
+                "razon": ciclo.get("razon"),
                 "contexto": o_ctx,
-                "factores": {
-                    "C": str(C) if C is not None else None,
-                    "L": str(L) if L is not None else None,
-                    "K": str(K) if K is not None else None,
-                },
+                "factores": ciclo.get("factores"),
+                "ce_ids": ce.get("ids") or [],
+                "mandatos_aplicados": mandatos,
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
+            if sujetos:
+                body["sujetos"] = sujetos
+                body["n_sujetos"] = len(sujetos)
+                body["por_sujeto"] = {
+                    s.get("nombre") or "S{0}".format(s.get("indice")): s
+                    for s in sujetos
+                }
             if cx is not None:
                 body["contexto_cx"] = {
                     "permite_k": cx.get("permite_k"),
@@ -977,37 +1096,28 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # 4. Fórmula FO
-        try:
-            tru_ri_fn, tru_total_fn = self.get_formulas()
-            constantes = self.get_constantes()
-            ri = tru_ri_fn(C, L, K)
-            tt = tru_total_fn(C, L, K)
-        except Exception as e:
-            body = {
-                "estado": "ERROR",
-                "razon": "cálculo Tru: {0}: {1}".format(type(e).__name__, e),
-                "contexto": o_ctx,
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
-            }
-            if cx is not None:
-                body["contexto_cx"] = {"permite_k": cx.get("permite_k")}
-            return self._emit(body, peticion)
-
         body = {
             "estado": "OK",
             "contexto": o_ctx,
-            "factores": {"C": str(C), "L": str(L), "K": str(K)},
-            "tru_ri": str(ri),
-            "tru_total": str(tt),
-            "alpha": str(constantes["ALPHA"]),
-            "beta": str(constantes["BETA"]),
+            "factores": ciclo["factores"],
+            "tru_ri": ciclo["tru_ri"],
+            "tru_total": ciclo["tru_total"],
+            "alpha": ciclo["alpha"],
+            "beta": ciclo["beta"],
             "R_i_equals_R": False,
             "fuentes_usadas": ["X", "O_context"],
+            "ce_ids": ce.get("ids") or [],
+            "mandatos_aplicados": mandatos,
             "fallos": list(self.fallos),
             "engine_version": self.VERSION,
         }
+        if sujetos:
+            body["sujetos"] = sujetos
+            body["n_sujetos"] = len(sujetos)
+            body["por_sujeto"] = {
+                s.get("nombre") or "S{0}".format(s.get("indice")): s
+                for s in sujetos
+            }
         if cx is not None:
             body["contexto_cx"] = {
                 "permite_k": cx.get("permite_k"),
@@ -1018,17 +1128,15 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
                 "coherente": cx.get("coherente"),
             }
 
-        # 5. Cierre CIT
         cit = self._cierre_cit(peticion, cx, body)
         if cit is not None:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
 
-        # 6. Evidencia
         return self._emit(body, peticion)
 
     # -----------------------------------------------------------
-    # Introspección
+    # Introspeccion
     # -----------------------------------------------------------
     def censar(self) -> Dict[str, Any]:
         return self.registro.resumen()
@@ -1039,7 +1147,7 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
             if cont.tiene("inventario"):
                 out = self._ejecutar_capacidad(cont, "inventario")
                 if es_undefined(out):
-                    contenido[cont.nombre] = {"error": "inventario falló"}
+                    contenido[cont.nombre] = {"error": "inventario fallo"}
                 else:
                     contenido[cont.nombre] = out
         return {
@@ -1053,10 +1161,10 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
             "informe_mecanica": self.informe_mecanica,
             "resultados_evaluacion": list(self.resultados_evaluacion),
             "resultados_evaluacion_n": len(self.resultados_evaluacion),
+            "ce": self._ce_ids_skills() if self.estado == "OPERATIVO" else {},
         }
 
     def censar_generatividad(self) -> Dict[str, Any]:
-        """Solo oficio AX.generatividad si el contrato lo expone."""
         out = self.ejecutar_capacidad("AX", "generatividad")
         try:
             resumen = self.censar()
@@ -1069,13 +1177,13 @@ def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
         if es_undefined(out) or not isinstance(out, dict):
             return {
                 "estado": "UNDEFINED",
-                "razon": "AX.generatividad no disponible o falló",
+                "razon": "AX.generatividad no disponible o fallo",
                 "engine_version": self.VERSION,
                 "roles_vacios": roles_vacios,
                 "rechazados": rechazados,
                 "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
                 "nota": (
-                    "Sin medición TR1 desde AX; residual de roles como proxy U1. "
+                    "Sin medicion TR1 desde AX; residual de roles como proxy U1. "
                     "TR1 vive en AX, no en Engine."
                 ),
             }
