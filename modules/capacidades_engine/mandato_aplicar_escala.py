@@ -2,57 +2,37 @@
 """
 Skill CE — exclusivo Engine.
 
-Mandato de sincronización: aplicar escala de Tru por id
-(usando todas las capacidades del sistema).
-
-CE no calcula. Engine emite el mandato; cada módulo ejecuta su contrato.
+Mandato de sincronización: escala Tru (catálogo TT).
+Engine emite el mandato; cada módulo ejecuta su contrato.
+CE no calcula.
 """
 
 SKILL = {
-    "id": "ce_mandato_aplicar_escala",
-    "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
+    "id": "ce_mandato_escala_tt",
+    "nombre": "Mandato: calcular escala Tru del catálogo TT",
     "enunciado": (
-        "Mandato del Engine a todos los módulos de oficio: "
-        "se pide valuación en la escala indicada por id "
-        "(escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, "
-        "tru_conversacion, tru_repositorio u otro id declarado). "
-        "El recorte de material sigue el descriptor del id; "
-        "cada módulo aporta lo suyo en sincronía; "
-        "si repetir_por es por_sujeto (u otro repetidor), "
-        "el ciclo se repite por cada recorte y Engine deposita "
-        "el resultado (incl. resultado.sujetos cuando aplique). "
+        "Mandato del Engine a los módulos de oficio: "
+        "se pide valuación en la escala indicada por el catálogo TT "
+        "(categoria_tru / id de casilla). "
+        "Cada módulo aporta lo suyo en sincronía; "
+        "Engine deposita el resultado del ciclo. "
         "CE no calcula."
     ),
     "version": "1.0",
     "modulos_objetivo": [
-        "capacidades_engine",
         "tru_totales",
-        "calculator",
-        "formulas",
         "contexto",
         "correlacion_mecanica",
+        "calculator",
+        "formulas",
         "citacion",
-        "citaciones",
         "cache",
         "taxonomia",
         "axiomas",
-        "realidad",
-        "verificacion",
-        "constante",
-        "diccionario",
-        "glosario",
-        "self",
-        "diagnostico",
-        "interfaz",
     ],
-    "requiere_roles": [
-        "CE", "TT", "CA", "FO", "CX", "MC", "CIT", "CC",
-        "CH", "TX", "AX", "RE", "VX", "CT", "DI", "GL", "SF", "DG", "UI",
-    ],
+    "requiere_roles": ["TT", "CX", "MC", "CA", "FO", "CIT", "CH", "TX", "AX"],
     "entrada": [
-        "escala_id",
         "categoria_tru",
-        "texto",
         "O_id",
         "enunciado_O",
         "material",
@@ -64,20 +44,16 @@ SKILL = {
         "tru_ri",
         "tru_total",
         "categoria_tru",
-        "sujetos",
-        "n_sujetos",
-        "resultado_ciclo",
+        "citacion",
     ],
     "sincroniza_con": [
-        "ce_mandato_catalogo",
-        "ce_mandato_escala_tt",
         "ce_mandato_sujetos",
     ],
-    "prioridad": 15,
+    "prioridad": 10,
     "notas": (
-        "Utiliza todas las capacidades del sistema en sincronía. "
-        "escalas_ids (bajo calculator) describe el recorte; "
-        "conteos cuenta; FO formula; el resto su oficio. "
-        "Engine deposita; Omega lee. CE solo declara el mandato."
+        "Engine lanza el mandato. "
+        "TT aporta la casilla; CX el O; MC la correlación; "
+        "CA los factores; FO la fórmula; CIT/CH/TX/AX su oficio. "
+        "El conjunto en sincronía produce el depósito. CE solo declara el mandato."
     ),
 }
