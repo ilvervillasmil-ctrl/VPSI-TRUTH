@@ -1,25 +1,59 @@
 # -*- coding: utf-8 -*-
 """
-Skill CE (exclusivo Engine): orquestar catálogo TT.
+Skill CE — exclusivo Engine.
 
-Un skill del repertorio del Engine.
-No calcula. Los oficios siguen en TT / CA / FO / CX.
+Mandato de sincronización: escala Tru (catálogo TT).
+Engine emite el mandato; cada módulo ejecuta su contrato.
+CE no calcula.
 """
 
 SKILL = {
-    "id": "ce_orquestar_tt",
-    "nombre": "Orquestar catálogo Tru totales",
+    "id": "ce_mandato_escala_tt",
+    "nombre": "Mandato: calcular escala Tru del catálogo TT",
     "enunciado": (
-        "Skill: consultar tru_totales (ids de escala) y pedir a CA/FO "
-        "el cálculo de la escala indicada; depositar Tru_Ri / Tru_total "
-        "y, si aplica escala tru_sujeto, la lista por sujeto."
+        "Mandato del Engine a los módulos de oficio: "
+        "se pide valuación en la escala indicada por el catálogo TT "
+        "(categoria_tru / id de casilla). "
+        "Cada módulo aporta lo suyo en sincronía; "
+        "Engine deposita el resultado del ciclo. "
+        "CE no calcula."
     ),
     "version": "1.0",
-    "modulos_objetivo": ["tru_totales", "calculator", "formulas", "contexto"],
-    "requiere_roles": ["TT", "CA", "FO", "CX"],
-    "entrada": ["categoria_tru", "O_id", "enunciado_O", "material_segmentable"],
-    "salida_esperada": ["tru_ri", "tru_total", "sujetos", "categoria_tru"],
-    "sincroniza_con": ["ce_depositar_sujetos"],
+    "modulos_objetivo": [
+        "tru_totales",
+        "contexto",
+        "correlacion_mecanica",
+        "calculator",
+        "formulas",
+        "citacion",
+        "cache",
+        "taxonomia",
+        "axiomas",
+    ],
+    "requiere_roles": ["TT", "CX", "MC", "CA", "FO", "CIT", "CH", "TX", "AX"],
+    "entrada": [
+        "categoria_tru",
+        "O_id",
+        "enunciado_O",
+        "material",
+    ],
+    "salida_esperada": [
+        "C",
+        "L",
+        "K",
+        "tru_ri",
+        "tru_total",
+        "categoria_tru",
+        "citacion",
+    ],
+    "sincroniza_con": [
+        "ce_mandato_sujetos",
+    ],
     "prioridad": 10,
-    "notas": "Complementa TT (catálogo pasivo). Solo Engine usa este skill.",
+    "notas": (
+        "Engine lanza el mandato. "
+        "TT aporta la casilla; CX el O; MC la correlación; "
+        "CA los factores; FO la fórmula; CIT/CH/TX/AX su oficio. "
+        "El conjunto en sincronía produce el depósito. CE solo declara el mandato."
+    ),
 }
