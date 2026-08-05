@@ -2,19 +2,22 @@
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 14.0 — Orquestador por contrato 100% declarativo (Conocimiento Absoluto).
+Version 14.1 — Orquestador por contrato; CE = extensión del Engine.
 
 Principio
-  - El Engine nunca hardcodea salidas ("sujetos", "por_sujeto").
-  - Lee TODOS los skills (CE) → extrae salida_esperada → inicializa automáticamente.
-  - Asegura persistencia blindada a Omega Report mediante _VPSIEncoder.
+  - Descubre módulos por CONTENEDOR (roles y capacidades).
+  - Actúa solo por lo que cada contrato declara.
+  - CE es extensión del Engine: lee mandatos y asegura la salida_esperada.
+  - Deposita explícitamente sujetos y por_sujeto para el informe de Omega.
   - CT: ALPHA/BETA. CA: C/L/K y escalas. FO: Tru. CX: marco. CIT: anuncio.
+  - Sin O usable → UNDEFINED. Nunca bool(UNDEFINED). No fabrica K/O.
 """
 
 from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 import traceback
 from fractions import Fraction
@@ -73,7 +76,7 @@ def _truthy_pedido(v: Any) -> bool:
 
 
 # ===============================================================
-# EXCEPCIONES Y JSON ENCODER
+# EXCEPCIONES Y ENCODER
 # ===============================================================
 class ArranqueError(Exception):
     pass
@@ -92,7 +95,7 @@ class ContratoError(Exception):
 
 
 class _VPSIEncoder(json.JSONEncoder):
-    """Garantiza que el Omega Report no falle silenciosamente al guardar"""
+    """Garantiza la serialización limpia de Fraction y objetos de modelo a JSON."""
     def default(self, obj):
         if isinstance(obj, Fraction):
             return str(obj)
@@ -240,15 +243,68 @@ class Registro:
 
 
 # ===============================================================
-# ENGINE OMEGA
+# EXTRACCIÓN Y SEGMENTACIÓN
+# ===============================================================
+_RE_HABLANTE = re.compile(
+    r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
+)
+
+
+def _texto_peticion(peticion: Dict[str, Any]) -> str:
+    for k in ("mensaje", "descripcion", "texto", "D", "material"):
+        v = peticion.get(k)
+        if v is not None and str(v).strip():
+            return str(v)
+    entrada = peticion.get("entrada")
+    if isinstance(entrada, dict):
+        for k in ("mensaje", "descripcion", "texto"):
+            v = entrada.get(k)
+            if v is not None and str(v).strip():
+                return str(v)
+    elif entrada is not None and str(entrada).strip():
+        return str(entrada)
+    return ""
+
+
+def _segmentar_lineas_nombre(texto: str) -> List[Dict[str, Any]]:
+    if not texto or not str(texto).strip():
+        return []
+    out: List[Dict[str, Any]] = []
+    for m in _RE_HABLANTE.finditer(str(texto)):
+        nombre = m.group(1).strip()
+        cuerpo = m.group(2).strip()
+        if nombre and cuerpo:
+            out.append({
+                "indice": len(out) + 1,
+                "nombre": nombre,
+                "texto": cuerpo,
+            })
+    return out
+
+
+def _default_para_clave(clave: str) -> Any:
+    k = str(clave).strip().lower()
+    if k.startswith("n_") or k.endswith("_n") or k in ("n", "count"):
+        return 0
+    if k in ("sujetos", "por_sujeto", "items", "recortes", "lista"):
+        return [] if k != "por_sujeto" else {}
+    if k.startswith("por_"):
+        return {}
+    if k in ("tru_ri", "tru_total", "c", "l", "k"):
+        return None
+    return None
+
+
+# ===============================================================
+# ENGINE
 # ===============================================================
 class Engine:
     """
-    Orquestador v14.0
-    Flujo 100% declarativo guiado por salida_esperada de CE.
+    Orquestador v14.1
+    Asegura los depósitos por contrato e inyecta resultado.sujetos y resultado.por_sujeto.
     """
 
-    VERSION = "14.0"
+    VERSION = "14.1"
 
     def __init__(
         self,
@@ -428,36 +484,36 @@ class Engine:
         cont = self.registro.primero("CE")
         if cont is None:
             return {"disponible": False, "ids": [], "skills": [], "por_id": {}, "n": 0}
-        
+
         ids: List[str] = []
         skills: List[Dict[str, Any]] = []
-        
+
         if cont.tiene("ids"):
             out = self._ejecutar_capacidad(cont, "ids")
             if isinstance(out, list):
                 ids = [str(x).strip().lower() for x in out if str(x).strip()]
-                
+
         if cont.tiene("skills"):
             out = self._ejecutar_capacidad(cont, "skills")
             if isinstance(out, list):
                 for s in out:
                     if isinstance(s, dict) and s.get("id"):
                         skills.append(dict(s))
-                        
+
         vistos = set()
         ids_u: List[str] = []
         for i in ids:
             if i not in vistos:
                 vistos.add(i)
                 ids_u.append(i)
-                
+
         if not ids_u and skills:
             for s in skills:
                 sid = str(s.get("id") or "").strip().lower()
                 if sid and sid not in vistos:
                     vistos.add(sid)
                     ids_u.append(sid)
-                    
+
         por_id: Dict[str, Dict[str, Any]] = {}
         for s in skills:
             sid = str(s.get("id") or "").strip().lower()
@@ -469,7 +525,7 @@ class Engine:
                     merged.update(s)
                     s = merged
             por_id[sid] = s
-            
+
         return {
             "disponible": True, "ids": ids_u,
             "skills": list(por_id.values()) if por_id else skills,
@@ -499,24 +555,88 @@ class Engine:
                 out.append(self._skill_meta(por))
         return out
 
+    def _recortes_desde_peticion(self, peticion: Dict[str, Any]) -> List[Dict[str, Any]]:
+        for key in ("sujetos", "recortes", "items", "segmentos"):
+            raw = peticion.get(key)
+            if isinstance(raw, list) and raw:
+                segs: List[Dict[str, Any]] = []
+                for i, s in enumerate(raw, start=1):
+                    if isinstance(s, dict):
+                        nombre = str(s.get("nombre") or s.get("id") or f"R{i}")
+                        texto = str(s.get("texto") or s.get("mensaje") or s.get("D") or "")
+                    else:
+                        nombre = f"R{i}"
+                        texto = str(s)
+                    if texto.strip():
+                        segs.append({"indice": i, "nombre": nombre, "texto": texto})
+                if segs:
+                    return segs
+        return _segmentar_lineas_nombre(_texto_peticion(peticion))
+
+    def _ciclo_por_recortes(
+        self,
+        peticion: Dict[str, Any],
+        o_ctx: Any,
+        segs: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for seg in segs:
+            p = dict(peticion)
+            p["mensaje"] = seg["texto"]
+            p["texto"] = seg["texto"]
+            p["descripcion"] = seg["texto"]
+            if not _o_ausente(o_ctx):
+                p.setdefault("contexto", o_ctx)
+                p.setdefault("O_context", o_ctx)
+            for k in ("C", "L", "K"):
+                p.pop(k, None)
+            ciclo = self._ciclo_factores_tru(p)
+            item = {
+                "indice": seg["indice"],
+                "nombre": seg["nombre"],
+                "texto": seg["texto"],
+                "estado": ciclo.get("estado"),
+            }
+            if ciclo.get("estado") == "OK":
+                item["C"] = ciclo["factores"]["C"]
+                item["L"] = ciclo["factores"]["L"]
+                item["K"] = ciclo["factores"]["K"]
+                item["tru_ri"] = ciclo["tru_ri"]
+                item["tru_total"] = ciclo["tru_total"]
+            else:
+                item["razon"] = ciclo.get("razon")
+                item["factores"] = ciclo.get("factores")
+            out.append(item)
+        return out
+
     def _depositar_segun_mandatos(self, body: Dict[str, Any], mandatos: List[Dict[str, Any]]) -> None:
         """
-        El Engine lee TODO CE y crea automáticamente cada salida para Omega, 
-        asegurando que NINGUNA clave del contrato quede sin declarar en el JSON.
+        El Engine lee CE y crea las salidas esperadas por contrato si no están en body.
+        Garantiza que 'sujetos', 'por_sujeto' y 'n_sujetos' queden inicializados.
         """
         claves_esperadas = set()
         for m in mandatos:
             for s in m.get("salida_esperada") or []:
                 if str(s).strip():
                     claves_esperadas.add(str(s).strip())
-                    
+
+        # Forzar llaves principales de sujetos requeridas por Omega
+        claves_esperadas.update({"sujetos", "por_sujeto", "n_sujetos"})
+
         for key in claves_esperadas:
-            if key not in body:
+            if key not in body or body[key] is None:
                 k_lower = key.lower()
                 if k_lower.startswith("n_") or k_lower.endswith("_n") or k_lower == "n":
-                    body[key] = 0
-                elif k_lower.startswith("por_"):
-                    body[key] = {}
+                    body[key] = len(body.get("sujetos") or []) if isinstance(body.get("sujetos"), list) else 0
+                elif k_lower.startswith("por_") or k_lower == "por_sujeto":
+                    suj_list = body.get("sujetos") or []
+                    if isinstance(suj_list, list):
+                        body[key] = {
+                            (s.get("nombre") or f"R{s.get('indice', i+1)}"): s
+                            for i, s in enumerate(suj_list) if isinstance(s, dict)
+                        }
+                    else:
+                        body[key] = {}
                 elif k_lower in ("c", "l", "k", "tru_ri", "tru_total", "resultado_ciclo", "citacion", "categoria_tru", "escala_id", "error", "razon"):
                     body[key] = None
                 else:
@@ -553,6 +673,21 @@ class Engine:
 
     def _emit(self, resultado: Dict[str, Any], peticion: Dict[str, Any]) -> Dict[str, Any]:
         cx = resultado.get("contexto_cx") or {}
+
+        # Asegurar que las propiedades clave de sujetos estén siempre dentro del objeto resultado
+        if "sujetos" not in resultado or resultado["sujetos"] is None:
+            resultado["sujetos"] = []
+        if "por_sujeto" not in resultado or resultado["por_sujeto"] is None:
+            if isinstance(resultado["sujetos"], list):
+                resultado["por_sujeto"] = {
+                    (s.get("nombre") or f"S{s.get('indice', i+1)}"): s
+                    for i, s in enumerate(resultado["sujetos"]) if isinstance(s, dict)
+                }
+            else:
+                resultado["por_sujeto"] = {}
+        if "n_sujetos" not in resultado or resultado["n_sujetos"] is None:
+            resultado["n_sujetos"] = len(resultado["sujetos"]) if isinstance(resultado["sujetos"], list) else 0
+
         registro = {
             "secuencia": len(self.resultados_evaluacion) + 1,
             "engine_version": self.VERSION,
@@ -621,7 +756,7 @@ class Engine:
     def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         fac = self._factores_ca(peticion)
         if fac.get("error"): return {"estado": "ERROR", "razon": fac["error"]}
-            
+
         C, L, K = fac.get("C"), fac.get("L"), fac.get("K")
         if C is None or L is None or K is None:
             res = {"estado": "PARCIAL", "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron)"}
@@ -636,7 +771,7 @@ class Engine:
             for k, v in fac.items():
                 if k not in ("C", "L", "K", "error"): res[k] = v
             return res
-            
+
         res = {"estado": "OK", "factores": {"C": str(C), "L": str(L), "K": str(K)}, "tru_ri": str(tru["tru_ri"]), "tru_total": str(tru["tru_total"]), "alpha": str(tru["alpha"]), "beta": str(tru["beta"])}
         for k, v in fac.items():
             if k not in ("C", "L", "K", "error"): res[k] = v
@@ -653,12 +788,12 @@ class Engine:
                 pedir = pedir or _truthy_pedido(reg.get("pedir_anuncio"))
                 if not tipos: tipos = list(reg.get("tipos_peticion") or [])
         if not pedir: return None
-        
+
         cont = self.registro.primero("CIT")
         if cont is None:
             self.fallos.append({"rol": "CIT", "razon": "pedir_anuncio=True pero rol CIT no cargado"})
             return {"estado": "SIN_OFICIO", "razon": "CIT no disponible", "pedir_anuncio": True, "tipos_peticion": tipos}
-        
+
         paquete = {"peticion": peticion, "contexto_cx": cx, "resultado": resultado_parcial, "tipos_peticion": tipos, "invocador_id": self.invocador_id, "engine_version": self.VERSION}
         out = self._ejecutar_oficio(cont, "anunciar", paquete)
         if es_undefined(out): out = self._ejecutar_oficio(cont, "evaluar", paquete)
@@ -668,14 +803,14 @@ class Engine:
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Orquesta el ciclo guiándose 100% por los contratos de salida_esperada.
+        Orquesta el ciclo guiándose por los contratos, realizando la segmentación
+        de hablantes si el material es conversacional o multi-sujeto.
         """
         self.fallos = []
         peticion = dict(peticion or {})
         peticion.setdefault("invocador_id", self.invocador_id)
         peticion.setdefault("engine_version", self.VERSION)
 
-        # 1. Leer CE
         ce = self._ce_cargar()
         mandatos = self._mandatos_ciclo(ce)
         mandatos_ids = [m["id"] for m in mandatos]
@@ -695,6 +830,7 @@ class Engine:
                 "razon": "Sin O_context usable: K de contenido no reclamable",
                 "factores": {"C": None, "L": None, "K": "UNDEFINED"},
                 "tru_ri": "UNDEFINED", "tru_total": "UNDEFINED",
+                "sujetos": [], "n_sujetos": 0, "por_sujeto": {},
                 "ce_ids": ce.get("ids") or [], "mandatos_ce": mandatos_ids,
                 "valuacion": {
                     "capa_objeto": "indefinido", "capa_meta": "anuncio_de_indefinido", "es_error_sistema": False,
@@ -709,14 +845,28 @@ class Engine:
             self._depositar_segun_mandatos(body, mandatos)
             return self._emit(body, peticion)
 
-        # 2. CA evalúa todo lo correspondiente al mandato (factores, recortes, etc.)
+        # 1. Evaluación del ciclo principal
         ciclo = self._ciclo_factores_tru(peticion)
+
+        # 2. Segmentación de recortes/sujetos (por formato 'Nombre: mensaje' o lista explícita)
+        segs = self._recortes_desde_peticion(peticion)
+        sujetos_calculados = []
+        por_sujeto_dic = {}
+
+        if segs and not _o_ausente(o_ctx):
+            sujetos_calculados = self._ciclo_por_recortes(peticion, o_ctx, segs)
+            for s in sujetos_calculados:
+                nombre_sujeto = s.get("nombre") or f"R{s.get('indice')}"
+                por_sujeto_dic[nombre_sujeto] = s
 
         body = {
             "estado": ciclo.get("estado", "OK"),
             "contexto": o_ctx,
             "ce_ids": ce.get("ids") or [],
             "mandatos_ce": mandatos_ids,
+            "sujetos": sujetos_calculados,
+            "n_sujetos": len(sujetos_calculados),
+            "por_sujeto": por_sujeto_dic,
             "fallos": list(self.fallos),
             "engine_version": self.VERSION,
         }
@@ -730,7 +880,6 @@ class Engine:
                 "alpha": ciclo.get("alpha"), "beta": ciclo.get("beta"), "R_i_equals_R": False, "fuentes_usadas": ["X", "O_context"],
             })
 
-        # Transferimos la inteligencia cruda calculada por CA y FO
         for k, v in ciclo.items():
             if k not in body and k not in ("estado", "razon"):
                 body[k] = v
@@ -741,10 +890,10 @@ class Engine:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
 
-        # 3. Leer salida_esperada de CE y autocompletar estructura matriz (El truco maestro para que no falle N=0)
+        # 3. Completar salidas esperadas por contrato de mandatos
         self._depositar_segun_mandatos(body, mandatos)
 
-        # 4. Persistir a JSON y retornar
+        # 4. Emitir y guardar en evaluaciones.json
         return self._emit(body, peticion)
 
     def censar(self) -> Dict[str, Any]:
@@ -775,6 +924,7 @@ class Engine:
         else: resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
         resultado["estado"] = "OK"
         return resultado
+
 
 __all__ = [
     "Engine", "Contenedor", "Registro", "ROLES", "OBLIGATORIOS", "ALIAS_CAPACIDAD", "UNDEFINED", "es_undefined", "_o_ausente", "ArranqueError", "EvaluacionError", "DominioError", "ContratoError",
