@@ -254,6 +254,22 @@ class Engine:
 
     No interpreta IND-T1 ni Def-5.3.1.
     Solo: contratos, oficios, permite_k de CX, no fabricar O/K.
+
+    Extension CE (capacidades_engine)
+      El rol CE no es un modulo ajeno: es complemento del propio Engine.
+      Todo archivo / skill / contrato bajo modules/capacidades_engine/
+      es extension de este orquestador. Engine los lee a disposicion
+      (ids, skills, PUENTE_DEPOSITO, DEFINICION_SUJETO, inventario)
+      segun lo que cada CONTENEDOR y cada skill declaran.
+      Agregar un mandato en CE no exige reescribir el nucleo: se descubre
+      y se consulta por contrato.
+
+    Sujeto (termino del ciclo, no gramatica)
+      En este codigo, "sujeto" NO es el sujeto gramatical de la oracion.
+      Sujeto = hablante etiquetado en el material con la forma
+      "Nombre: mensaje" (ej. Carlo:, Maria:, Juan:).
+      sujetos = lista de esos nombres; n_sujetos = cuantos hay.
+      Ver DEFINICION_SUJETO en el rol CE cuando este cargado.
     """
 
     VERSION = "11.1"
@@ -278,6 +294,8 @@ class Engine:
         self.fallos: List[Dict[str, Any]] = []
         self.resultados_evaluacion: List[Dict[str, Any]] = []
 
+        # Sustrato: descubre CONTENEDOR de cada modulo bajo raiz
+        # (incluye CE como extension; TT/CC como roles de catalogo).
         self._descubrir()
         self._resolver_dependencias()
 
