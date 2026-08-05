@@ -975,7 +975,7 @@ class Engine:
             return out
         return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
 
-    # -----------------------------------------------------------
+        # -----------------------------------------------------------
     # evaluar (orquestacion)
     # -----------------------------------------------------------
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
@@ -983,9 +983,11 @@ class Engine:
         Orquesta un ciclo por contratos disponibles + mandatos CE.
         No interpreta Tru. No inventa O ni factores.
         """
+        # ----- prep -----
         self.fallos = []
         peticion = self._peticion_con_meta(peticion)
 
+        # ----- rechazo si no operativo -----
         if self.estado != "OPERATIVO":
             return self._emit({
                 "estado": "RECHAZADO",
@@ -995,15 +997,15 @@ class Engine:
                 "engine_version": self.VERSION,
             }, peticion)
 
-        # --- CE: extension (mandatos a disposicion) ---
+        # ----- CE: mandatos a disposicion -----
         ce = self._ce_ids_skills()
         mandatos = self._mandatos_aplicables(peticion, ce)
 
-        # 1. Marco CX
+        # ----- marco CX + O usable -----
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        # 2. Sin O usable
+        # ----- sin O usable → UNDEFINED -----
         if _o_ausente(o_ctx):
             ids_cx = []
             if cx is not None:
@@ -1058,7 +1060,7 @@ class Engine:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # 3. Recombinacion por mandato de sujetos (si aplica)
+        # ----- sujetos (si mandato o escala tru_sujeto) -----
         sujetos: List[Dict[str, Any]] = []
         if "ce_mandato_sujetos" in mandatos or (
             str(peticion.get("escala_id") or peticion.get("categoria_tru") or "")
@@ -1068,8 +1070,10 @@ class Engine:
         ):
             sujetos = self._ciclo_por_sujetos(peticion, o_ctx)
 
-        # 4. Ciclo principal CA + FO
+        # ----- ciclo principal CA + FO -----
         ciclo = self._ciclo_factores_tru(peticion)
+
+        # ----- rama ERROR -----
         if ciclo.get("estado") == "ERROR":
             body = {
                 "estado": "ERROR",
@@ -1094,6 +1098,7 @@ class Engine:
                 }
             return self._emit(body, peticion)
 
+        # ----- rama PARCIAL -----
         if ciclo.get("estado") == "PARCIAL":
             body = {
                 "estado": "PARCIAL",
@@ -1123,6 +1128,7 @@ class Engine:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
+        # ----- rama OK -----
         body = {
             "estado": "OK",
             "contexto": o_ctx,
@@ -1155,19 +1161,28 @@ class Engine:
                 "coherente": cx.get("coherente"),
             }
 
+        # ----- cierre CIT -----
         cit = self._cierre_cit(peticion, cx, body)
         if cit is not None:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
 
+        # ----- emitir evidencia -----
         return self._emit(body, peticion)
 
+        # ===========================================================
+    # INTROSPECCION
+    # ===========================================================
+
     # -----------------------------------------------------------
-    # Introspeccion
+    # censar
     # -----------------------------------------------------------
     def censar(self) -> Dict[str, Any]:
         return self.registro.resumen()
 
+    # -----------------------------------------------------------
+    # inventario
+    # -----------------------------------------------------------
     def inventario(self) -> Dict[str, Any]:
         contenido: Dict[str, Any] = {}
         for cont in self.registro.contenedores.values():
@@ -1191,6 +1206,9 @@ class Engine:
             "ce": self._ce_ids_skills() if self.estado == "OPERATIVO" else {},
         }
 
+    # -----------------------------------------------------------
+    # censar generatividad (AX)
+    # -----------------------------------------------------------
     def censar_generatividad(self) -> Dict[str, Any]:
         out = self.ejecutar_capacidad("AX", "generatividad")
         try:
@@ -1227,6 +1245,9 @@ class Engine:
         return resultado
 
 
+# ===========================================================
+# EXPORTS
+# ===========================================================
 __all__ = [
     "Engine",
     "Contenedor",
