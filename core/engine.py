@@ -1245,7 +1245,7 @@ class Engine:
         return resultado
 
 
-    def auditar_estructura(self) -> Dict[str, Any]:
+        def auditar_estructura(self) -> Dict[str, Any]:
         """
         ===========================================================
         AUDITORÍA ESTRUCTURAL DEL ENGINE (CONCIENCIA TOTAL Y NATIVA)
@@ -1292,6 +1292,9 @@ class Engine:
             if tipo in contador_tipos:
                 contador_tipos[tipo] += 1
 
+        # ===========================================================
+        # 1) SECCIÓN: ANÁLISIS DE FUENTE Y SINTAXIS (AST)
+        # ===========================================================
         try:
             fuente = inspect.getsource(type(self))
             tree = ast.parse(fuente)
@@ -1317,6 +1320,9 @@ class Engine:
                 "engine_version": getattr(self, "VERSION", "12.0"),
             }
 
+        # ===========================================================
+        # 2) SECCIÓN: MÉTODOS Y CAPACIDADES NATIVAS DEL ENGINE
+        # ===========================================================
         metodos = {
             n
             for n, _ in inspect.getmembers(
@@ -1337,6 +1343,9 @@ class Engine:
                     for cap in cont.capacidades:
                         capacidades_conocidas_engine.add(cap)
 
+        # ===========================================================
+        # 3) SECCIÓN: VERIFICACIÓN DE LLAMADAS self.xxx()
+        # ===========================================================
         for nodo in ast.walk(tree):
             if isinstance(nodo, ast.Call):
                 f = nodo.func
@@ -1344,6 +1353,9 @@ class Engine:
                     if f.attr not in metodos and f.attr not in capacidades_conocidas_engine:
                         retenido("SELF", f"self.{f.attr}() inexistente", nodo.lineno)
 
+        # ===========================================================
+        # 4) SECCIÓN: ROLES OBLIGATORIOS Y DECLARADOS
+        # ===========================================================
         try:
             roles = set(ROLES)
             obligatorios = set(OBLIGATORIOS)
@@ -1356,6 +1368,9 @@ class Engine:
             if r not in roles:
                 retenido("ROL", f"Rol obligatorio {r} no declarado")
 
+        # ===========================================================
+        # 5) SECCIÓN: CONTENEDORES Y CAPACIDADES DEL REPOSITORIO
+        # ===========================================================
         nombres = set()
         ids_globales_repositorio = []
 
@@ -1391,6 +1406,9 @@ class Engine:
                     if isinstance(ids_meta, list):
                         ids_globales_repositorio.extend(ids_meta)
 
+        # ===========================================================
+        # 6) SECCIÓN: IDENTIFICADORES (IDS Y CE)
+        # ===========================================================
         try:
             if hasattr(self, "_ce_ids_skills") and callable(self._ce_ids_skills):
                 ce = self._ce_ids_skills()
@@ -1399,11 +1417,16 @@ class Engine:
         except Exception as e:
             retenido("EXCEPCION", f"Error ejecutando _ce_ids_skills(): {e}")
 
+        ids_globales_repositorio = list(set(ids_globales_repositorio))
+
         contador_ids = Counter(ids_globales_repositorio)
         for rid, count in contador_ids.items():
             if count > 1:
                 retenido("IDS", f"ID repetido en el repositorio: {rid} (aparece {count} veces)")
 
+        # ===========================================================
+        # 7) SECCIÓN: DEPENDENCIAS ENTRE MÓDULOS Y ROLES
+        # ===========================================================
         if hasattr(self, "registro") and self.registro and hasattr(self.registro, "contenedores"):
             for cont in self.registro.contenedores.values():
                 for req in cont.requiere:
@@ -1414,6 +1437,9 @@ class Engine:
                         if req not in self.registro.contenedores:
                             retenido("DEPENDENCIA", f"{cont.nombre} requiere el contenedor '{req}' ausente en el registro")
 
+        # ===========================================================
+        # 8) SECCIÓN: RESUMEN Y CONSOLIDACIÓN DEL INFORME
+        # ===========================================================
         retenidos_total = sum(1 for x in items if x["estado"] == "RETENIDO")
         aprobados_total = sum(1 for x in items if x["estado"] == "APROBADO")
 
@@ -1425,6 +1451,7 @@ class Engine:
             "items": items,
             "engine_version": getattr(self, "VERSION", "12.0"),
         }
+
 
 
 # ===========================================================
