@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- modules/capacidades_engine/__init__.py
 
@@ -6,20 +7,16 @@ Rol CE — capacidades del Engine (parte del propio Engine).
 CONTRATO (exclusivo de Engine)
   Este módulo es del Engine. No es un servicio externo.
   El INIT es el contrato: solo Engine lo consume.
-  Todo archivo bajo capacidades/ es un miembro del Engine
-  (mandato / skill). Engine los lee todos, a disposición,
-  cuando quiera y como quiera. CE no filtra el uso:
-  expone lo que hay; Engine decide.
-
-  Analogía: quitarle un brazo al Engine. Los skills son
-  sus brazos. El contrato no limita el brazo; solo declara
-  que existe y dónde está.
+  Todo archivo .py del directorio (salvo _*) que declare
+  SKILL / SKILLS es un miembro del Engine.
+  Engine los lee todos, a disposición, cuando quiera y como quiera.
+  CE no filtra el uso: expone lo que hay; Engine decide.
 
 OFICIO DE ESTE INIT
-  - Descubrir automáticamente todos los *.py bajo capacidades/
+  - Descubrir automáticamente todos los *.py del directorio
   - Exponer ids, skills e inventario a Engine
+  - Aceptar un archivo con SKILLS = [ ... ] (varios mandatos)
   - No calcular, no depositar, no orquestar el ciclo
-  - No negar al Engine el acceso a ningún skill válido
 
 REQUISITO
   "CE" debe figurar en ROLES de core/engine.py.
@@ -32,32 +29,36 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Directorio del propio contenedor CE.
-# Los mandatos (skills) viven directamente aquí:
-#
-# modules/
-#   capacidades_engine/
-#       __init__.py
-#       ce_orquestar_tt.py
-#       mandato_catalogo.py
-#       mandato_sujetos.py
-#       mandato_aplicar_escala.py
-#
-# CE descubre automáticamente cualquier archivo .py del mismo directorio
-# que declare SKILL, CAPACIDAD, SKILLS o CAPACIDADES.
-#
-# No existe una subcarpeta "capacidades/"; el propio directorio del
-# contenedor actúa como catálogo de mandatos.
-
 _DIR = Path(__file__).resolve().parent
 _CAP = _DIR
 
 
-def _extraer_meta(mod: Any) -> Optional[Dict[str, Any]]:
+def _normalizar_meta(meta: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    sid = str(meta.get("id") or "").strip().lower()
+    if not sid:
+        return None
+    meta = dict(meta)
+    if not str(meta.get("descripcion") or "").strip():
+        for alt in ("enunciado", "descripcion_larga", "nota", "notas"):
+            if str(meta.get(alt) or "").strip():
+                meta["descripcion"] = str(meta[alt]).strip()
+                break
+    if not str(meta.get("nombre") or "").strip():
+        meta["nombre"] = sid
+    if not str(meta.get("version") or "").strip():
+        meta["version"] = "1.0"
+    if not str(meta.get("descripcion") or "").strip():
+        meta["descripcion"] = "capacidad del Engine: {0}".format(sid)
+    return meta
+
+
+def _extraer_metas(mod: Any) -> List[Dict[str, Any]]:
     """
     Acepta SKILL / CAPACIDAD (dict) o SKILLS / CAPACIDADES (list).
-    Normaliza descripcion <- enunciado si hace falta.
+    Devuelve TODOS los skills validos del modulo.
     """
+    out: List[Dict[str, Any]] = []
+    vistos = set()
     for attr in ("SKILL", "CAPACIDAD", "SKILLS", "CAPACIDADES"):
         raw = getattr(mod, attr, None)
         candidatos: List[Dict[str, Any]] = []
@@ -66,30 +67,18 @@ def _extraer_meta(mod: Any) -> Optional[Dict[str, Any]]:
         elif isinstance(raw, list):
             candidatos = [x for x in raw if isinstance(x, dict)]
         for meta in candidatos:
-            sid = str(meta.get("id") or "").strip().lower()
-            if not sid:
+            norm = _normalizar_meta(meta)
+            if norm is None:
                 continue
-            meta = dict(meta)
-            if not str(meta.get("descripcion") or "").strip():
-                for alt in ("enunciado", "descripcion_larga", "nota"):
-                    if str(meta.get(alt) or "").strip():
-                        meta["descripcion"] = str(meta[alt]).strip()
-                        break
-            if not str(meta.get("nombre") or "").strip():
-                meta["nombre"] = sid
-            if not str(meta.get("version") or "").strip():
-                meta["version"] = "1.0"
-            if not str(meta.get("descripcion") or "").strip():
-                meta["descripcion"] = "capacidad del Engine: {0}".format(sid)
-            return meta
-    return None
+            sid = str(norm["id"]).strip().lower()
+            if sid in vistos:
+                continue
+            vistos.add(sid)
+            out.append(norm)
+    return out
 
 
 def _cargar_skills() -> Dict[str, Dict[str, Any]]:
-    """
-    Lee TODOS los *.py bajo capacidades/.
-    Engine tiene derecho a ver cada uno.
-    """
     hallado: Dict[str, Dict[str, Any]] = {}
     if not _CAP.is_dir():
         return hallado
@@ -113,26 +102,30 @@ def _cargar_skills() -> Dict[str, Dict[str, Any]]:
             }
             continue
 
-        meta = _extraer_meta(mod)
-        if meta is None:
+        metas = _extraer_metas(mod)
+        if not metas:
             hallado[f.stem] = {
                 "archivo": f.name,
                 "error": "sin SKILL/CAPACIDAD con id",
             }
             continue
 
-        sid = str(meta["id"]).strip().lower()
-        hallado[sid] = {
-            "archivo": f.name,
-            "id": sid,
-            "nombre": meta.get("nombre"),
-            "version": str(meta.get("version") or "1.0"),
-            "descripcion": str(meta.get("descripcion") or ""),
-            "oficio": meta.get("oficio"),
-            "material": meta.get("material"),
-            "requiere_catalogo": meta.get("requiere_catalogo"),
-            "raw": meta,
-        }
+        for meta in metas:
+            sid = str(meta["id"]).strip().lower()
+            hallado[sid] = {
+                "archivo": f.name,
+                "id": sid,
+                "nombre": meta.get("nombre"),
+                "version": str(meta.get("version") or "1.0"),
+                "descripcion": str(meta.get("descripcion") or ""),
+                "oficio": meta.get("oficio"),
+                "material": meta.get("material"),
+                "requiere_catalogo": meta.get("requiere_catalogo"),
+                "salida_esperada": meta.get("salida_esperada"),
+                "entrada": meta.get("entrada"),
+                "requiere_roles": meta.get("requiere_roles"),
+                "raw": meta,
+            }
     return hallado
 
 
@@ -155,7 +148,6 @@ def _validar_skills(hallado: Dict[str, Dict[str, Any]]) -> List[str]:
 
 
 def skills() -> List[Dict[str, Any]]:
-    """Todos los skills válidos — a disposición del Engine."""
     hallado = _cargar_skills()
     out: List[Dict[str, Any]] = []
     for sid, meta in sorted(hallado.items()):
@@ -169,12 +161,15 @@ def skills() -> List[Dict[str, Any]]:
             "archivo": meta.get("archivo"),
             "oficio": meta.get("oficio"),
             "material": meta.get("material"),
+            "salida_esperada": meta.get("salida_esperada"),
+            "entrada": meta.get("entrada"),
+            "requiere_roles": meta.get("requiere_roles"),
+            "raw": meta.get("raw"),
         })
     return out
 
 
 def ids() -> List[str]:
-    """Todos los ids — Engine los usa cuando quiera."""
     return [s["id"] for s in skills() if s.get("id")]
 
 
@@ -189,7 +184,6 @@ def por_id(skill_id: str) -> Optional[Dict[str, Any]]:
 
 
 def listar_archivos() -> List[str]:
-    """Nombres de todo *.py bajo capacidades/ (legibles por Engine)."""
     if not _CAP.is_dir():
         return []
     return [
@@ -199,22 +193,16 @@ def listar_archivos() -> List[str]:
 
 
 def barrer() -> Dict[str, Any]:
-    """
-    Centinela: ¿Engine puede leer sus capacidades?
-    No calcula. No deposita. No restringe el uso.
-    """
     hallado = _cargar_skills()
     errores = _validar_skills(hallado)
     lista_ids = [sid for sid, m in sorted(hallado.items()) if not m.get("error")]
     archivos = listar_archivos()
     notas: List[str] = []
     if not _CAP.is_dir():
-        notas.append("capacidades/ no existe")
+        notas.append("directorio CE no existe")
     elif not lista_ids:
         notas.append(
-            "ningún skill válido; archivos en capacidades/: {0}".format(
-                archivos or "(ninguno)"
-            )
+            "ningun skill valido; archivos: {0}".format(archivos or "(ninguno)")
         )
         for sid, m in hallado.items():
             if m.get("error"):
@@ -232,8 +220,8 @@ def barrer() -> Dict[str, Any]:
         "notas": notas,
         "ruta_capacidades": str(_CAP),
         "nota": (
-            "CE es del Engine. Todo skill bajo capacidades/ "
-            "está a su disposición. Este init no limita el uso."
+            "CE es del Engine. Todo skill del directorio "
+            "esta a su disposicion. Este init no limita el uso."
         ),
     }
 
@@ -256,7 +244,7 @@ def inventario(peticion: Any = None) -> Dict[str, Any]:
         "notas": b.get("notas"),
         "funcion": (
             "Cuerpo de capacidades del Engine. "
-            "Cada archivo bajo capacidades/ es un mandato legible. "
+            "Cada archivo .py con SKILL/SKILLS es un mandato legible. "
             "Engine los usa a voluntad. CE no calcula ni deposita."
         ),
     }
@@ -268,21 +256,17 @@ def verificar_salida(salida: Any) -> bool:
     return "coherente" in salida or "ids" in salida
 
 
-# ===============================================================
-# CONTENEDOR — contrato exclusivo de Engine
-# ===============================================================
 CONTENEDOR = {
     "nombre": "capacidades_engine",
     "rol": "CE",
     "version": "1.0",
     "requiere": [],
     "descripcion": (
-        "Capacidades del propio Engine (no un módulo ajeno). "
+        "Capacidades del propio Engine (no un modulo ajeno). "
         "El INIT es el contrato exclusivo de Engine. "
-        "Todo archivo bajo capacidades/ es un miembro del Engine: "
-        "Engine los lee todos, a disposición, cuando quiera y como quiera. "
+        "Todo archivo .py con SKILL/SKILLS es miembro del Engine: "
+        "Engine los lee todos, a disposicion, cuando quiera y como quiera. "
         "CE no calcula, no deposita, no restringe el uso. "
-        "Solo declara qué brazos tiene el Engine y dónde están. "
         "Requisito: 'CE' en ROLES de core/engine.py."
     ),
     "capacidades": {
