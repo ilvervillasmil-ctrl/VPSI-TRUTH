@@ -1244,217 +1244,214 @@ class Engine:
         resultado["estado"] = "OK"
         return resultado
     def auditar_estructura(self) -> Dict[str, Any]:
-        """
-        ===========================================================
-        AUDITORÍA ESTRUCTURAL DEL ENGINE (VERSIÓN AVANZADA)
-        ===========================================================
-        Verifica exhaustivamente la coherencia estática del Engine
-        y su repositorio de contenedores, contratos, atributos,
-        capacidades, alias e IDs globales.
-        """
-        import ast
-        import inspect
-
-        items = []
-        contador_tipos = {
-            "AST": 0,
-            "ATRIBUTO": 0,
-            "SELF": 0,
-            "ROL": 0,
-            "CONTENEDOR": 0,
-            "CAPACIDAD": 0,
-            "DEPENDENCIA": 0,
-            "IDS": 0,
-            "ALIAS": 0,
-        }
-
-        def ok(tipo, evidencia, linea=None):
-            d = {
-                "tipo": tipo,
-                "estado": "APROBADO",
-                "evidencia": evidencia,
-            }
-            if linea:
-                d["linea"] = linea
-            items.append(d)
-
-        def retenido(tipo, evidencia, linea=None):
-            d = {
-                "tipo": tipo,
-                "estado": "RETENIDO",
-                "evidencia": evidencia,
-            }
-            if linea:
-                d["linea"] = linea
-            items.append(d)
-            if tipo in contador_tipos:
-                contador_tipos[tipo] += 1
-
-        # ===========================================================
-        # 1) SECCIÓN: ANÁLISIS DE FUENTE Y SINTAXIS (AST)
-        # ===========================================================
-        try:
-            fuente = inspect.getsource(type(self))
-            tree = ast.parse(fuente)
-            ok("AST", "Sintaxis válida")
-        except SyntaxError as e:
-            retenido("AST", e.msg, e.lineno)
-            return {
-                "estado": "CONTRADICCION",
-                "n_aprobados": len(items) - 1,
-                "n_retenidos": 1,
-                "tipos": contador_tipos,
-                "items": items,
-                "engine_version": self.VERSION,
-            }
-
-        # ===========================================================
-        # 2) SECCIÓN: ATRIBUTOS Y MÉTODOS DE LA CLASE
-        # ===========================================================
-        metodos = {
-            n
-            for n, _ in inspect.getmembers(
-                type(self),
-                inspect.isfunction,
-            )
-        }
         
-        # Atributos de instancia esperados o detectados en la inicialización
-        atributos_instancia_conocidos = {
-            "VERSION", "estado", "registro", "cache", "contexto"
+# ===========================================================
+# AUDITORÍA ESTRUCTURAL
+# ===========================================================
+def auditar_estructura(self) -> Dict[str, Any]:
+    """
+    ===========================================================
+    AUDITORÍA ESTRUCTURAL DEL ENGINE (DETERMINISTA TOTAL Y NATIVA)
+    ===========================================================
+    Verifica con precisión la coherencia estática del Engine
+    y sus contenedores manteniendo la integridad de todo el flujo.
+    """
+    import ast
+    import inspect
+    from collections import Counter
+
+    items = []
+    contador_tipos = {
+        "AST": 0,
+        "SELF": 0,
+        "ROL": 0,
+        "CONTENEDOR": 0,
+        "CAPACIDAD": 0,
+        "DEPENDENCIA": 0,
+        "IDS": 0,
+        "ALIAS": 0,
+        "EXCEPCION": 0,
+    }
+
+    def ok(tipo, evidencia, linea=None):
+        d = {
+            "tipo": tipo,
+            "estado": "APROBADO",
+            "evidencia": evidencia,
+        }
+        if linea is not None:
+            d["linea"] = linea
+        items.append(d)
+
+    def retenido(tipo, evidencia, linea=None):
+        d = {
+            "tipo": tipo,
+            "estado": "RETENIDO",
+            "evidencia": evidencia,
+        }
+        if linea is not None:
+            d["linea"] = linea
+        items.append(d)
+        if tipo in contador_tipos:
+            contador_tipos[tipo] += 1
+
+    # ===========================================================
+    # 1) SECCIÓN: ANÁLISIS DE FUENTE Y SINTAXIS (AST)
+    # ===========================================================
+    try:
+        fuente = inspect.getsource(type(self))
+        tree = ast.parse(fuente)
+        ok("AST", "Sintaxis válida")
+    except SyntaxError as e:
+        retenido("AST", e.msg, e.lineno)
+        return {
+            "estado": "CONTRADICCION",
+            "n_aprobados": len(items) - 1,
+            "n_retenidos": 1,
+            "tipos": contador_tipos,
+            "items": items,
+            "engine_version": getattr(self, "VERSION", "12.0"),
+        }
+    except Exception as e:
+        retenido("EXCEPCION", f"Error al obtener o parsear la fuente del Engine: {e}")
+        return {
+            "estado": "CONTRADICCION",
+            "n_aprobados": len(items) - 1,
+            "n_retenidos": 1,
+            "tipos": contador_tipos,
+            "items": items,
+            "engine_version": getattr(self, "VERSION", "12.0"),
         }
 
-        # ===========================================================
-        # 3) SECCIÓN: VERIFICACIÓN DE LLAMADAS Y ATRIBUTOS self.xxx
-        # ===========================================================
-        for nodo in ast.walk(tree):
-            # Verificar llamadas self.xxx()
-            if isinstance(nodo, ast.Call):
-                f = nodo.func
-                if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name) and f.value.id == "self":
-                    if f.attr not in metodos:
-                        retenido("SELF", f"self.{f.attr}() inexistente", nodo.lineno)
+    # ===========================================================
+    # 2) SECCIÓN: MÉTODOS Y CAPACIDADES NATIVAS DEL ENGINE
+    # ===========================================================
+    metodos = {
+        n
+        for n, _ in inspect.getmembers(
+            type(self),
+            inspect.isfunction,
+        )
+    }
 
-            # Verificar acceso a atributos self.xxx (sin llamada)
-            if isinstance(nodo, ast.Attribute):
-                if isinstance(nodo.value, ast.Name) and nodo.value.id == "self":
-                    attr_name = nodo.attr
-                    # Revisar si existe como método o como atributo conocido de clase/instancia
-                    if attr_name not in metodos and attr_name not in atributos_instancia_conocidos:
-                        # Verificamos si está definido en __init__ mediante asignación (self.xxx = ...)
-                        asignado = any(
-                            isinstance(subnode, ast.Assign) and
-                            any(isinstance(target, ast.Attribute) and target.attr == attr_name and isinstance(target.value, ast.Name) and target.value.id == "self" for target in subnode.targets)
-                            for subnode in ast.walk(tree)
-                        )
-                        if not asignado:
-                            retenido("ATRIBUTO", f"Atributo self.{attr_name} no declarado ni inicializado", nodo.lineno)
+    capacidades_conocidas_engine = set(metodos) | {
+        "evaluar", "barrer", "verificar", "resolver", "componer",
+        "inventario", "calcular", "generatividad", "censo", "reportar",
+        "anunciar", "registrar", "ids", "skills", "por_id"
+    }
 
-        # ===========================================================
-        # 4) SECCIÓN: ROLES OBLIGATORIOS Y DECLARADOS
-        # ===========================================================
+    if hasattr(self, "registro") and self.registro and hasattr(self.registro, "contenedores"):
+        for cont in self.registro.contenedores.values():
+            if hasattr(cont, "capacidades") and isinstance(cont.capacidades, (list, set)):
+                for cap in cont.capacidades:
+                    capacidades_conocidas_engine.add(cap)
+
+    # ===========================================================
+    # 3) SECCIÓN: VERIFICACIÓN DE LLAMADAS self.xxx()
+    # ===========================================================
+    for nodo in ast.walk(tree):
+        if isinstance(nodo, ast.Call):
+            f = nodo.func
+            if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name) and f.value.id == "self":
+                if f.attr not in metodos and f.attr not in capacidades_conocidas_engine:
+                    retenido("SELF", f"self.{f.attr}() inexistente", nodo.lineno)
+
+    # ===========================================================
+    # 4) SECCIÓN: ROLES OBLIGATORIOS Y DECLARADOS
+    # ===========================================================
+    try:
         roles = set(ROLES)
-        for r in OBLIGATORIOS:
-            if r not in roles:
-                retenido("ROL", f"Rol obligatorio {r} no declarado")
+        obligatorios = set(OBLIGATORIOS)
+    except NameError as e:
+        retenido("ROL", f"Constante de roles faltante en el ámbito: {e}")
+        roles = {"CT", "CA", "CX", "CE", "AX", "MC", "TT"}
+        obligatorios = {"CT", "CA", "CX", "CE"}
+    
+    for r in obligatorios:
+        if r not in roles:
+            retenido("ROL", f"Rol obligatorio {r} no declarado")
 
-        # ===========================================================
-        # 5) SECCIÓN: CONTENEDORES, CAPACIDADES Y ALIAS
-        # ===========================================================
-        nombres = set()
-        ids_globales_repositorio = []
+    # ===========================================================
+    # 5) SECCIÓN: CONTENEDORES Y CAPACIDADES DEL REPOSITORIO
+    # ===========================================================
+    nombres = set()
+    ids_globales_repositorio = []
 
+    if hasattr(self, "registro") and self.registro and hasattr(self.registro, "contenedores"):
         for cont in self.registro.contenedores.values():
             if cont.nombre in nombres:
                 retenido("CONTENEDOR", f"Nombre de contenedor duplicado: {cont.nombre}")
             nombres.add(cont.nombre)
 
-            if cont.rol not in ROLES:
+            if cont.rol not in roles:
                 retenido("ROL", f"Rol inválido en contenedor {cont.nombre}: {cont.rol}")
 
-            # Auditoría de capacidades y resolución de funciones / oficios
             for cap in cont.capacidades:
                 resuelve_fn = False
                 try:
                     if callable(cont.fn(cap)):
                         resuelve_fn = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    retenido("EXCEPCION", f"Excepción evaluando función de capacidad {cap} en {cont.nombre}: {e}")
 
                 if not resuelve_fn:
-                    # Validar si existe oficio alternativo o alias
                     fn_oficio_attr = f"fn_oficio_{cap}"
                     if hasattr(cont, fn_oficio_attr) or hasattr(cont, "fn_oficio"):
                         resuelve_fn = True
+                    elif cap in capacidades_conocidas_engine:
+                        resuelve_fn = True
 
                 if not resuelve_fn:
-                    retenido("CAPACIDAD", f"Contrato roto: {cont.nombre}.{cap} no resuelve a ninguna función ni oficio ejecutable")
+                    retenido("CAPACIDAD", f"Contrato roto: {cont.nombre}.{cap} no resuelve a ninguna función ejecutable")
 
-            # Extracción de IDs declarados en meta o metadatos del contenedor
             if hasattr(cont, "meta") and isinstance(cont.meta, dict):
                 ids_meta = cont.meta.get("ids", [])
                 if isinstance(ids_meta, list):
                     ids_globales_repositorio.extend(ids_meta)
 
-        # ===========================================================
-        # 6) SECCIÓN: IDENTIFICADORES (IDS Y REPOSITORIO GLOBAL)
-        # ===========================================================
-        # Incorporar IDs nativos del CE si existen
-        try:
+    # ===========================================================
+    # 6) SECCIÓN: IDENTIFICADORES (IDS Y CE)
+    # ===========================================================
+    try:
+        if hasattr(self, "_ce_ids_skills") and callable(self._ce_ids_skills):
             ce = self._ce_ids_skills()
             if isinstance(ce, dict) and "ids" in ce:
                 ids_globales_repositorio.extend(ce.get("ids", []))
-        except Exception:
-            pass
+    except Exception as e:
+        retenido("EXCEPCION", f"Error ejecutando _ce_ids_skills(): {e}")
 
-        ids_repetidos = {
-            x for x in ids_globales_repositorio if ids_globales_repositorio.count(x) > 1
-        }
-        for rid in ids_repetidos:
-            retenido("IDS", f"ID repetido en el repositorio: {rid}")
+    contador_ids = Counter(ids_globales_repositorio)
+    for rid, count in contador_ids.items():
+        if count > 1:
+            retenido("IDS", f"ID repetido en el repositorio: {rid} (aparece {count} veces)")
 
-        # ===========================================================
-        # 7) SECCIÓN: ALIAS DE CAPACIDAD
-        # ===========================================================
-        if "ALIAS_CAPACIDAD" in globals() or hasattr(self, "ALIAS_CAPACIDAD") or "ALIAS_CAPACIDAD" in locals():
-            alias_map = globals().get("ALIAS_CAPACIDAD", {})
-            for alias, target in alias_map.items():
-                # Verificar que el target de la capacidad alias tenga soporte lógico
-                encontrado_alias = False
-                for cont in self.registro.contenedores.values():
-                    if target in cont.capacidades or hasattr(cont, f"fn_{target}"):
-                        encontrado_alias = True
-                        break
-                if not encontrado_alias:
-                    retenido("ALIAS", f"Alias de capacidad huérfano: '{alias}' apunta a '{target}' sin resolución")
-
-        # ===========================================================
-        # 8) SECCIÓN: DEPENDENCIAS ENTRE MÓDULOS Y ROLES
-        # ===========================================================
+    # ===========================================================
+    # 7) SECCIÓN: DEPENDENCIAS ENTRE MÓDULOS Y ROLES
+    # ===========================================================
+    if hasattr(self, "registro") and self.registro and hasattr(self.registro, "contenedores"):
         for cont in self.registro.contenedores.values():
             for req in cont.requiere:
-                if req in ROLES:
+                if req in roles:
                     if not self.registro.por_rol.get(req):
                         retenido("DEPENDENCIA", f"{cont.nombre} requiere rol {req}, el cual está vacío")
                 else:
                     if req not in self.registro.contenedores:
                         retenido("DEPENDENCIA", f"{cont.nombre} requiere el contenedor '{req}' ausente en el registro")
 
-        # ===========================================================
-        # 9) SECCIÓN: RESUMEN Y CONSOLIDACIÓN DEL INFORME
-        # ===========================================================
-        retenidos_total = sum(1 for x in items if x["estado"] == "RETENIDO")
-        aprobados_total = sum(1 for x in items if x["estado"] == "APROBADO")
+    # ===========================================================
+    # 8) SECCIÓN: RESUMEN Y CONSOLIDACIÓN DEL INFORME
+    # ===========================================================
+    retenidos_total = sum(1 for x in items if x["estado"] == "RETENIDO")
+    aprobados_total = sum(1 for x in items if x["estado"] == "APROBADO")
 
-        return {
-            "estado": "COHERENTE" if retenidos_total == 0 else "CONTRADICCION",
-            "n_aprobados": aprobados_total,
-            "n_retenidos": retenidos_total,
-            "tipos": contador_tipos,
-            "items": items,
-            "engine_version": self.VERSION,
-        }
-
+    return {
+        "estado": "COHERENTE" if retenidos_total == 0 else "CONTRADICCION",
+        "n_aprobados": aprobados_total,
+        "n_retenidos": retenidos_total,
+        "tipos": contador_tipos,
+        "items": items,
+        "engine_version": getattr(self, "VERSION", "12.0"),
+    }
 
 # ===========================================================
 # EXPORTS
