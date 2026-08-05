@@ -1251,7 +1251,7 @@ class Engine:
 def auditar_estructura(self) -> Dict[str, Any]:
     """
     ===========================================================
-    AUDITORÍA ESTRUCTURAL DEL ENGINE (DETERMINISTA TOTAL Y NATIVA)
+    AUDITORÍA ESTRUCTURAL DEL ENGINE (CONCIENCIA TOTAL Y NATIVA)
     ===========================================================
     Verifica con precisión la coherencia estática del Engine
     y sus contenedores manteniendo la integridad de todo el flujo.
@@ -1452,6 +1452,7 @@ def auditar_estructura(self) -> Dict[str, Any]:
         "items": items,
         "engine_version": getattr(self, "VERSION", "12.0"),
     }
+
 
 # ===========================================================
 # EXPORTS
