@@ -354,7 +354,15 @@ def resolver_pedido(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
             "mensajes": ["Catálogo incoherente; no hay categorías cargadas."],
         }
 
-    raw_id = peticion.get("categoria") or peticion.get("tipo_total") or peticion.get("id")
+    # SECCIÓN CORREGIDA: Sincronización de vocabulario con CE y Engine
+    raw_id = (
+        peticion.get("escala_id") or 
+        peticion.get("categoria_tru") or 
+        peticion.get("categoria") or 
+        peticion.get("tipo_total") or 
+        peticion.get("id")
+    )
+    
     if raw_id and es_valida(str(raw_id)):
         meta = por_id(str(raw_id)) or {}
         return {
