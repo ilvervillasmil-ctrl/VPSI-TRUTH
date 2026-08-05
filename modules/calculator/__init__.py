@@ -1,466 +1,445 @@
-# -*- coding: utf-8 -*-
 """
-modules/tru_totales/__init__.py
-===============================
+VPSI-TRUTH --- modules/calculator/__init__.py
 
-Módulo VPSI-TRUTH — Tru totales
+Rol CA: calcula factores C, L, K.
+No calcula Tru_Ri ni Tru_total (eso es FO).
+Sin O_context / contexto, K queda ausente (None) — Def-5.3.1.
 
-CONTRATO (leer primero)
------------------------
-Aquí están las *capacidades de categorías* de alcance de Tru_Ri y Tru_total.
-
-  Utilícenlas cuando quieran.
-
-  - Este módulo NO calcula.
-  - Este módulo NO orquesta.
-  - Este módulo NO tiene voz ni voto sobre el pedido.
-  - Solo expone el catálogo ordenado de escalas evaluables.
-
-Quién hace qué
---------------
-  Omega Report
-      Pide mostrar un total (p.ej. «Tru total del sujeto», «Tru de la frase»).
-      No calcula: declara qué quiere ver.
-
-  Engine
-      Lee este catálogo, junta O (CX) + segmentos + pedido,
-      y orquesta el ciclo hacia conteos y Calculator.
-
-  CX
-      Fija el contexto O.
-
-  conteos
-      Cuenta sobre el segmento pedido bajo ese O.
-
-  Calculator (CA)
-      Aplica las fórmulas que ya tiene (C, L, K, Tru_Ri, Tru_total con α, β).
-      Calcula lo que Engine le diga: una letra, una frase, S_i, el diálogo, …
-
-  tru_totales (este módulo)
-      Catálogo pasivo: «existen estas categorías; esta es su unidad;
-      esto es lo que requieren como material».
-      Cero voluntad. Cero aritmética. Cero imports de cálculo.
-
-Flujo típico (automático para el usuario del repo)
--------------------------------------------------
-  1. Omega / petición: «Tru total del sujeto» / «Tru de la conversación» / …
-  2. Engine consulta este INIT → resuelve la categoría del catálogo.
-  3. CX aporta O; se segmenta el material (S_1…S_N si aplica).
-  4. conteos + CA calculan bajo ese O y ese segmento.
-  5. Omega muestra el Tru_Ri / Tru_total pedido.
-
-El usuario del framework no arma el ciclo a mano: el contrato de este
-INIT es lo suficientemente explícito para que Engine sepa *qué categorías
-existen* y Calculator sepa *qué le están pidiendo calcular*.
-
-Extensión
----------
-  Agregar o editar un archivo en categorias/*.py.
-  Este INIT los lee solo. No hace falta modificar el INIT para una
-  categoría nueva (mismo patrón que axiomas/ y contexto/).
-
-Prohibido en este módulo y en categorias/
------------------------------------------
-  - import de calculator / fórmulas / conteos con fin de calcular
-  - valores numéricos de Tru, C, L, K
-  - algoritmos de agregación
-  - nombres propios de sujetos (usar S_i; Engine asigna María/Carlo/…)
+El init es centinela de calculator/:
+  - descubre archivos de cálculo
+  - exige APIs públicas por factor
+  - reporta choques / fallos de carga
+  - orquesta calcular(peticion) solo sobre lo coherente
+  - si metodo=operacional y faltan conteos, los produce via conteos.py
 """
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sys
+from fractions import Fraction
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+
+# ===============================================================
+# Errores y UNDEFINED (antes de importar submódulos)
+# ===============================================================
+class DominioError(ValueError):
+    """Entrada fuera de dominio (p. ej. k > m)."""
+
+
+class MetodoError(ValueError):
+    """Método de cálculo no admitido."""
+
+
+class _Undefined:
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "UNDEFINED"
+
+    def __bool__(self):
+        raise TypeError("UNDEFINED no admite conversión a booleano")
+
+    def __eq__(self, other):
+        return isinstance(other, _Undefined)
+
+    def __hash__(self):
+        return hash("VPSI_CA_UNDEFINED")
+
+
+UNDEFINED = _Undefined()
+
+
+def es_undefined(v: Any) -> bool:
+    return v is UNDEFINED or isinstance(v, _Undefined)
+
 
 _DIR = Path(__file__).parent
-_CAT_DIR = _DIR / "categorias"
 
-__version__ = "1.1"
+# Factores canónicos y archivo esperado (convención; barrer admite más)
+_FACTORES_CANONICOS = ("C", "L", "K")
+_ARCHIVO_FACTOR = {
+    "coherencia": "C",
+    "logica": "L",
+    "correlacion_k": "K",
+}
 
-# Contrato de forma de cada categoría (centinela).
-# Todos los archivos de categorias/ deben poder normalizarse a esto.
-_CAMPOS_OBLIGATORIOS = (
-    "id",           # tru_atomo | tru_frase | tru_sujeto | …
-    "nombre",       # etiqueta legible
-    "unidad",       # qué material cubre
-    "enunciado",    # definición operativa del alcance
-)
-
-_CAMPOS_OPCIONALES_CONOCIDOS = (
-    "nivel_fractal",       # 1..n orden de escala (no constante geométrica)
-    "requiere",            # material / O / segmentos (lista de strings)
-    "factores_evaluables", # p.ej. ["Tru_Ri", "Tru_total"]
-    "agrega_desde",        # ids de escala inferior (declarativo, no algoritmo)
-    "senales",             # prosa que resolver_pedido reconoce
-    "anclas",              # ids AX/CX de referencia
-    "version",
-    "notas",
+# Claves que la ruta operacional exige
+_CLAVES_CONTEO = (
+    "compromisos",
+    "contradicciones",
+    "posturas",
+    "reversiones",
+    "afirmaciones",
+    "afirmaciones_falsas",
 )
 
 
-# ---------------------------------------------------------------------------
-# Carga: lee todas las categorías debajo
-# ---------------------------------------------------------------------------
-def _cargar_desde_archivo(archivo: Path) -> Tuple[List[Dict[str, Any]], List[str]]:
-    errores: List[str] = []
-    if archivo.name.startswith("_") or archivo.name == "__init__.py":
-        return [], errores
-
-    nombre_mod = f"tru_totales_cat_{archivo.stem}"
-    spec = importlib.util.spec_from_file_location(nombre_mod, archivo)
-    if spec is None or spec.loader is None:
-        return [], [f"{archivo.name}: no se pudo crear spec"]
-
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[nombre_mod] = mod
-    try:
-        spec.loader.exec_module(mod)
-    except Exception as e:  # noqa: BLE001
-        return [], [f"{archivo.name}: import {type(e).__name__}: {e}"]
-
-    halladas: List[Dict[str, Any]] = []
-    una = getattr(mod, "CATEGORIA", None)
-    if isinstance(una, dict):
-        halladas.append(una)
-    varias = getattr(mod, "CATEGORIAS", None)
-    if isinstance(varias, list):
-        for item in varias:
-            if isinstance(item, dict):
-                halladas.append(item)
-    if not halladas:
-        for attr in ("DECLARACION", "declaracion", "TOTAL"):
-            val = getattr(mod, attr, None)
-            if isinstance(val, dict):
-                halladas.append(val)
-                break
-    if not halladas:
-        errores.append(f"{archivo.name}: sin CATEGORIA/CATEGORIAS exportada")
-    return halladas, errores
-
-
-def _validar_categoria(cat: Dict[str, Any], origen: str) -> List[str]:
-    errs: List[str] = []
-    for k in _CAMPOS_OBLIGATORIOS:
-        if k not in cat or not str(cat.get(k, "")).strip():
-            errs.append(f"{origen}: falta campo obligatorio '{k}'")
-
-    # Oficio prohibido: traer números de Tru/C/L/K
-    for prohibido in ("Tru_Ri", "Tru_total", "tru_ri", "tru_total", "C", "L", "K"):
-        if prohibido in cat and cat[prohibido] is not None:
-            if prohibido in ("C", "L", "K") and isinstance(cat.get(prohibido), bool):
-                continue
-            errs.append(
-                f"{origen}: no debe traer valor '{prohibido}' "
-                f"(oficio Calculator; tru_totales solo cataloga)"
-            )
-    return errs
-
-
-def _normalizar(cat: Dict[str, Any], origen: str) -> Dict[str, Any]:
-    factores = cat.get("factores_evaluables") or ["Tru_Ri", "Tru_total"]
-    if not isinstance(factores, list):
-        factores = ["Tru_Ri", "Tru_total"]
-
-    nivel = cat.get("nivel_fractal")
-    try:
-        nivel_n = int(nivel) if nivel is not None else None
-    except (TypeError, ValueError):
-        nivel_n = None
-
-    return {
-        "id": str(cat["id"]).strip().lower(),
-        "nombre": str(cat["nombre"]).strip(),
-        "unidad": str(cat["unidad"]).strip(),
-        "enunciado": str(cat["enunciado"]).strip(),
-        "nivel_fractal": nivel_n,
-        "requiere": [str(x) for x in (cat.get("requiere") or [])],
-        "factores_evaluables": [str(x) for x in factores],
-        "agrega_desde": [str(x) for x in (cat.get("agrega_desde") or [])],
-        "senales": [str(x).lower() for x in (cat.get("senales") or [])],
-        "anclas": [str(x) for x in (cat.get("anclas") or [])],
-        "origen": origen,
-        "version": str(cat.get("version") or "1.0"),
-        "notas": str(cat.get("notas") or ""),
-    }
-
-
-def recolectar() -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
+# ===============================================================
+# Carga de submódulos (APIs públicas)
+# ===============================================================
+def _importar_apis() -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
     """
-    Lee categorias/*.py (y *.py no privados en la raíz del módulo).
-    Retorna (categorías normalizadas, errores de forma/carga).
+    Importa calcular_c / calcular_l / calcular_k si existen.
+    No lanza: acumula errores para barrer().
     """
-    cats: List[Dict[str, Any]] = []
+    apis: Dict[str, Any] = {}
     errores: List[Dict[str, str]] = []
-    archivos: List[Path] = []
 
-    if _CAT_DIR.is_dir():
-        archivos.extend(sorted(_CAT_DIR.glob("*.py")))
-    archivos.extend(sorted(_DIR.glob("*.py")))
-
-    vistos: set = set()
-    for archivo in archivos:
-        if archivo.name == "__init__.py" or archivo.name.startswith("_"):
-            continue
-        key = str(archivo.resolve())
-        if key in vistos:
-            continue
-        vistos.add(key)
-
-        halladas, errs = _cargar_desde_archivo(archivo)
-        for e in errs:
-            errores.append({"archivo": archivo.name, "error": e})
-        for raw in halladas:
-            ve = _validar_categoria(raw, archivo.name)
-            if ve:
-                for e in ve:
-                    errores.append({"archivo": archivo.name, "error": e})
-                continue
-            try:
-                cats.append(_normalizar(raw, archivo.stem))
-            except Exception as e:  # noqa: BLE001
+    pares = (
+        ("coherencia", "calcular_c", "C"),
+        ("logica", "calcular_l", "L"),
+        ("correlacion_k", "calcular_k", "K"),
+    )
+    for mod_name, fn_name, factor in pares:
+        try:
+            mod = importlib.import_module("modules.calculator.{0}".format(mod_name))
+            fn = getattr(mod, fn_name, None)
+            if not callable(fn):
                 errores.append({
-                    "archivo": archivo.name,
-                    "error": f"normalizar: {type(e).__name__}: {e}",
+                    "archivo": "{0}.py".format(mod_name),
+                    "error": "falta API pública callable '{0}'".format(fn_name),
                 })
-
-    por_id: Dict[str, List[str]] = {}
-    for c in cats:
-        por_id.setdefault(c["id"], []).append(c["origen"])
-    for cid, origenes in por_id.items():
-        if len(origenes) > 1:
+                continue
+            apis[factor] = fn
+        except Exception as e:
             errores.append({
-                "archivo": ",".join(origenes),
-                "error": f"id duplicado '{cid}' en {origenes}",
+                "archivo": "{0}.py".format(mod_name),
+                "error": "{0}: {1}".format(type(e).__name__, e),
             })
-
-    # orden estable por nivel_fractal luego id
-    cats.sort(key=lambda c: (c["nivel_fractal"] is None, c["nivel_fractal"] or 0, c["id"]))
-    return cats, errores
+    return apis, errores
 
 
-def barrer() -> Dict[str, Any]:
-    """Coherencia del catálogo. No calcula Tru."""
-    cats, errores = recolectar()
-    return {
-        "coherente": not errores,
-        "categorias": len(cats),
-        "ids": [c["id"] for c in cats],
-        "errores": errores,
-        "version": __version__,
-        "contrato": (
-            "Catálogo pasivo de alcances Tru_Ri/Tru_total. "
-            "Engine/Omega usan; Calculator calcula; este módulo no calcula."
-        ),
-    }
+_APIS, _ERRORES_CARGA = _importar_apis()
 
 
-def categorias() -> List[Dict[str, Any]]:
-    """Lista del catálogo si coherente; si no → []."""
-    r = barrer()
-    if not r["coherente"]:
-        return []
-    cats, _ = recolectar()
-    return cats
-
-
-def por_id(cat_id: str) -> Optional[Dict[str, Any]]:
-    key = str(cat_id or "").strip().lower()
-    for c in categorias():
-        if c["id"] == key:
-            return dict(c)
+# ===============================================================
+# Conteo (productor operacional)
+# ===============================================================
+def _cargar_conteos():
+    """Carga conteos.py si existe. No tumba el módulo si falta."""
+    try:
+        mod = importlib.import_module("modules.calculator.conteos")
+        extraer = getattr(mod, "extraer_conteos", None)
+        inyectar = getattr(mod, "inyectar_en_peticion", None)
+        verificar = getattr(mod, "verificar_conteos", None)
+        if callable(extraer) and callable(inyectar):
+            return {
+                "extraer_conteos": extraer,
+                "inyectar_en_peticion": inyectar,
+                "verificar_conteos": verificar if callable(verificar) else None,
+            }
+    except Exception:
+        pass
     return None
 
 
-def ids() -> List[str]:
-    return [c["id"] for c in categorias()]
+_CONTEOS = _cargar_conteos()
 
 
-def es_valida(cat_id: str) -> bool:
-    return str(cat_id or "").strip().lower() in set(ids())
+def _faltan_conteos(peticion: Dict[str, Any]) -> bool:
+    """True si falta alguna clave que la ruta operacional necesita."""
+    for k in _CLAVES_CONTEO:
+        if k not in peticion or peticion[k] is None:
+            return True
+    return False
 
 
-def capacidades() -> Dict[str, Any]:
+def _asegurar_conteos(peticion: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Vista explícita para Engine/Omega:
-
-      «Aquí están las capacidades de categorías; utilícenlas cuando quieran.»
+    Si metodo=operacional y faltan conteos, los produce con conteos.py.
+    Si conteos.py no está cargado, deja la petición igual (CA devolverá None).
     """
-    cats, errores = recolectar()
+    if _CONTEOS is None:
+        return peticion
+    if not _faltan_conteos(peticion):
+        return peticion
+    inyectar = _CONTEOS["inyectar_en_peticion"]
+    return inyectar(peticion)
+
+
+# ===============================================================
+# Centinela de carpeta
+# ===============================================================
+def _listar_py() -> List[Path]:
+    out = []
+    for f in sorted(_DIR.glob("*.py")):
+        if f.name == "__init__.py" or f.name.startswith("_"):
+            continue
+        out.append(f)
+    return out
+
+
+def barrer() -> Dict[str, Any]:
+    """
+    Centinela del módulo CA.
+    - Archivos presentes
+    - APIs de factores canónicos resolubles
+    - Choque: dos stems mapeados al mismo factor sin regla
+    - Presencia de conteos.py (productor operacional)
+    No calcula Tru. No exige que C/L/K salgan numéricos sin petición.
+    """
+    errores: List[Dict[str, str]] = list(_ERRORES_CARGA)
+    choques: List[str] = []
+    archivos = [p.name for p in _listar_py()]
+
+    factores_ok = sorted(_APIS.keys())
+    for factor in _FACTORES_CANONICOS:
+        if factor not in _APIS:
+            errores.append({
+                "archivo": "?",
+                "error": "factor canónico '{0}' sin API pública cargada".format(
+                    factor
+                ),
+            })
+
+    por_factor: Dict[str, List[str]] = {}
+    for stem, factor in _ARCHIVO_FACTOR.items():
+        path = _DIR / "{0}.py".format(stem)
+        if path.exists():
+            por_factor.setdefault(factor, []).append(stem)
+    for factor, stems in por_factor.items():
+        if len(stems) > 1:
+            choques.append(
+                "factor '{0}' reclamado por varios archivos: {1}".format(
+                    factor, stems
+                )
+            )
+
+    stems_conocidos = set(_ARCHIVO_FACTOR.keys()) | {"conteos"}
+    extra = [
+        p.stem for p in _listar_py()
+        if p.stem not in stems_conocidos
+    ]
+
+    conteos_ok = _CONTEOS is not None
+
+    limpio = not errores and not choques
     return {
-        "modulo": "tru_totales",
-        "version": __version__,
-        "mensaje": (
-            "Capacidades de categorías de Tru_Ri y Tru_total. "
-            "Úsenlas cuando quieran. Este módulo no calcula."
-        ),
-        "como_usar": (
-            "Omega declara el total a mostrar; Engine resuelve la categoría "
-            "con resolver_pedido / por_id; CX aporta O; conteos + Calculator "
-            "aplican la fórmula sobre el segmento."
-        ),
-        "categorias": [
-            {
-                "id": c["id"],
-                "nombre": c["nombre"],
-                "unidad": c["unidad"],
-                "nivel_fractal": c["nivel_fractal"],
-                "factores_evaluables": c["factores_evaluables"],
-                "requiere": c["requiere"],
-            }
-            for c in cats
-        ],
-        "total": len(cats),
-        "coherente": not errores,
+        "contenedor": "calculator",
+        "rol": "CA",
+        "coherente": limpio,
         "errores": errores,
+        "choques": choques,
+        "archivos": archivos,
+        "factores_api": factores_ok,
+        "archivos_extra": extra,
+        "conteos_disponible": conteos_ok,
+        "nota": (
+            "conteos.py produce k/m, r/p, f/c para la ruta operacional; "
+            "archivos_extra son candidatos a nuevos factores"
+        ),
     }
 
 
 def inventario(peticion: Any = None) -> Dict[str, Any]:
-    caps = capacidades()
+    b = barrer()
     return {
-        "contenedor": "tru_totales",
-        "version": __version__,
-        "rol": "TT",
+        "contenedor": "calculator",
+        "version": "1.2",
+        "rol": "CA",
+        "archivos": b.get("archivos"),
+        "factores_api": b.get("factores_api"),
+        "conteos_disponible": b.get("conteos_disponible"),
+        "coherente": b.get("coherente"),
         "funcion": (
-            "Catálogo pasivo de categorías de alcance de Tru_Ri / Tru_total. "
-            "Auto-carga categorias/*.py. No calcula. No orquesta. "
-            "Engine y Omega utilizan las capacidades cuando las necesitan."
-        ),
-        "capacidades": caps,
-        "extension": (
-            "Editar o agregar un archivo en categorias/ sin tocar este INIT."
-        ),
-        "formula_referencia": (
-            "Tru_Ri = C·L·K ; Tru_total = Tru_Ri·α + β — las aplica Calculator, "
-            "no este módulo."
+            "Calcula C, L, K. No calcula Tru. "
+            "K ausente sin contexto/O (Def-5.3.1). "
+            "Si metodo=operacional y faltan conteos, los produce conteos.py."
         ),
     }
 
 
-def resolver_pedido(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+# ===============================================================
+# Cálculo (oficio principal)
+# ===============================================================
+def calcular(peticion: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    Normaliza un pedido de Omega/Engine a una categoría del catálogo.
-    No calcula. No orquesta.
+    Orquesta C, L, K vía APIs públicas de los submódulos.
+
+    Si metodo=operacional (default) y faltan las claves de conteo,
+    intenta producirlas con conteos.py antes de llamar a los factores.
+
+    Devuelve Fraction | None por factor.
+    None = dato no disponible (legítimo), no es fallo del contenedor.
     """
     peticion = dict(peticion or {})
-    cats, errores = recolectar()
-    if errores and not cats:
-        return {
-            "ok": False,
-            "error": "modulo_incoherente",
-            "errores": errores,
-            "mensajes": ["Catálogo incoherente; no hay categorías cargadas."],
-        }
+    metodo = str(peticion.get("metodo") or "operacional")
+    errores: List[str] = []
+    meta_conteos = None
 
-    raw_id = peticion.get("categoria") or peticion.get("tipo_total") or peticion.get("id")
-    if raw_id and es_valida(str(raw_id)):
-        meta = por_id(str(raw_id)) or {}
-        return {
-            "ok": True,
-            "categoria": meta["id"],
-            "nombre": meta.get("nombre"),
-            "unidad": meta.get("unidad"),
-            "nivel_fractal": meta.get("nivel_fractal"),
-            "factores_evaluables": list(meta.get("factores_evaluables") or []),
-            "requiere": list(meta.get("requiere") or []),
-            "agrega_desde": list(meta.get("agrega_desde") or []),
-            "anclas": list(meta.get("anclas") or []),
-            "sujeto_indice": peticion.get("sujeto_indice"),  # S_i si Engine lo trae
-            "mensajes": [
-                f"Categoría '{meta['id']}' disponible. "
-                "Engine orquesta; Calculator calcula; tru_totales no calcula."
-            ],
-        }
+    # ----- producir conteos si hace falta (solo operacional) -----
+    if metodo == "operacional":
+        peticion = _asegurar_conteos(peticion)
+        meta_conteos = peticion.get("_conteos_meta")
 
-    tipos = peticion.get("tipos_total") or peticion.get("categorias")
-    if isinstance(tipos, (list, tuple)):
-        res = [str(t).strip().lower() for t in tipos if es_valida(str(t))]
-        if res:
-            return {
-                "ok": True,
-                "categoria": res[0],
-                "categorias": res,
-                "multiple": True,
-                "mensajes": [
-                    "Varias categorías pedidas. Cada una se calcula en su "
-                    "segmento/O; sin fusión silenciosa."
-                ],
-            }
+    C = L = K = None
 
-    texto = " ".join(
-        str(peticion.get(k) or "")
-        for k in ("pedido", "texto", "objetivo", "tarea", "mensaje")
-    ).lower()
-    for c in cats:
-        for s in c.get("senales") or []:
-            if s and s in texto:
-                return {
-                    "ok": True,
-                    "categoria": c["id"],
-                    "nombre": c.get("nombre"),
-                    "unidad": c.get("unidad"),
-                    "nivel_fractal": c.get("nivel_fractal"),
-                    "factores_evaluables": list(c.get("factores_evaluables") or []),
-                    "requiere": list(c.get("requiere") or []),
-                    "agrega_desde": list(c.get("agrega_desde") or []),
-                    "anclas": list(c.get("anclas") or []),
-                    "mensajes": [f"Pedido en prosa → categoría '{c['id']}'."],
-                }
+    # ----- C -----
+    fn_c = _APIS.get("C")
+    if callable(fn_c):
+        try:
+            if metodo == "teorico":
+                raw = fn_c(
+                    descripcion=peticion.get("mensaje") or peticion.get("descripcion"),
+                    metodo="teorico",
+                )
+            else:
+                raw = fn_c(
+                    compromisos=peticion.get("compromisos"),
+                    contradicciones=peticion.get("contradicciones"),
+                    metodo="operacional",
+                )
+            if not es_undefined(raw):
+                C = raw if isinstance(raw, Fraction) else (
+                    Fraction(str(raw)) if raw is not None else None
+                )
+        except Exception as e:
+            errores.append("Error en C: {0}".format(e))
+            C = None
+    else:
+        errores.append("API C no disponible")
 
-    return {
-        "ok": False,
-        "categoria": None,
-        "error": "categoria_no_reconocida",
-        "categorias_validas": [c["id"] for c in cats],
-        "mensajes": [
-            "Categoría no reconocida. "
-            f"Catálogo: {', '.join(c['id'] for c in cats) or '(vacío)'}."
-        ],
+    # ----- L -----
+    fn_l = _APIS.get("L")
+    if callable(fn_l):
+        try:
+            if metodo == "teorico":
+                raw = fn_l(
+                    descripcion=peticion.get("mensaje") or peticion.get("descripcion"),
+                    metodo="teorico",
+                )
+            else:
+                raw = fn_l(
+                    posturas=peticion.get("posturas"),
+                    reversiones=peticion.get("reversiones"),
+                    metodo="operacional",
+                )
+            if not es_undefined(raw):
+                L = raw if isinstance(raw, Fraction) else (
+                    Fraction(str(raw)) if raw is not None else None
+                )
+        except Exception as e:
+            errores.append("Error en L: {0}".format(e))
+            L = None
+    else:
+        errores.append("API L no disponible")
+
+    # ----- K (exige contexto / O) -----
+    fn_k = _APIS.get("K")
+    o_ctx = (
+        peticion.get("contexto")
+        or peticion.get("O_context")
+        or peticion.get("o_context")
+    )
+    if callable(fn_k):
+        try:
+            if o_ctx is None:
+                K = None
+            elif metodo == "teorico":
+                raw = fn_k(
+                    descripcion=peticion.get("mensaje") or peticion.get("descripcion"),
+                    o_context=o_ctx,
+                    metodo="teorico",
+                )
+                if not es_undefined(raw):
+                    K = raw if isinstance(raw, Fraction) else (
+                        Fraction(str(raw)) if raw is not None else None
+                    )
+            else:
+                raw = fn_k(
+                    afirmaciones=peticion.get("afirmaciones"),
+                    afirmaciones_falsas=peticion.get("afirmaciones_falsas"),
+                    o_context=o_ctx,
+                    metodo="operacional",
+                )
+                if not es_undefined(raw):
+                    K = raw if isinstance(raw, Fraction) else (
+                        Fraction(str(raw)) if raw is not None else None
+                    )
+        except Exception as e:
+            errores.append("Error en K: {0}".format(e))
+            K = None
+    else:
+        errores.append("API K no disponible")
+
+    if errores:
+        try:
+            from core.diagnostico import DiagnosticoGlobal
+
+            recibir = getattr(DiagnosticoGlobal, "recibir_reporte", None)
+            if callable(recibir):
+                recibir(
+                    "calculator",
+                    [
+                        {"tipo": "error_calculo", "detalle": e}
+                        for e in errores
+                    ],
+                )
+        except Exception:
+            pass
+
+    salida: Dict[str, Any] = {
+        "C": C,
+        "L": L,
+        "K": K,
+        "errores": errores,
+        "metodo": metodo,
     }
+    if meta_conteos is not None:
+        salida["conteos"] = meta_conteos
+    return salida
 
 
-def verificar_salida(salida: Dict[str, Any]) -> bool:
-    if not isinstance(salida, dict) or salida.get("error"):
+def verificar_salida(salida: Any) -> bool:
+    """
+    Forma mínima de salida de calcular: dict con C, L, K.
+    None en un factor es legítimo (sobre todo K sin O).
+    """
+    if not isinstance(salida, dict):
         return False
-    if "coherente" in salida:
-        return bool(salida.get("coherente"))
-    cat = salida.get("categoria")
-    return bool(cat) and es_valida(str(cat))
+    return all(k in salida for k in ("C", "L", "K"))
 
 
+# ===============================================================
+# CONTENEDOR (contrato — al final)
+# ===============================================================
 CONTENEDOR = {
-    "nombre": "tru_totales",
-    "rol": "TT",
-    "version": __version__,
-    "requiere": [],  # no impone; el catálogo está disponible para quien lo use
+    "nombre": "calculator",
+    "rol": "CA",
+    "version": "1.2",
+    "requiere": [],
     "descripcion": (
-        "Catálogo pasivo de categorías de alcance de Tru_Ri / Tru_total. "
-        "Aquí están las capacidades; Engine y Omega las utilizan cuando quieren. "
-        "Calculator calcula. Este módulo no calcula ni orquesta. "
-        "Auto-carga categorias/*.py."
+        "Calcula C, L, K. None = dato no disponible. "
+        "Sin contexto/O, K queda None (Def-5.3.1). "
+        "No calcula Tru_total (FO). "
+        "Si metodo=operacional y faltan conteos, los produce conteos.py. "
+        "verificar = centinela de carpeta; calcular = oficio de factores."
     ),
     "capacidades": {
+        "calcular": calcular,
         "verificar": barrer,
-        "barrer": barrer,
         "inventario": inventario,
-        "capacidades": capacidades,
-        "categorias": categorias,
-        "resolver_pedido": resolver_pedido,
     },
 }
 
+# Exponer oficio de conteos solo si el archivo cargó
+if _CONTEOS is not None:
+    CONTENEDOR["capacidades"]["extraer_conteos"] = _CONTEOS["extraer_conteos"]
+    CONTENEDOR["capacidades"]["inyectar_conteos"] = _CONTEOS["inyectar_en_peticion"]
+
+
 __all__ = [
     "CONTENEDOR",
-    "recolectar",
+    "UNDEFINED",
+    "es_undefined",
+    "DominioError",
+    "MetodoError",
+    "calcular",
     "barrer",
-    "categorias",
-    "por_id",
-    "ids",
-    "es_valida",
-    "capacidades",
     "inventario",
-    "resolver_pedido",
     "verificar_salida",
 ]
