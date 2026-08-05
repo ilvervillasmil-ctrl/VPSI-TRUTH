@@ -10,19 +10,13 @@ FUNCIÓN
   Expone esos IDs a Engine.
   Nada más.
 
-  Engine consulta aquí los IDs que necesite cuando Omega
-  o un usuario los pidan (citar, reportar, referenciar).
+  Engine puede utilizar este módulo cuando le dé la gana
+  si le piden un ID (citar, reportar, referenciar).
   Los IDs viven en los archivos de categorias/, no en este INIT.
-
-  Ejemplos de lo que puede haber debajo (cuando se escriban):
-    - IDs de axiomas
-    - IDs de escalas
-    - IDs de contratos / roles
-    - IDs de cualquier casilla del repositorio que deba poder citarse
 
 NO HACE
   Calcular Tru / C / L / K.
-  Aplicar α β.
+  Aplicar alpha beta.
   Conteos.
   Clasificar O.
   Orquestar el ciclo.
@@ -55,8 +49,6 @@ _CAT_DIR = _DIR / "categorias"
 
 __version__ = "1.0"
 
-# Forma de cada casilla bajo categorias/.
-# Los IDs NO se listan en este INIT: viven en los archivos.
 ESQUEMA_CATEGORIA: Dict[str, Any] = {
     "obligatorios": ["id", "nombre", "unidad", "enunciado"],
     "opcionales": [
@@ -77,8 +69,8 @@ ESQUEMA_CATEGORIA: Dict[str, Any] = {
         "alpha", "beta", "ALPHA", "BETA", "Fraction",
     ],
     "nota": (
-        "Archivos bajo categorias/ declaran CATEGORIA o CATEGORIAS. "
-        "Cada uno aporta uno o más IDs del repositorio. "
+        "Archivos bajo categorias/ declaran CATEGORIA o CATEGORIAS o IDS. "
+        "Cada uno aporta uno o mas IDs del repositorio. "
         "CC los lee y expone. No calcula. "
         "Este INIT no embebe IDs."
     ),
@@ -178,17 +170,13 @@ def _normalizar(cat: Dict[str, Any], origen: str) -> Dict[str, Any]:
 
 
 def recolectar() -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
-    """
-    Lee categorias/*.py (y *.py no privados junto al INIT).
-    Los IDs salen de esos archivos, nunca de una lista fija en este INIT.
-    """
     cats: List[Dict[str, Any]] = []
     errores: List[Dict[str, str]] = []
     archivos: List[Path] = []
     if _CAT_DIR.is_dir():
         archivos.extend(sorted(_CAT_DIR.glob("*.py")))
     archivos.extend(sorted(_DIR.glob("*.py")))
-    vistos: set = set()
+    vistos = set()
     for archivo in archivos:
         if archivo.name == "__init__.py" or archivo.name.startswith("_"):
             continue
@@ -246,7 +234,7 @@ def barrer() -> Dict[str, Any]:
     notas: List[str] = []
     if not cats and not errores:
         notas.append(
-            "glosario vacío (legítimo hasta montar archivos en categorias/)"
+            "glosario vacio (legitimo hasta montar archivos en categorias/)"
         )
     return {
         "contenedor": "catalogo_citaciones",
@@ -278,4 +266,90 @@ def categorias() -> List[Dict[str, Any]]:
 
 
 def por_id(cat_id: str) -> Optional[Dict[str, Any]]:
-    key = str(cat
+    key = str(cat_id or "").strip().lower()
+    for c in categorias():
+        if c["id"] == key:
+            return dict(c)
+    return None
+
+
+def ids() -> List[str]:
+    return [c["id"] for c in categorias()]
+
+
+def esquema() -> Dict[str, Any]:
+    return dict(ESQUEMA_CATEGORIA)
+
+
+def inventario(peticion: Any = None) -> Dict[str, Any]:
+    cats, errores = recolectar()
+    return {
+        "contenedor": "catalogo_citaciones",
+        "version": __version__,
+        "rol": "CC",
+        "funcion": (
+            "Glosario de IDs del repositorio. "
+            "Expone ids a Engine para citar/reportar. No calcula."
+        ),
+        "para_engine": (
+            "Aqui puedes consultar todos los IDs que necesites. "
+            "Cuando Omega o un usuario pidan citar un ID, buscalo aqui. "
+            "Los IDs viven en categorias/, no en este INIT."
+        ),
+        "esquema_categoria": ESQUEMA_CATEGORIA,
+        "categorias": cats,
+        "ids": [c["id"] for c in cats],
+        "total": len(cats),
+        "errores": errores,
+        "coherente": not errores,
+        "no_hace": [
+            "calcular",
+            "orquestar",
+            "interpretar pedidos",
+            "sustituir CIT / CA / FO / AX / CX / MC / RE / TX / CH",
+        ],
+        "extension": (
+            "Agregar o editar un archivo en categorias/ actualiza el glosario "
+            "sin tocar este INIT."
+        ),
+    }
+
+
+CONTENEDOR = {
+    "nombre": "catalogo_citaciones",
+    "rol": "CC",
+    "version": __version__,
+    "requiere": [],
+    "descripcion": (
+        "Glosario de IDs del repositorio. Rol CC. "
+        "Esta carpeta es de IDs. "
+        "Lee y organiza categorias/*.py. Los IDs viven ahi, no en el INIT. "
+        "Engine puede utilizar este modulo cuando le de la gana "
+        "si le piden un ID para citar o generar un reporte. "
+        "No calcula. No interpreta pedidos. "
+        "El Engine ejecuta solo lo que este contrato declara."
+    ),
+    "capacidades": {
+        "verificar": barrer,
+        "barrer": barrer,
+        "inventario": inventario,
+        "categorias": categorias,
+        "por_id": por_id,
+        "ids": ids,
+        "esquema": esquema,
+    },
+}
+
+
+__all__ = [
+    "CONTENEDOR",
+    "ESQUEMA_CATEGORIA",
+    "recolectar",
+    "barrer",
+    "verificar_salida",
+    "categorias",
+    "por_id",
+    "ids",
+    "esquema",
+    "inventario",
+]
