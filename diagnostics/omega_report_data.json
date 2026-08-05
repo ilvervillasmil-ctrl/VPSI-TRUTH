@@ -1614,6 +1614,7 @@
           "coherencia.py",
           "conteos.py",
           "correlacion_k.py",
+          "escalas_ids.py",
           "logica.py"
         ],
         "factores_api": [
@@ -5394,6 +5395,7 @@
       "coherencia.py",
       "conteos.py",
       "correlacion_k.py",
+      "escalas_ids.py",
       "logica.py"
     ],
     "factores_api": [
@@ -5401,7 +5403,9 @@
       "L",
       "K"
     ],
-    "archivos_extra": [],
+    "archivos_extra": [
+      "escalas_ids"
+    ],
     "conteos_disponible": true,
     "versiones": {
       "C": "2.0",
