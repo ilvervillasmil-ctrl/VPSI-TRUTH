@@ -2,23 +2,37 @@
 """
 VPSI-TRUTH --- modules/catalogo_citaciones/__init__.py
 
-Rol CC — catálogo de citaciones.
+Rol CC — glosario / catálogo de IDs del repositorio.
 
 FUNCIÓN
-  Leer y organizar todo lo que está debajo (categorias/*.py).
-  Exponer el catálogo de citaciones a Engine (ids y casillas).
+  Esta carpeta es de IDs.
+  Lee y organiza todo lo que está debajo (categorias/*.py).
+  Expone esos IDs a Engine.
   Nada más.
 
-  Engine busca en este catálogo lo que exista y pueda usar en el ciclo.
-  Este módulo no calcula. No orquesta. No interpreta pedidos.
+  Engine consulta aquí los IDs que necesite cuando Omega
+  o un usuario los pidan (citar, reportar, referenciar).
+  Los IDs viven en los archivos de categorias/, no en este INIT.
+
+  Ejemplos de lo que puede haber debajo (cuando se escriban):
+    - IDs de axiomas
+    - IDs de escalas
+    - IDs de contratos / roles
+    - IDs de cualquier casilla del repositorio que deba poder citarse
 
 NO HACE
-  Calcular Tru / C / L / K. Aplicar α β. Conteos. Clasificar O.
-  Anunciar en lugar de CIT. Ejecutar CA, FO, AX, MC, RE, TX, CH.
+  Calcular Tru / C / L / K.
+  Aplicar α β.
+  Conteos.
+  Clasificar O.
+  Orquestar el ciclo.
+  Anunciar en lugar de CIT.
+  Ejecutar CA, FO, AX, MC, RE, TX, CH.
 
 CONTRATO CON ENGINE
   Capacidades: barrer, inventario, categorias, por_id, ids, esquema.
   Engine ejecuta solo lo que CONTENEDOR declara.
+  Engine busca IDs aquí cuando se los piden; este módulo solo informa.
 """
 
 from __future__ import annotations
@@ -41,6 +55,8 @@ _CAT_DIR = _DIR / "categorias"
 
 __version__ = "1.0"
 
+# Forma de cada casilla bajo categorias/.
+# Los IDs NO se listan en este INIT: viven en los archivos.
 ESQUEMA_CATEGORIA: Dict[str, Any] = {
     "obligatorios": ["id", "nombre", "unidad", "enunciado"],
     "opcionales": [
@@ -62,7 +78,9 @@ ESQUEMA_CATEGORIA: Dict[str, Any] = {
     ],
     "nota": (
         "Archivos bajo categorias/ declaran CATEGORIA o CATEGORIAS. "
-        "ST los lee y expone ids. No calcula."
+        "Cada uno aporta uno o más IDs del repositorio. "
+        "CC los lee y expone. No calcula. "
+        "Este INIT no embebe IDs."
     ),
 }
 
@@ -74,16 +92,18 @@ def _cargar_desde_archivo(archivo: Path) -> Tuple[List[Dict[str, Any]], List[str
     errores: List[str] = []
     if archivo.name.startswith("_") or archivo.name == "__init__.py":
         return [], errores
-    nombre_mod = f"citaciones_cat_{archivo.stem}"
-    spec = importlib.util.spec_from_file_location(nombre_mod, archivo)
+    nombre_mod = "citaciones_cat_{0}".format(archivo.stem)
+    spec = importlib.util.spec_from_file_location(nombre_mod, str(archivo))
     if spec is None or spec.loader is None:
-        return [], [f"{archivo.name}: no se pudo crear spec"]
+        return [], ["{0}: no se pudo crear spec".format(archivo.name)]
     mod = importlib.util.module_from_spec(spec)
     sys.modules[nombre_mod] = mod
     try:
         spec.loader.exec_module(mod)
     except Exception as e:  # noqa: BLE001
-        return [], [f"{archivo.name}: import {type(e).__name__}: {e}"]
+        return [], [
+            "{0}: import {1}: {2}".format(archivo.name, type(e).__name__, e)
+        ]
     halladas: List[Dict[str, Any]] = []
     una = getattr(mod, "CATEGORIA", None)
     if isinstance(una, dict):
@@ -93,23 +113,37 @@ def _cargar_desde_archivo(archivo: Path) -> Tuple[List[Dict[str, Any]], List[str
         for item in varias:
             if isinstance(item, dict):
                 halladas.append(item)
+    raw_ids = getattr(mod, "IDS", None)
+    if isinstance(raw_ids, list):
+        for item in raw_ids:
+            if isinstance(item, str) and item.strip():
+                halladas.append({
+                    "id": item.strip().lower(),
+                    "nombre": item.strip(),
+                    "unidad": "id",
+                    "enunciado": "ID del repositorio: {0}".format(item.strip()),
+                })
+            elif isinstance(item, dict) and item.get("id"):
+                halladas.append(item)
     if not halladas:
-        errores.append(f"{archivo.name}: sin CATEGORIA/CATEGORIAS exportada")
+        errores.append(
+            "{0}: sin CATEGORIA/CATEGORIAS/IDS exportada".format(archivo.name)
+        )
     return halladas, errores
 
 
 def _validar_categoria(cat: Dict[str, Any], origen: str) -> List[str]:
     errs: List[str] = []
     if not isinstance(cat, dict):
-        return [f"{origen}: CATEGORIA no es dict"]
+        return ["{0}: CATEGORIA no es dict".format(origen)]
     for k in _CAMPOS_OBLIGATORIOS:
         if k not in cat or not str(cat.get(k, "")).strip():
-            errs.append(f"{origen}: falta campo obligatorio '{k}'")
+            errs.append("{0}: falta campo obligatorio '{1}'".format(origen, k))
     for prohibido in _VALORES_PROHIBIDOS:
         if prohibido in cat and cat[prohibido] is not None:
             errs.append(
-                f"{origen}: campo prohibido '{prohibido}' "
-                f"(oficio ajeno; ST solo organiza el catálogo)"
+                "{0}: campo prohibido '{1}' "
+                "(oficio ajeno; CC solo organiza IDs)".format(origen, prohibido)
             )
     return errs
 
@@ -130,7 +164,9 @@ def _normalizar(cat: Dict[str, Any], origen: str) -> Dict[str, Any]:
         "nivel_fractal": nivel_n,
         "jurisdiccion": str(juris).strip() if juris else None,
         "requiere": [str(x) for x in (cat.get("requiere") or [])],
-        "factores_evaluables": [str(x) for x in (cat.get("factores_evaluables") or [])],
+        "factores_evaluables": [
+            str(x) for x in (cat.get("factores_evaluables") or [])
+        ],
         "agrega_desde": [str(x) for x in (cat.get("agrega_desde") or [])],
         "fuente_modulo": str(fuente).strip() if fuente else None,
         "senales": [str(x).lower() for x in (cat.get("senales") or [])],
@@ -142,6 +178,10 @@ def _normalizar(cat: Dict[str, Any], origen: str) -> Dict[str, Any]:
 
 
 def recolectar() -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
+    """
+    Lee categorias/*.py (y *.py no privados junto al INIT).
+    Los IDs salen de esos archivos, nunca de una lista fija en este INIT.
+    """
     cats: List[Dict[str, Any]] = []
     errores: List[Dict[str, str]] = []
     archivos: List[Path] = []
@@ -170,7 +210,7 @@ def recolectar() -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
             except Exception as e:  # noqa: BLE001
                 errores.append({
                     "archivo": archivo.name,
-                    "error": f"normalizar: {type(e).__name__}: {e}",
+                    "error": "normalizar: {0}: {1}".format(type(e).__name__, e),
                 })
     por_id: Dict[str, List[str]] = {}
     for c in cats:
@@ -179,9 +219,15 @@ def recolectar() -> Tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
         if len(origenes) > 1:
             errores.append({
                 "archivo": ",".join(origenes),
-                "error": f"id duplicado '{cid}' en {origenes}",
+                "error": "id duplicado '{0}' en {1}".format(cid, origenes),
             })
-    cats.sort(key=lambda c: (c["nivel_fractal"] is None, c["nivel_fractal"] or 0, c["id"]))
+    cats.sort(
+        key=lambda c: (
+            c["nivel_fractal"] is None,
+            c["nivel_fractal"] or 0,
+            c["id"],
+        )
+    )
     return cats, errores
 
 
@@ -190,16 +236,20 @@ def barrer() -> Dict[str, Any]:
     if errores:
         try:
             DiagnosticoGlobal.recibir_reporte(
-                modulo="citaciones",
-                errores=[{"tipo": "error_categoria", "detalle": e} for e in errores],
+                modulo="catalogo_citaciones",
+                errores=[
+                    {"tipo": "error_categoria", "detalle": e} for e in errores
+                ],
             )
         except Exception:
             pass
     notas: List[str] = []
     if not cats and not errores:
-        notas.append("catálogo vacío (legítimo hasta montar archivos en categorias/)")
+        notas.append(
+            "glosario vacío (legítimo hasta montar archivos en categorias/)"
+        )
     return {
-        "contenedor": "citaciones",
+        "contenedor": "catalogo_citaciones",
         "rol": "CC",
         "coherente": not errores,
         "categorias": len(cats),
@@ -207,7 +257,10 @@ def barrer() -> Dict[str, Any]:
         "errores": errores,
         "notas": notas,
         "version": __version__,
-        "oficio": "organizar y exponer el catálogo de citaciones",
+        "oficio": (
+            "Glosario de IDs del repositorio. "
+            "Engine consulta cuando Omega o un usuario piden citar/reportar."
+        ),
         "esquema": ESQUEMA_CATEGORIA,
     }
 
@@ -225,86 +278,4 @@ def categorias() -> List[Dict[str, Any]]:
 
 
 def por_id(cat_id: str) -> Optional[Dict[str, Any]]:
-    key = str(cat_id or "").strip().lower()
-    for c in categorias():
-        if c["id"] == key:
-            return dict(c)
-    return None
-
-
-def ids() -> List[str]:
-    return [c["id"] for c in categorias()]
-
-
-def esquema() -> Dict[str, Any]:
-    return dict(ESQUEMA_CATEGORIA)
-
-
-def inventario(peticion: Any = None) -> Dict[str, Any]:
-    cats, errores = recolectar()
-    return {
-        "contenedor": "citaciones",
-        "version": __version__,
-        "rol": "CC",
-        "funcion": (
-            "Catálogo de citaciones. "
-            "Expone ids y casillas a Engine. No calcula."
-        ),
-        "para_engine": (
-            "Aquí están los ids de citaciones disponibles. "
-            "Úsalos con los módulos que ya tienen el oficio correspondiente."
-        ),
-        "esquema_categoria": ESQUEMA_CATEGORIA,
-        "categorias": cats,
-        "ids": [c["id"] for c in cats],
-        "total": len(cats),
-        "errores": errores,
-        "coherente": not errores,
-        "no_hace": [
-            "calcular",
-            "orquestar",
-            "interpretar pedidos",
-            "sustituir CIT / CA / FO / AX / CX / MC / RE / TX / CH",
-        ],
-        "extension": (
-            "Agregar o editar un archivo en categorias/ actualiza el catálogo "
-            "sin tocar este INIT."
-        ),
-    }
-
-
-CONTENEDOR = {
-    "nombre": "citaciones",
-    "rol": "CC",
-    "version": __version__,
-    "requiere": [],
-    "descripcion": (
-        "Catálogo de citaciones. Rol CC. "
-        "Lee y organiza categorias/*.py. Expone ids a Engine. "
-        "No calcula. No interpreta pedidos. "
-        "El Engine ejecuta solo lo que este contrato declara."
-    ),
-    "capacidades": {
-        "verificar": barrer,
-        "barrer": barrer,
-        "inventario": inventario,
-        "categorias": categorias,
-        "por_id": por_id,
-        "ids": ids,
-        "esquema": esquema,
-    },
-}
-
-
-__all__ = [
-    "CONTENEDOR",
-    "ESQUEMA_CATEGORIA",
-    "recolectar",
-    "barrer",
-    "verificar_salida",
-    "categorias",
-    "por_id",
-    "ids",
-    "esquema",
-    "inventario",
-]
+    key = str(cat
