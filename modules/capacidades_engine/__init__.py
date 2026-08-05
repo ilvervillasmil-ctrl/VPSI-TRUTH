@@ -32,8 +32,25 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-_DIR = Path(__file__).parent
-_CAP = _DIR / "capacidades"
+# Directorio del propio contenedor CE.
+# Los mandatos (skills) viven directamente aquí:
+#
+# modules/
+#   capacidades_engine/
+#       __init__.py
+#       ce_orquestar_tt.py
+#       mandato_catalogo.py
+#       mandato_sujetos.py
+#       mandato_aplicar_escala.py
+#
+# CE descubre automáticamente cualquier archivo .py del mismo directorio
+# que declare SKILL, CAPACIDAD, SKILLS o CAPACIDADES.
+#
+# No existe una subcarpeta "capacidades/"; el propio directorio del
+# contenedor actúa como catálogo de mandatos.
+
+_DIR = Path(__file__).resolve().parent
+_CAP = _DIR
 
 
 def _extraer_meta(mod: Any) -> Optional[Dict[str, Any]]:
