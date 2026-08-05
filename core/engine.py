@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 12.1 — orquestador por contrato; CE = extension del Engine.
+Version 12.2 — orquestador por contrato; CE = extension del Engine.
 
 Principio
   - Descubre modulos por CONTENEDOR (roles y capacidades).
   - Actua solo por lo que cada contrato declara.
   - CE no es un modulo ajeno: es extension del propio Engine.
   - Todo archivo/mandato bajo CE se lee automaticamente.
-  - Engine no hardcodea "sujeto", "objeto" ni nombres de mandato:
-    deposita lo que cada skill declara en salida_esperada (u homologos).
-  - Nuevos mandatos en CE no exigen tocar este archivo.
+  - Engine deposita explicitamente las salidas exigidas por los mandatos
+    (sujetos, recortes, etc.) para que Omega los consuma sin fallos de N=0.
   - CT: ALPHA/BETA. CA: C/L/K. FO: Tru. CX: marco. CIT: anuncio.
   - Sin O usable → UNDEFINED. Nunca bool(UNDEFINED). No fabrica K/O.
 """
@@ -290,13 +289,11 @@ def _default_para_clave(clave: str) -> Any:
 # ===============================================================
 class Engine:
     """
-    Orquestador v12.1
-
-    CE es extension del Engine: lee todos los mandatos y deposita
-    segun salida_esperada de cada skill. No hardcodea nombres.
+    Orquestador v12.2
+    Depositos directos garantizados para Omega
     """
 
-    VERSION = "12.1"
+    VERSION = "12.2"
 
     def __init__(
         self,
@@ -658,9 +655,18 @@ class Engine:
         mandatos: List[Dict[str, Any]],
         relleno: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Garantiza depósito explícito de las llaves que exige Omega."""
         relleno = relleno or {}
         
-        # Volcamos todo el relleno dinámico al body forzosamente
+        # 1. Inyección explícita y directa para evitar fallo N=0
+        if "sujetos" not in body:
+            body["sujetos"] = relleno.get("sujetos", [])
+        if "n_sujetos" not in body:
+            body["n_sujetos"] = relleno.get("n_sujetos", len(body["sujetos"]))
+        if "por_sujeto" not in body:
+            body["por_sujeto"] = relleno.get("por_sujeto", {})
+            
+        # 2. Inyección del resto de dinámicos del contrato
         for k, v in relleno.items():
             if k not in body:
                 body[k] = v
@@ -759,11 +765,20 @@ class Engine:
         mandatos: List[Dict[str, Any]],
         recortes: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
+        """Alineación explícita para el reporte de Omega."""
         relleno: Dict[str, Any] = {}
+        
+        # 1. Llenado base para sujetos explícitos
         por = {
             (r.get("nombre") or "R{0}".format(r.get("indice"))): r
             for r in recortes
         }
+        
+        relleno["sujetos"] = list(recortes)
+        relleno["n_sujetos"] = len(recortes)
+        relleno["por_sujeto"] = dict(por)
+        
+        # 2. Heurística original de mandatos de CE
         for m in mandatos:
             sal = [str(x).strip() for x in (m.get("salida_esperada") or [])]
             sal_l = [x.lower() for x in sal]
@@ -771,7 +786,6 @@ class Engine:
             for k, kl in zip(sal, sal_l):
                 if kl.startswith("n_") or kl.startswith("por_"):
                     continue
-                # Filtramos las llaves operativas para encontrar la lista real (ej: 'sujetos')
                 if kl in ("tru_ri", "tru_total", "c", "l", "k", "resultado_ciclo", "categoria_tru", "escala_id", "citacion"):
                     continue
                 lista_key = k
@@ -781,11 +795,10 @@ class Engine:
                     if not kl.startswith("n_") and not kl.startswith("por_"):
                         lista_key = k
                         break
-            if lista_key:
+            if lista_key and lista_key not in relleno:
                 relleno[lista_key] = list(recortes)
                 relleno["n_" + str(lista_key)] = len(recortes)
                 
-                # Generamos automáticamente el "por_..." (ej: por_sujeto)
                 singular = lista_key[:-1] if lista_key.endswith('s') else lista_key
                 relleno["por_" + str(singular)] = dict(por)
 
