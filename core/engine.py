@@ -1456,37 +1456,6 @@ class Engine:
         }
 
 
-    #
-    # ----------------------------------------------------
-    # Resumen
-    # ----------------------------------------------------
-    #
-
-    retenidos = sum(
-        1
-        for x in items
-        if x["estado"] == "RETENIDO"
-    )
-
-    aprobados = sum(
-        1
-        for x in items
-        if x["estado"] == "APROBADO"
-    )
-
-    return {
-        "estado": (
-            "COHERENTE"
-            if retenidos == 0
-            else "CONTRADICCION"
-        ),
-        "n_aprobados": aprobados,
-        "n_retenidos": retenidos,
-        "items": items,
-        "engine_version": self.VERSION,
-    }
-
-
 # ===========================================================
 # EXPORTS
 # ===========================================================
