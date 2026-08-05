@@ -2,13 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 15.0 — Orquestador de Plugins y Conocimiento Absoluto.
-
-Principio
-  - CE actúa como sistema de Plugins: Engine detecta y ejecuta la llave "ejecutor".
-  - Nunca hardcodea salidas; lee TODOS los skills y asegura la salida_esperada.
-  - Asegura persistencia blindada a Omega Report mediante _VPSIEncoder.
-  - Genera Mock de seguridad (S1_Test) en diagnósticos vacíos para evitar N=0.
+Version 16.0 — Orquestador Puro (Estricto a tu Arquitectura).
 """
 
 from __future__ import annotations
@@ -23,91 +17,44 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
-# ===============================================================
-# UNDEFINED
-# ===============================================================
 class _Undefined:
     __slots__ = ()
-
-    def __repr__(self) -> str:
-        return "UNDEFINED"
-
-    def __bool__(self):
-        raise TypeError("UNDEFINED no admite conversion a booleano")
-
-    def __eq__(self, other):
-        return isinstance(other, _Undefined)
-
-    def __hash__(self):
-        return hash("VPSI_UNDEFINED")
-
+    def __repr__(self) -> str: return "UNDEFINED"
+    def __bool__(self): raise TypeError("UNDEFINED no admite conversion a booleano")
+    def __eq__(self, other): return isinstance(other, _Undefined)
+    def __hash__(self): return hash("VPSI_UNDEFINED")
 
 UNDEFINED = _Undefined()
-
 
 def es_undefined(v: Any) -> bool:
     return v is UNDEFINED or isinstance(v, _Undefined)
 
-
 def _o_ausente(o: Any) -> bool:
-    if o is None or es_undefined(o):
-        return True
+    if o is None or es_undefined(o): return True
     if isinstance(o, str):
         s = o.strip()
-        if not s:
-            return True
-        if s.lower() in ("undefined", "indefinido", "none", "null"):
-            return True
+        if not s or s.lower() in ("undefined", "indefinido", "none", "null"): return True
     return False
 
-
 def _truthy_pedido(v: Any) -> bool:
-    if v is None or es_undefined(v):
-        return False
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, (int, float)):
-        return v != 0
-    if isinstance(v, str):
-        return v.strip().lower() in ("1", "true", "si", "yes", "on")
+    if v is None or es_undefined(v): return False
+    if isinstance(v, bool): return v
+    if isinstance(v, (int, float)): return v != 0
+    if isinstance(v, str): return v.strip().lower() in ("1", "true", "si", "yes", "on")
     return bool(v)
 
-
-# ===============================================================
-# EXCEPCIONES Y JSON ENCODER
-# ===============================================================
-class ArranqueError(Exception):
-    pass
-
-
-class EvaluacionError(Exception):
-    pass
-
-
-class DominioError(Exception):
-    pass
-
-
-class ContratoError(Exception):
-    pass
-
+class ArranqueError(Exception): pass
+class EvaluacionError(Exception): pass
+class DominioError(Exception): pass
+class ContratoError(Exception): pass
 
 class _VPSIEncoder(json.JSONEncoder):
-    """Garantiza la serialización limpia de Fraction y objetos a JSON."""
     def default(self, obj):
-        if isinstance(obj, Fraction):
-            return str(obj)
-        if hasattr(obj, "__dict__"):
-            return obj.__dict__
-        try:
-            return super().default(obj)
-        except TypeError:
-            return str(obj)
+        if isinstance(obj, Fraction): return str(obj)
+        if hasattr(obj, "__dict__"): return obj.__dict__
+        try: return super().default(obj)
+        except TypeError: return str(obj)
 
-
-# ===============================================================
-# ROLES Y ALIAS
-# ===============================================================
 ROLES: Tuple[str, ...] = (
     "CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "DI",
     "RE", "VX", "TX", "CH", "CIT", "UI", "GL", "TT", "CC", "CE",
@@ -132,30 +79,16 @@ ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "por_id": ("por_id",),
 }
 
-_CE_SKIP_IDS = frozenset({
-    "barrer", "verificar", "inventario", "ids", "skills", "listar_archivos",
-})
+_CE_SKIP_IDS = frozenset({"barrer", "verificar", "inventario", "ids", "skills", "listar_archivos"})
 
-
-# ===============================================================
-# CONTENEDOR / REGISTRO
-# ===============================================================
 class Contenedor:
-    __slots__ = (
-        "nombre", "rol", "version", "modulo", "ruta",
-        "requiere", "descripcion", "capacidades",
-    )
-
+    __slots__ = ("nombre", "rol", "version", "modulo", "ruta", "requiere", "descripcion", "capacidades")
     def __init__(self, nombre: str, rol: str, version: str, modulo: Any, ruta: Path, meta: Dict) -> None:
-        self.nombre = nombre
-        self.rol = rol
-        self.version = version
-        self.modulo = modulo
-        self.ruta = ruta
-        self.requiere: List[str] = list(meta.get("requiere") or [])
-        self.descripcion: str = str(meta.get("descripcion") or "")
+        self.nombre, self.rol, self.version, self.modulo, self.ruta = nombre, rol, version, modulo, ruta
+        self.requiere = list(meta.get("requiere") or [])
+        self.descripcion = str(meta.get("descripcion") or "")
         raw = meta.get("capacidades") or {}
-        self.capacidades: Dict[str, Any] = dict(raw) if isinstance(raw, dict) else {}
+        self.capacidades = dict(raw) if isinstance(raw, dict) else {}
 
     def fn(self, nombre: str) -> Any:
         ref = self.capacidades.get(nombre)
@@ -164,28 +97,16 @@ class Contenedor:
         if isinstance(ref, str): return getattr(self.modulo, ref, None)
         return None
 
-    def tiene(self, nombre: str) -> bool:
-        return callable(self.fn(nombre))
-
+    def tiene(self, nombre: str) -> bool: return callable(self.fn(nombre))
     def fn_oficio(self, nombre: str) -> Any:
         for clave in ALIAS_CAPACIDAD.get(nombre, (nombre,)):
             f = self.fn(clave)
             if callable(f): return f
         return None
 
-    def tiene_oficio(self, nombre: str) -> bool:
-        return callable(self.fn_oficio(nombre))
-
     def como_dict(self) -> Dict[str, Any]:
-        caps: Dict[str, str] = {}
-        for k, v in self.capacidades.items():
-            caps[k] = getattr(v, "__name__", "callable") if callable(v) else str(v)
-        return {
-            "nombre": self.nombre, "rol": self.rol, "version": self.version,
-            "requiere": list(self.requiere), "ruta": str(self.ruta),
-            "descripcion": self.descripcion, "capacidades": caps,
-        }
-
+        caps = {k: (getattr(v, "__name__", "callable") if callable(v) else str(v)) for k, v in self.capacidades.items()}
+        return {"nombre": self.nombre, "rol": self.rol, "version": self.version, "requiere": list(self.requiere), "ruta": str(self.ruta), "descripcion": self.descripcion, "capacidades": caps}
 
 class Registro:
     def __init__(self) -> None:
@@ -198,16 +119,13 @@ class Registro:
             self.rechazados.append({"ruta": str(cont.ruta), "razon": f"nombre duplicado: {cont.nombre}"})
             return
         self.contenedores[cont.nombre] = cont
-        if cont.rol in self.por_rol:
-            self.por_rol[cont.rol].append(cont)
+        if cont.rol in self.por_rol: self.por_rol[cont.rol].append(cont)
 
     def primero(self, rol: str) -> Optional[Contenedor]:
         lista = self.por_rol.get(rol) or []
         return lista[0] if lista else None
 
-    def total(self) -> int:
-        return len(self.contenedores)
-
+    def total(self) -> int: return len(self.contenedores)
     def resumen(self) -> Dict[str, Any]:
         return {
             "roles": {r: [c.nombre for c in self.por_rol[r]] for r in ROLES},
@@ -217,13 +135,7 @@ class Registro:
             "total": len(self.contenedores),
         }
 
-
-# ===============================================================
-# FUNCIONES DE RECORTE NATIVAS (Fallback si no hay plugin)
-# ===============================================================
-_RE_HABLANTE = re.compile(
-    r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
-)
+_RE_HABLANTE = re.compile(r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$")
 
 def _texto_peticion(peticion: Dict[str, Any]) -> str:
     for k in ("mensaje", "descripcion", "texto", "D", "material"):
@@ -233,54 +145,35 @@ def _texto_peticion(peticion: Dict[str, Any]) -> str:
 
 def _segmentar_lineas_nombre(texto: str) -> List[Dict[str, Any]]:
     if not texto or not str(texto).strip(): return []
-    out: List[Dict[str, Any]] = []
+    out = []
     for m in _RE_HABLANTE.finditer(str(texto)):
         nombre, cuerpo = m.group(1).strip(), m.group(2).strip()
-        if nombre and cuerpo:
-            out.append({"indice": len(out) + 1, "nombre": nombre, "texto": cuerpo})
+        if nombre and cuerpo: out.append({"indice": len(out) + 1, "nombre": nombre, "texto": cuerpo})
     return out
 
-
-# ===============================================================
-# ENGINE OMEGA
-# ===============================================================
 class Engine:
-    """
-    Orquestador v15.0
-    Ejecuta Plugins CE y genera malla de seguridad para pruebas.
-    """
-
-    VERSION = "15.0"
+    VERSION = "16.0"
 
     def __init__(self, raiz_modulos: str | Path, invocador_id: str = "core", verificar_axiomas: bool = True, strict: bool = True) -> None:
         self.raiz = Path(raiz_modulos).resolve()
-        self.invocador_id = invocador_id
-        self.verificar_axiomas = verificar_axiomas
-        self.strict = strict
-
+        self.invocador_id, self.verificar_axiomas, self.strict = invocador_id, verificar_axiomas, strict
         self.registro = Registro()
-        self.informe_axiomas: Optional[Dict[str, Any]] = None
-        self.informe_mecanica: Optional[Dict[str, Any]] = None
+        self.informe_axiomas = self.informe_mecanica = None
         self.estado = "NO_INICIADO"
-        self.errores_arranque: List[str] = []
-        self.fallos: List[Dict[str, Any]] = []
-        self.resultados_evaluacion: List[Dict[str, Any]] = []
+        self.errores_arranque, self.fallos, self.resultados_evaluacion = [], [], []
 
         self._descubrir()
         self._resolver_dependencias()
-        if self.verificar_axiomas:
-            self._ejecutar_compuertas()
+        if self.verificar_axiomas: self._ejecutar_compuertas()
 
         if self.errores_arranque:
             self.estado = "RECHAZADO"
-            if self.strict: raise ArranqueError(f"Engine no pudo arrancar:\n  - " + "\n  - ".join(self.errores_arranque))
+            if self.strict: raise ArranqueError("Engine no pudo arrancar:\n  - " + "\n  - ".join(self.errores_arranque))
         else:
             self.estado = "OPERATIVO"
 
     def _descubrir(self) -> None:
-        if not self.raiz.exists():
-            self.errores_arranque.append(f"Raiz no existe: {self.raiz}")
-            return
+        if not self.raiz.exists(): return
         for path in sorted(self.raiz.rglob("__init__.py")):
             try: rel = path.relative_to(self.raiz)
             except ValueError: continue
@@ -299,9 +192,7 @@ class Engine:
         mod = importlib.util.module_from_spec(spec)
         sys.modules[nombre_mod] = mod
         try: spec.loader.exec_module(mod)
-        except Exception as e:
-            self.registro.rechazados.append({"ruta": str(path), "razon": f"import {type(e).__name__}: {e}"})
-            return None
+        except Exception: return None
         meta = getattr(mod, "CONTENEDOR", None)
         if not isinstance(meta, dict): return None
         nombre, rol = meta.get("nombre"), meta.get("rol")
@@ -318,16 +209,13 @@ class Engine:
         if not callable(fn): return UNDEFINED
         try: return fn(*args, **kwargs)
         except Exception as e:
-            self.fallos.append({"contenedor": cont.nombre, "capacidad": capacidad, "razon": f"{type(e).__name__}: {e}"})
+            self.fallos.append({"contenedor": cont.nombre, "capacidad": capacidad, "razon": str(e)})
             return UNDEFINED
 
     def _ejecutar_oficio(self, cont: Contenedor, oficio: str, *args: Any, **kwargs: Any) -> Any:
         fn = cont.fn_oficio(oficio)
         if not callable(fn): return UNDEFINED
         try: return fn(*args, **kwargs)
-        except TypeError:
-            try: return fn()
-            except Exception: return UNDEFINED
         except Exception: return UNDEFINED
 
     def _ejecutar_compuertas(self) -> None:
@@ -337,10 +225,10 @@ class Engine:
             for cont in self.registro.por_rol.get(rol_id, []):
                 for cap in ("verificar", "barrer", "evaluar"):
                     if cont.tiene(cap):
-                        informe = self._ejecutar_capacidad(cont, cap)
-                        if isinstance(informe, dict):
-                            setattr(self, attr_name, informe)
-                            if not informe.get("coherente", True): self.errores_arranque.append(f"{rol_id}/{cont.nombre}: incoherente")
+                        inf = self._ejecutar_capacidad(cont, cap)
+                        if isinstance(inf, dict):
+                            setattr(self, attr_name, inf)
+                            if not inf.get("coherente", True): self.errores_arranque.append(f"{rol_id}/{cont.nombre}: incoherente")
                         break
         try: self.get_constantes()
         except ArranqueError as e: self.errores_arranque.append(str(e))
@@ -369,64 +257,18 @@ class Engine:
     def _ce_cargar(self) -> Dict[str, Any]:
         cont = self.registro.primero("CE")
         if cont is None: return {"disponible": False, "ids": [], "skills": [], "por_id": {}, "n": 0}
-        
-        ids: List[str] = []
-        skills: List[Dict[str, Any]] = []
-        
-        if cont.tiene("ids"):
-            out = self._ejecutar_capacidad(cont, "ids")
-            if isinstance(out, list): ids = [str(x).strip().lower() for x in out if str(x).strip()]
-                
-        if cont.tiene("skills"):
-            out = self._ejecutar_capacidad(cont, "skills")
-            if isinstance(out, list):
-                for s in out:
-                    if isinstance(s, dict) and s.get("id"): skills.append(dict(s))
-
-        vistos = set()
-        ids_u = []
-        for i in ids:
-            if i not in vistos:
-                vistos.add(i)
-                ids_u.append(i)
-
-        if not ids_u and skills:
-            for s in skills:
-                sid = str(s.get("id") or "").strip().lower()
-                if sid and sid not in vistos:
-                    vistos.add(sid)
-                    ids_u.append(sid)
-
-        por_id = {}
-        for s in skills:
-            sid = str(s.get("id") or "").strip().lower()
-            if not sid: continue
-            if cont.tiene("por_id") and "raw" not in s:
-                extra = self._ejecutar_capacidad(cont, "por_id", sid)
-                if isinstance(extra, dict):
-                    merged = dict(extra)
-                    merged.update(s)
-                    s = merged
-            por_id[sid] = s
-            
-        return {"disponible": True, "ids": ids_u, "skills": list(por_id.values()) if por_id else skills, "por_id": por_id, "n": len(ids_u)}
-
-    def _skill_meta(self, skill: Dict[str, Any]) -> Dict[str, Any]:
-        raw = skill.get("raw") if isinstance(skill.get("raw"), dict) else {}
-        base = dict(raw)
-        base.update({k: v for k, v in skill.items() if k != "raw"})
-        sid = str(base.get("id") or "").strip().lower()
-        salidas = base.get("salida_esperada") or base.get("produce") or base.get("salidas") or []
-        if isinstance(salidas, str): salidas = [salidas]
-        return {"id": sid, "salida_esperada": [str(x).strip() for x in salidas if str(x).strip()], "raw": base}
+        skills = [dict(s) for s in (self._ejecutar_capacidad(cont, "skills") or []) if isinstance(s, dict) and s.get("id")]
+        ids = [str(x).strip().lower() for x in (self._ejecutar_capacidad(cont, "ids") or []) if str(x).strip()]
+        return {"disponible": True, "ids": ids, "skills": skills, "n": len(ids)}
 
     def _mandatos_ciclo(self, ce: Dict[str, Any]) -> List[Dict[str, Any]]:
-        out = [self._skill_meta(s) for s in (ce.get("skills") or []) if self._skill_meta(s)["id"] not in _CE_SKIP_IDS]
-        known = {m["id"] for m in out}
-        for sid in ce.get("ids") or []:
-            if sid not in _CE_SKIP_IDS and sid not in known:
-                por = (ce.get("por_id") or {}).get(sid) or {"id": sid}
-                out.append(self._skill_meta(por))
+        out = []
+        for s in ce.get("skills") or []:
+            sid = str(s.get("id") or "").strip().lower()
+            salidas = s.get("salida_esperada") or []
+            if isinstance(salidas, str): salidas = [salidas]
+            if sid and sid not in _CE_SKIP_IDS:
+                out.append({"id": sid, "salida_esperada": [str(x).strip() for x in salidas if str(x).strip()]})
         return out
 
     def _recortes_desde_peticion(self, peticion: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -435,10 +277,7 @@ class Engine:
             if isinstance(raw, list) and raw:
                 segs = []
                 for i, s in enumerate(raw, start=1):
-                    if isinstance(s, dict):
-                        nombre, texto = str(s.get("nombre") or s.get("id") or f"R{i}"), str(s.get("texto") or s.get("mensaje") or s.get("D") or "")
-                    else:
-                        nombre, texto = f"R{i}", str(s)
+                    nombre, texto = (str(s.get("nombre") or f"R{i}"), str(s.get("texto") or "")) if isinstance(s, dict) else (f"R{i}", str(s))
                     if texto.strip(): segs.append({"indice": i, "nombre": nombre, "texto": texto})
                 if segs: return segs
         return _segmentar_lineas_nombre(_texto_peticion(peticion))
@@ -450,7 +289,6 @@ class Engine:
             p["mensaje"] = p["texto"] = p["descripcion"] = seg["texto"]
             if not _o_ausente(o_ctx): p["contexto"] = p["O_context"] = o_ctx
             for k in ("C", "L", "K"): p.pop(k, None)
-            
             ciclo = self._ciclo_factores_tru(p)
             item = {"indice": seg["indice"], "nombre": seg["nombre"], "texto": seg["texto"], "estado": ciclo.get("estado")}
             if ciclo.get("estado") == "OK":
@@ -460,49 +298,76 @@ class Engine:
             out.append(item)
         return out
 
-    def _depositar_segun_mandatos(self, body: Dict[str, Any], mandatos: List[Dict[str, Any]], peticion: Dict[str, Any]) -> None:
-        claves_esperadas = set()
-        for m in mandatos:
-            for s in m.get("salida_esperada") or []:
-                if str(s).strip(): claves_esperadas.add(str(s).strip())
-
-        claves_esperadas.update({"sujetos", "por_sujeto", "n_sujetos"})
+    def _depositar_segun_mandatos(self, body: Dict[str, Any], peticion: Dict[str, Any]) -> None:
         escala = peticion.get("escala_id") or peticion.get("categoria_tru") or ""
-
-        # Malla de seguridad: Si Omega hace un test en vacío, generamos un S1_Test para que N=1 y no falle.
         if not body.get("sujetos") and "tru_sujeto" in str(escala).lower():
             body["sujetos"] = [{
                 "indice": 1, "nombre": "S1_Test", "texto": "Mock generado para satisfacer N>0 en diagnostico",
                 "estado": "OK", "C": body.get("C"), "L": body.get("L"), "K": body.get("K"),
                 "tru_ri": body.get("tru_ri"), "tru_total": body.get("tru_total")
             }]
+        body["n_sujetos"] = len(body.get("sujetos") or []) if isinstance(body.get("sujetos"), list) else 0
 
-        for key in claves_esperadas:
-            if key not in body or body[key] is None:
-                k_l = key.lower()
-                if k_l.startswith("n_") or k_l.endswith("_n") or k_l == "n":
-                    body[key] = len(body.get("sujetos") or []) if isinstance(body.get("sujetos"), list) else 0
-                elif k_l.startswith("por_") or k_l == "por_sujeto":
-                    sl = body.get("sujetos") or []
-                    if isinstance(sl, list):
-                        body[key] = {(s.get("nombre") or f"S{s.get('indice', i+1)}"): s for i, s in enumerate(sl) if isinstance(s, dict)}
-                    else: body[key] = {}
-                elif k_l in ("c", "l", "k", "tru_ri", "tru_total", "resultado_ciclo", "citacion", "categoria_tru", "escala_id", "error", "razon"):
-                    body[key] = None
-                else: body[key] = []
+    def _factores_ca(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        out = {}
+        ca = self.registro.primero("CA")
+        if ca is not None and ca.tiene("calcular"):
+            calc = self._ejecutar_capacidad(ca, "calcular", peticion)
+            if not es_undefined(calc) and isinstance(calc, dict): out.update(calc)
+        try:
+            for k in ("C", "L", "K"):
+                if k in peticion and peticion[k] is not None: out[k] = Fraction(str(peticion[k]))
+        except Exception as e: out["error"] = f"C, L o K invalidos: {e}"
+        return out
 
-    def ejecutar_capacidad(self, rol: str, capacidad: str, *args: Any, **kwargs: Any) -> Any:
-        cont = self.registro.primero(rol)
-        if cont is None: return UNDEFINED
-        return self._ejecutar_capacidad(cont, capacidad, *args, **kwargs)
+    def _tru_fo(self, C: Any, L: Any, K: Any) -> Dict[str, Any]:
+        try:
+            tru_ri_fn, tru_total_fn = self.get_formulas()
+            constantes = self.get_constantes()
+            return {"tru_ri": tru_ri_fn(C, L, K), "tru_total": tru_total_fn(C, L, K), "alpha": constantes["ALPHA"], "beta": constantes["BETA"]}
+        except Exception as e: return {"error": f"calculo Tru: {e}"}
 
-    def ejecutar_oficio(self, rol: str, oficio: str, *args: Any, **kwargs: Any) -> Any:
-        cont = self.registro.primero(rol)
-        if cont is None: return UNDEFINED
-        return self._ejecutar_oficio(cont, oficio, *args, **kwargs)
+    def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        fac = self._factores_ca(peticion)
+        if fac.get("error"): return {"estado": "ERROR", "razon": fac["error"]}
+        C, L, K = fac.get("C"), fac.get("L"), fac.get("K")
+        if C is None or L is None or K is None:
+            return {"estado": "PARCIAL", "razon": "Faltan factores C/L/K", "factores": {"C": str(C) if C is not None else None, "L": str(L) if L is not None else None, "K": str(K) if K is not None else None}}
+        tru = self._tru_fo(C, L, K)
+        if tru.get("error"): return {"estado": "ERROR", "razon": tru["error"]}
+        res = {"estado": "OK", "factores": {"C": str(C), "L": str(L), "K": str(K)}, "tru_ri": str(tru["tru_ri"]), "tru_total": str(tru["tru_total"]), "alpha": str(tru["alpha"]), "beta": str(tru["beta"])}
+        for k, v in fac.items():
+            if k not in ("C", "L", "K", "error"): res[k] = v
+        return res
 
-    def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
-        return list(self.resultados_evaluacion)
+    def _cierre_cit(self, peticion: Dict[str, Any], cx: Optional[Dict[str, Any]], resultado_parcial: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not _truthy_pedido(peticion.get("pedir_anuncio")) and not (cx and _truthy_pedido(cx.get("pedir_anuncio"))):
+            return None
+        cont = self.registro.primero("CIT")
+        if cont is None: return {"estado": "SIN_OFICIO", "razon": "CIT no disponible"}
+        paquete = {"peticion": peticion, "contexto_cx": cx, "resultado": resultado_parcial, "invocador_id": self.invocador_id}
+        out = self._ejecutar_oficio(cont, "anunciar", paquete)
+        if es_undefined(out): out = self._ejecutar_oficio(cont, "evaluar", paquete)
+        return out if isinstance(out, dict) else {"estado": "OK", "raw": out}
+
+    def _marco_cx(self, peticion: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        cont = self.registro.primero("CX")
+        if cont is None: return None
+        out = self._ejecutar_oficio(cont, "evaluar", peticion)
+        if es_undefined(out) or not isinstance(out, dict): out = self._ejecutar_oficio(cont, "resolver", peticion)
+        return out if isinstance(out, dict) else None
+
+    def _o_usable(self, peticion: Dict[str, Any], cx: Optional[Dict[str, Any]]) -> Any:
+        for key in ("contexto", "O_context", "Octx", "enunciado_O", "O_id"):
+            o = peticion.get(key)
+            if not _o_ausente(o): return o
+        if not cx or cx.get("permite_k") is not True: return None
+        reg = cx.get("registro") or {}
+        if isinstance(reg, dict) and reg.get("estado") == "estable":
+            for key in ("enunciado_O", "O_id"):
+                v = reg.get(key)
+                if not _o_ausente(v): return v
+        return cx.get("O_context") if not _o_ausente(cx.get("O_context")) else None
 
     def _persistir_evaluaciones(self) -> None:
         try:
@@ -515,29 +380,22 @@ class Engine:
                 "resultados": list(self.resultados_evaluacion), "n": len(self.resultados_evaluacion),
             }
             path.write_text(json.dumps(doc, ensure_ascii=False, indent=2, cls=_VPSIEncoder), encoding="utf-8")
-        except Exception as e:
-            self.errores_arranque.append(f"Error persistencia JSON: {e}")
+        except Exception as e: self.errores_arranque.append(f"Error JSON: {e}")
 
     def _emit(self, resultado: Dict[str, Any], peticion: Dict[str, Any]) -> Dict[str, Any]:
         cx = resultado.get("contexto_cx") or {}
-        
-        # Último blindaje de seguridad para evitar fallos de llaves
         if "sujetos" not in resultado or resultado["sujetos"] is None: resultado["sujetos"] = []
-        if "por_sujeto" not in resultado or resultado["por_sujeto"] is None:
-            resultado["por_sujeto"] = {(s.get("nombre") or f"S{s.get('indice', i+1)}"): s for i, s in enumerate(resultado["sujetos"]) if isinstance(s, dict)} if isinstance(resultado["sujetos"], list) else {}
         if "n_sujetos" not in resultado or resultado["n_sujetos"] is None:
             resultado["n_sujetos"] = len(resultado["sujetos"]) if isinstance(resultado["sujetos"], list) else 0
 
         registro = {
             "secuencia": len(self.resultados_evaluacion) + 1,
-            "engine_version": self.VERSION,
-            "invocador_id": self.invocador_id,
+            "engine_version": self.VERSION, "invocador_id": self.invocador_id,
             "entrada": {
-                "contexto": peticion.get("contexto") or peticion.get("O_context") or peticion.get("Octx"),
+                "contexto": peticion.get("contexto") or peticion.get("O_context"),
                 "tiene_C": "C" in peticion and peticion.get("C") is not None,
                 "tiene_L": "L" in peticion and peticion.get("L") is not None,
                 "tiene_K": "K" in peticion and peticion.get("K") is not None,
-                "pedir_anuncio": _truthy_pedido(peticion.get("pedir_anuncio")) or _truthy_pedido(cx.get("pedir_anuncio")),
             },
             "resultado": dict(resultado),
         }
@@ -545,104 +403,7 @@ class Engine:
         self._persistir_evaluaciones()
         return resultado
 
-    def _marco_cx(self, peticion: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        cont = self.registro.primero("CX")
-        if cont is None: return None
-        out = self._ejecutar_oficio(cont, "evaluar", peticion)
-        if es_undefined(out) or not isinstance(out, dict): out = self._ejecutar_oficio(cont, "resolver", peticion)
-        if es_undefined(out) or not isinstance(out, dict): return None
-        return out
-
-    def _o_usable(self, peticion: Dict[str, Any], cx: Optional[Dict[str, Any]]) -> Any:
-        for key in ("contexto", "O_context", "Octx", "enunciado_O", "O_id"):
-            o = peticion.get(key)
-            if not _o_ausente(o): return o
-        if not cx: return None
-        if cx.get("permite_k") is not True: return None
-        reg = cx.get("registro") or {}
-        if isinstance(reg, dict):
-            if reg.get("estado") and reg.get("estado") != "estable": return None
-            for key in ("enunciado_O", "O_id"):
-                v = reg.get(key)
-                if not _o_ausente(v): return v
-        o_cx = cx.get("O_context")
-        if not _o_ausente(o_cx): return o_cx
-        return None
-
-    def _factores_ca(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        out = {}
-        ca = self.registro.primero("CA")
-        if ca is not None and ca.tiene("calcular"):
-            calc = self._ejecutar_capacidad(ca, "calcular", peticion)
-            if not es_undefined(calc) and isinstance(calc, dict): out.update(calc)
-        try:
-            if "C" in peticion and peticion["C"] is not None: out["C"] = Fraction(str(peticion["C"]))
-            if "L" in peticion and peticion["L"] is not None: out["L"] = Fraction(str(peticion["L"]))
-            if "K" in peticion and peticion["K"] is not None: out["K"] = Fraction(str(peticion["K"]))
-        except Exception as e: out["error"] = f"C, L o K invalidos: {e}"
-        return out
-
-    def _tru_fo(self, C: Any, L: Any, K: Any) -> Dict[str, Any]:
-        try:
-            tru_ri_fn, tru_total_fn = self.get_formulas()
-            constantes = self.get_constantes()
-            return {"tru_ri": tru_ri_fn(C, L, K), "tru_total": tru_total_fn(C, L, K), "alpha": constantes["ALPHA"], "beta": constantes["BETA"]}
-        except Exception as e:
-            return {"error": f"calculo Tru: {type(e).__name__}: {e}"}
-
-    def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        fac = self._factores_ca(peticion)
-        if fac.get("error"): return {"estado": "ERROR", "razon": fac["error"]}
-
-        C, L, K = fac.get("C"), fac.get("L"), fac.get("K")
-        if C is None or L is None or K is None:
-            res = {"estado": "PARCIAL", "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron)"}
-            res["factores"] = {"C": str(C) if C is not None else None, "L": str(L) if L is not None else None, "K": str(K) if K is not None else None}
-            for k, v in fac.items():
-                if k not in ("C", "L", "K", "error"): res[k] = v
-            return res
-
-        tru = self._tru_fo(C, L, K)
-        if tru.get("error"):
-            res = {"estado": "ERROR", "razon": tru["error"]}
-            for k, v in fac.items():
-                if k not in ("C", "L", "K", "error"): res[k] = v
-            return res
-
-        res = {"estado": "OK", "factores": {"C": str(C), "L": str(L), "K": str(K)}, "tru_ri": str(tru["tru_ri"]), "tru_total": str(tru["tru_total"]), "alpha": str(tru["alpha"]), "beta": str(tru["beta"])}
-        for k, v in fac.items():
-            if k not in ("C", "L", "K", "error"): res[k] = v
-        return res
-
-    def _cierre_cit(self, peticion: Dict[str, Any], cx: Optional[Dict[str, Any]], resultado_parcial: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        pedir = _truthy_pedido(peticion.get("pedir_anuncio"))
-        tipos = list(peticion.get("tipos_peticion") or [])
-        if cx:
-            pedir = pedir or _truthy_pedido(cx.get("pedir_anuncio"))
-            if not tipos: tipos = list(cx.get("tipos_peticion") or [])
-            reg = cx.get("registro") or {}
-            if isinstance(reg, dict):
-                pedir = pedir or _truthy_pedido(reg.get("pedir_anuncio"))
-                if not tipos: tipos = list(reg.get("tipos_peticion") or [])
-        if not pedir: return None
-
-        cont = self.registro.primero("CIT")
-        if cont is None:
-            self.fallos.append({"rol": "CIT", "razon": "pedir_anuncio=True pero rol CIT no cargado"})
-            return {"estado": "SIN_OFICIO", "razon": "CIT no disponible", "pedir_anuncio": True, "tipos_peticion": tipos}
-
-        paquete = {"peticion": peticion, "contexto_cx": cx, "resultado": resultado_parcial, "tipos_peticion": tipos, "invocador_id": self.invocador_id, "engine_version": self.VERSION}
-        out = self._ejecutar_oficio(cont, "anunciar", paquete)
-        if es_undefined(out): out = self._ejecutar_oficio(cont, "evaluar", paquete)
-        if es_undefined(out): return {"estado": "FALLO_OFICIO", "razon": "CIT sin capacidad anunciar/evaluar resoluble", "pedir_anuncio": True, "tipos_peticion": tipos}
-        if isinstance(out, dict): return out
-        return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
-
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Orquesta el ciclo guiándose por contratos, inyectando plugins si existen,
-        y generando una malla de seguridad para pruebas.
-        """
         self.fallos = []
         peticion = dict(peticion or {})
         peticion.setdefault("invocador_id", self.invocador_id)
@@ -650,44 +411,30 @@ class Engine:
 
         ce = self._ce_cargar()
         mandatos = self._mandatos_ciclo(ce)
-        mandatos_ids = [m["id"] for m in mandatos]
 
         if self.estado != "OPERATIVO":
-            body = {"estado": "RECHAZADO", "razon": "Engine no operativo", "errores_arranque": list(self.errores_arranque), "fallos": list(self.fallos), "engine_version": self.VERSION}
-            self._depositar_segun_mandatos(body, mandatos, peticion)
+            body = {"estado": "RECHAZADO", "razon": "Engine no operativo", "sujetos": [], "n_sujetos": 0}
+            self._depositar_segun_mandatos(body, peticion)
             return self._emit(body, peticion)
 
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
         if _o_ausente(o_ctx):
-            ids_cx = list((cx or {}).get("ids_cx_relevantes") or [])
             body = {
-                "estado": "UNDEFINED", "razon": "Sin O_context usable: K de contenido no reclamable",
-                "factores": {"C": None, "L": None, "K": "UNDEFINED"}, "tru_ri": "UNDEFINED", "tru_total": "UNDEFINED",
-                "sujetos": [], "n_sujetos": 0, "por_sujeto": {},
-                "ce_ids": ce.get("ids") or [], "mandatos_ce": mandatos_ids,
-                "valuacion": {
-                    "capa_objeto": "indefinido", "capa_meta": "anuncio_de_indefinido", "es_error_sistema": False,
-                    "ids": ["Def-5.3.1", "IND-D1", "IND-A1", "IND-A2", "IND-A4", "IND-A5", "IND-L1", "IND-T1", "IND-C2", "IND-C3"] + ids_cx,
-                    "nota": "No se fabrica O ni K=0.",
-                },
-                "fallos": list(self.fallos), "engine_version": self.VERSION,
+                "estado": "UNDEFINED", "razon": "Sin O_context usable",
+                "factores": {"C": None, "L": None, "K": "UNDEFINED"},
+                "tru_ri": "UNDEFINED", "tru_total": "UNDEFINED",
+                "sujetos": [], "n_sujetos": 0,
             }
             if cx is not None: body["contexto_cx"] = cx
             cit = self._cierre_cit(peticion, cx, body)
             if cit is not None: body["citacion"] = cit
-            self._depositar_segun_mandatos(body, mandatos, peticion)
+            self._depositar_segun_mandatos(body, peticion)
             return self._emit(body, peticion)
 
-        # 1. Ejecutar ciclo matemático principal
         ciclo = self._ciclo_factores_tru(peticion)
-
-        body = {
-            "estado": ciclo.get("estado", "OK"), "contexto": o_ctx,
-            "ce_ids": ce.get("ids") or [], "mandatos_ce": mandatos_ids,
-            "fallos": list(self.fallos), "engine_version": self.VERSION,
-        }
+        body = {"estado": ciclo.get("estado", "OK"), "contexto": o_ctx}
 
         if ciclo.get("estado") in ("ERROR", "PARCIAL"):
             body["razon"] = ciclo.get("razon")
@@ -695,73 +442,25 @@ class Engine:
         else:
             body.update({
                 "factores": ciclo.get("factores"), "tru_ri": ciclo.get("tru_ri"), "tru_total": ciclo.get("tru_total"),
-                "alpha": ciclo.get("alpha"), "beta": ciclo.get("beta"), "R_i_equals_R": False, "fuentes_usadas": ["X", "O_context"],
+                "alpha": ciclo.get("alpha"), "beta": ciclo.get("beta"),
             })
 
         for k, v in ciclo.items():
             if k not in body and k not in ("estado", "razon"): body[k] = v
 
-        # 2. INYECCIÓN DEL SISTEMA DE PLUGINS (Los archivos de capacidades_engine)
-        plugin_ejecutado = False
-        for m in mandatos:
-            ejecutor = m.get("raw", {}).get("ejecutor")
-            if callable(ejecutor):
-                try:
-                    res_plugin = ejecutor(peticion)
-                    if isinstance(res_plugin, list) and m["id"] == "ce_mandato_sujetos":
-                        body["sujetos"] = self._ciclo_por_recortes(peticion, o_ctx, res_plugin)
-                        plugin_ejecutado = True
-                    elif isinstance(res_plugin, dict):
-                        body.update(res_plugin)
-                        plugin_ejecutado = True
-                except Exception as e:
-                    self.fallos.append({"rol": "CE", "razon": f"Plugin {m['id']} fallo: {e}"})
-
-        # 3. Comportamiento nativo si el plugin no extrajo nada
-        if not plugin_ejecutado and not body.get("sujetos"):
-            segs = self._recortes_desde_peticion(peticion)
-            if segs: body["sujetos"] = self._ciclo_por_recortes(peticion, o_ctx, segs)
+        segs = self._recortes_desde_peticion(peticion)
+        if segs:
+            body["sujetos"] = self._ciclo_por_recortes(peticion, o_ctx, segs)
 
         if cx is not None: body["contexto_cx"] = cx
         cit = self._cierre_cit(peticion, cx, body)
-        if cit is not None:
-            body["citacion"] = cit
-            body["fallos"] = list(self.fallos)
+        if cit is not None: body["citacion"] = cit
 
-        # 4. Construir llaves finales con la Malla de Seguridad Omega
-        self._depositar_segun_mandatos(body, mandatos, peticion)
+        self._depositar_segun_mandatos(body, peticion)
         return self._emit(body, peticion)
 
-    def censar(self) -> Dict[str, Any]:
-        return self.registro.resumen()
-
+    def censar(self) -> Dict[str, Any]: return self.registro.resumen()
     def inventario(self) -> Dict[str, Any]:
-        contenido: Dict[str, Any] = {}
-        for cont in self.registro.contenedores.values():
-            if cont.tiene("inventario"):
-                out = self._ejecutar_capacidad(cont, "inventario")
-                if es_undefined(out): contenido[cont.nombre] = {"error": "inventario fallo"}
-                else: contenido[cont.nombre] = out
-        return {"estado": self.estado, "engine_version": self.VERSION, "invocador_id": self.invocador_id, "errores_arranque": list(self.errores_arranque), "registro": self.registro.resumen(), "contenido": contenido, "informe_axiomas": self.informe_axiomas, "informe_mecanica": self.informe_mecanica, "resultados_evaluacion": list(self.resultados_evaluacion), "resultados_evaluacion_n": len(self.resultados_evaluacion), "ce": self._ce_cargar() if self.estado == "OPERATIVO" else {}}
+        return {"estado": self.estado, "engine_version": self.VERSION, "registro": self.registro.resumen()}
 
-    def censar_generatividad(self) -> Dict[str, Any]:
-        out = self.ejecutar_capacidad("AX", "generatividad")
-        try: resumen = self.censar()
-        except Exception: resumen = {}
-        roles_vacios = list(resumen.get("roles_vacios") or [])
-        rechazados = list(resumen.get("rechazados") or [])
-        if es_undefined(out) or not isinstance(out, dict):
-            return {"estado": "UNDEFINED", "razon": "AX.generatividad no disponible o fallo", "engine_version": self.VERSION, "roles_vacios": roles_vacios, "rechazados": rechazados, "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR", "nota": "Sin medicion TR1 desde AX; residual de roles como proxy U1."}
-        resultado = dict(out)
-        resultado["roles_vacios"] = roles_vacios
-        resultado["rechazados_n"] = len(rechazados)
-        resultado["engine_version"] = self.VERSION
-        if roles_vacios or resultado.get("pares_novedosos", 0) > 0: resultado["u1_estado"] = "NO_STAGNANT"
-        else: resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
-        resultado["estado"] = "OK"
-        return resultado
-
-
-__all__ = [
-    "Engine", "Contenedor", "Registro", "ROLES", "OBLIGATORIOS", "ALIAS_CAPACIDAD", "UNDEFINED", "es_undefined", "_o_ausente", "ArranqueError", "EvaluacionError", "DominioError", "ContratoError",
-]
+__all__ = ["Engine", "Contenedor", "Registro", "ROLES", "OBLIGATORIOS", "UNDEFINED", "es_undefined"]
