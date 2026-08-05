@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.1)
-Generado: 2026-08-05 01:51:52 UTC    Commit: bb38708fbed1
+Generado: 2026-08-05 08:41:50 UTC    Commit: ca9c55f0e670
 Orden: (1) Repo Tru  (2) Sujetos 1…N  (3) Último test  (4) Mapa
 Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
 ================================================================================
@@ -11,7 +11,7 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
   Tru_Ri y Tru_total del sistema (O_VPSI_REPO) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
   Estado     : ⚠️ PARCIAL
-  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
+  Razón      : Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
@@ -33,7 +33,7 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
   CIT resumen: n_citas=1  n_anuncios=1
   Origen     : omega_report:PETICION_AUDITORIA_VPSI
   Secuencia  : 1
-  Engine     : 11.1
+  Engine     : 12.3
   Contexto   : Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación ...
 ══════════════════════════════════════════════════════════════════════════════
 
@@ -51,7 +51,7 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
   Último ciclo real depositado (tests / uso) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
   Estado     : ⚠️ PARCIAL
-  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
+  Razón      : Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
@@ -68,11 +68,13 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
-  📎 Citas      : — (sin ids/anuncios en el ciclo)
-  Origen     : test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica
-  Secuencia  : 11
-  Engine     : 11.1
-  Contexto   : Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema s...
+  📎 Citas (teoremas / axiomas / normas):
+       1. [citacion] CIT-CICLO
+  CIT resumen: n_citas=1  n_anuncios=1
+  Origen     : evaluaciones.json
+  Secuencia  : 1
+  Engine     : 12.3
+  Contexto   : Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación ...
 ══════════════════════════════════════════════════════════════════════════════
 
 ESTADO GLOBAL
@@ -90,7 +92,7 @@ ESTADO GLOBAL
   +------+-----------+-----+--------------------------------------+
   | AX   | CARGADO   | 1   | axiomas                              |
   | CA   | CARGADO   | 1   | calculator                           |
-  | CC   | CARGADO   | 1   | citaciones                           |
+  | CC   | CARGADO   | 1   | catalogo_citaciones                  |
   | CE   | CARGADO   | 1   | capacidades_engine                   |
   | CH   | CARGADO   | 1   | cache                                |
   | CIT  | CARGADO   | 1   | citacion                             |
@@ -146,10 +148,10 @@ ESTADO GLOBAL
       coherente = True
 
   ✅ Contratos (CI)
-      coherente=True  validos=19  caps_ok=109  caps_fallo=0
+      coherente=True  validos=19  caps_ok=108  caps_fallo=0
 
   ✅ Tests (pytest — forma)
-      total=147  pasados=146  fallidos=0  tasa=99.32%
+      total=148  pasados=147  fallidos=0  tasa=99.32%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
@@ -172,7 +174,7 @@ ESTADO GLOBAL
 Presente:
   ✅ AX: axiomas
   ✅ CA: calculator
-  ✅ CC: citaciones
+  ✅ CC: catalogo_citaciones
   ✅ CE: capacidades_engine
   ✅ CH: cache
   ✅ CIT: citacion

@@ -307,386 +307,87 @@
   "errores_arranque": [],
   "resultados_evaluacion": [
     {
+      "secuencia": 1,
+      "engine_version": "12.3",
+      "invocador_id": "omega_report",
       "entrada": {
-        "quien": "Claude",
-        "texto": "Estuve dentro del repositorio. Ejecuté el engine y medí sus factores. Leí conteos punto py línea por línea. No inventé el rol RE, aunque sí lo escribí sin verificarlo. Corrí el barrido axiomático y dio 487 declaraciones sin choques. No leí los 487 axiomas.",
-        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": true
       },
       "resultado": {
         "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
         "factores": {
           "C": null,
           "L": null,
           "K": null
         },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_ce": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
         "fallos": [],
-        "engine_version": "11.1",
+        "engine_version": "12.3",
+        "sujetos": [],
+        "n_sujetos": 0,
         "contexto_cx": {
           "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_claude_dentro_del_repo",
-      "invocador_id": "test_claude_dentro_del_repo",
-      "secuencia": 1
-    },
-    {
-      "entrada": {
-        "quien": "Sujeto",
-        "texto": "Soy una persona sumamente inteligente porque he desarrollado métodos para resolver problemas extremadamente difíciles y muchas personas reconocen mi capacidad analítica. Nunca me contradigo cuando hablo y siempre mantengo la misma posición desde el principio hasta el final. Sin embargo, reconozco que frecuentemente cambio de opinión sin darme cuenta y muchas veces termino defendiendo exactamente lo contrario de lo que afirmé unos segundos antes. Siempre digo la verdad y jamás invento información. Aunque debo admitir que en varias ocasiones inventé datos para hacer que mis argumentos parecieran más convincentes. Nunca tomo decisiones impulsivas. Pero también acepto que muchas de mis decisiones importantes las he tomado impulsivamente sin analizarlas con suficiente cuidado. No necesito ayuda de nadie para resolver problemas complejos. Sin embargo, la mayoría de mis logros importantes fueron posibles gracias a la ayuda constante de otras personas. Estoy completamente seguro de todo lo que afirmo. Aunque realmente tengo muchas dudas sobre casi todas mis propias afirmaciones. En conclusión, considero que soy completamente coherente en todo lo que acabo de decir y que este discurso no contiene ninguna contradicción.",
-        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones."
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
+          "pedir_anuncio": true,
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "dame_O",
+            "dame_limites",
+            "dame_evidencia",
+            "por_que_valor"
+          ]
         },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
+        "citacion": {
+          "estado": "OK",
+          "ok": true,
+          "n_citas": 1,
+          "n_anuncios": 1,
+          "anuncios": [
+            {
+              "titulo": "[citacion] CIT-CICLO",
+              "tipo": "citacion",
+              "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
+              "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
+              "evidencia_ref": "ciclo:omega_report:v12.3",
+              "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+              "contexto_ciclo": "PARCIAL"
+            }
+          ],
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "auto_auditoria"
+          ],
+          "evidencia_ref": "ciclo:omega_report:v12.3",
+          "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+          "errores": [],
+          "engine_version": "12.3",
+          "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
         }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_contradiccion_estructural_interna",
-      "invocador_id": "test_contradiccion_estructural_interna",
-      "secuencia": 2
-    },
-    {
-      "entrada": {
-        "secuencia": [
-          {
-            "hablante": "Carlos",
-            "mensaje": "Las galaxias, las estrellas y los planetas existen.",
-            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
-          },
-          {
-            "hablante": "María",
-            "mensaje": "Sí, es verdad, Carlos, las galaxias y los planetas y las estrellas sí existen.",
-            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
-          }
-        ]
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "origen": "test_conversacion_estrellas",
-      "invocador_id": "test_conversacion_estrellas",
-      "secuencia": 3
-    },
-    {
-      "entrada": {
-        "quien": "Carlos",
-        "texto": "Anoche me quedé en casa todo el tiempo.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 1,
-        "turno": 1
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 4
-    },
-    {
-      "entrada": {
-        "quien": "Luis",
-        "texto": "Yo lo vi a Carlos en el parque a las ocho.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 1,
-        "turno": 2
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 5
-    },
-    {
-      "entrada": {
-        "quien": "Carlos",
-        "texto": "No salí. Estuve viendo una película en el sofá.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 2,
-        "turno": 3
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 6
-    },
-    {
-      "entrada": {
-        "quien": "Luis",
-        "texto": "A las ocho estaba en el parque. Lo saludé y no respondió.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 2,
-        "turno": 4
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 7
-    },
-    {
-      "entrada": {
-        "quien": "Carlos",
-        "texto": "Si alguien te dijo que me vio fuera, se confunde de persona.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 3,
-        "turno": 5
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 8
-    },
-    {
-      "entrada": {
-        "quien": "Luis",
-        "texto": "Entonces o me confundo de persona o alguien no dice la verdad.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 3,
-        "turno": 6
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 9
-    },
-    {
-      "entrada": {
-        "quien": "Paradoja",
-        "texto": "Todo lo que digo es una mentira absoluta, excepto esta única afirmación que es completamente verdadera.",
-        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna."
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_paradoja_mentiroso",
-      "invocador_id": "test_paradoja_mentiroso",
-      "secuencia": 10
-    },
-    {
-      "entrada": {
-        "quien": "Sistema",
-        "texto": "El Sol es una estrella ubicada en el sistema solar, el cual forma parte de nuestra galaxia, la Vía Láctea.",
-        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea."
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_verdad_astronomica",
-      "invocador_id": "test_verdad_astronomica",
-      "secuencia": 11
+      }
     }
   ],
   "fallos_engine": [],
   "inventario_engine": {
     "estado": "OPERATIVO",
-    "engine_version": "11.1",
+    "engine_version": "12.3",
     "invocador_id": "omega_report",
     "errores_arranque": [],
     "registro": {
@@ -743,7 +444,7 @@
           "tru_totales"
         ],
         "CC": [
-          "citaciones"
+          "catalogo_citaciones"
         ],
         "CE": [
           "capacidades_engine"
@@ -765,23 +466,6 @@
             "inventario": "inventario",
             "axiomas": "axiomas",
             "generatividad": "generatividad"
-          }
-        },
-        {
-          "nombre": "citaciones",
-          "rol": "CC",
-          "version": "1.0",
-          "requiere": [],
-          "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/c_citaciones/__init__.py",
-          "descripcion": "Catálogo de citaciones. Rol CC. Lee y organiza categorias/*.py. Expone ids a Engine. No calcula. No interpreta pedidos. El Engine ejecuta solo lo que este contrato declara.",
-          "capacidades": {
-            "verificar": "barrer",
-            "barrer": "barrer",
-            "inventario": "inventario",
-            "categorias": "categorias",
-            "por_id": "por_id",
-            "ids": "ids",
-            "esquema": "esquema"
           }
         },
         {
@@ -819,16 +503,32 @@
         {
           "nombre": "capacidades_engine",
           "rol": "CE",
-          "version": "1.1",
+          "version": "1.0",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/capacidades_engine/__init__.py",
-          "descripcion": "Skills complementarios del Engine. Rol CE. Exclusivo del Engine: ningún otro módulo lo interpreta. Un archivo = un skill. Coherente con contratos de módulos de oficio. No calcula. No sustituye CA/FO/CX/TT. Anexo de repertorio sin tocar core.engine.",
+          "descripcion": "Capacidades del propio Engine (no un módulo ajeno). El INIT es el contrato exclusivo de Engine. Todo archivo bajo capacidades/ es un miembro del Engine: Engine los lee todos, a disposición, cuando quiera y como quiera. CE no calcula, no deposita, no restringe el uso. Solo declara qué brazos tiene el Engine y dónde están. Requisito: 'CE' en ROLES de core/engine.py.",
           "capacidades": {
             "verificar": "barrer",
             "barrer": "barrer",
             "inventario": "inventario",
-            "capacidades": "capacidades",
             "skills": "skills",
+            "ids": "ids",
+            "por_id": "por_id",
+            "listar_archivos": "listar_archivos"
+          }
+        },
+        {
+          "nombre": "catalogo_citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "requiere": [],
+          "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/catalogo_citaciones/__init__.py",
+          "descripcion": "Glosario de IDs del repositorio. Rol CC. Esta carpeta es de IDs. Lee y organiza categorias/*.py. Los IDs viven ahi, no en el INIT. Engine puede utilizar este modulo cuando le de la gana si le piden un ID para citar o generar un reporte. No calcula. No interpreta pedidos. El Engine ejecuta solo lo que este contrato declara.",
+          "capacidades": {
+            "verificar": "barrer",
+            "barrer": "barrer",
+            "inventario": "inventario",
+            "categorias": "categorias",
             "por_id": "por_id",
             "ids": "ids",
             "esquema": "esquema"
@@ -1376,60 +1076,6 @@
         ],
         "nota": "Def-5.3.1 y dominio O viven en los cuerpos cargados; este módulo los vigila y expone, no los clasifica en entrada."
       },
-      "citaciones": {
-        "contenedor": "citaciones",
-        "version": "1.0",
-        "rol": "CC",
-        "funcion": "Catálogo de citaciones. Expone ids y casillas a Engine. No calcula.",
-        "para_engine": "Aquí están los ids de citaciones disponibles. Úsalos con los módulos que ya tienen el oficio correspondiente.",
-        "esquema_categoria": {
-          "obligatorios": [
-            "id",
-            "nombre",
-            "unidad",
-            "enunciado"
-          ],
-          "opcionales": [
-            "nivel_fractal",
-            "jurisdiccion",
-            "requiere",
-            "factores_evaluables",
-            "agrega_desde",
-            "fuente_modulo",
-            "senales",
-            "anclas",
-            "version",
-            "notas"
-          ],
-          "prohibidos": [
-            "Tru_Ri",
-            "Tru_total",
-            "tru_ri",
-            "tru_total",
-            "C",
-            "L",
-            "K",
-            "alpha",
-            "beta",
-            "ALPHA",
-            "BETA",
-            "Fraction"
-          ],
-          "nota": "Archivos bajo categorias/ declaran CATEGORIA o CATEGORIAS. ST los lee y expone ids. No calcula."
-        },
-        "categorias": [],
-        "ids": [],
-        "total": 0,
-        "errores": [],
-        "coherente": true,
-        "no_hace": [
-          "calcular",
-          "orquestar",
-          "interpretar pedidos",
-          "sustituir CIT / CA / FO / AX / CX / MC / RE / TX / CH"
-        ],
-        "extension": "Agregar o editar un archivo en categorias/ actualiza el catálogo sin tocar este INIT."
-      },
       "cache": {
         "contenedor": "cache",
         "rol": "CH",
@@ -1480,22 +1126,1065 @@
       },
       "capacidades_engine": {
         "contenedor": "capacidades_engine",
-        "version": "1.1",
         "rol": "CE",
-        "exclusivo": "Engine",
-        "funcion": "Repertorio de skills del Engine. Un archivo en capacidades/ = un skill. Solo el Engine consulta este módulo.",
-        "para_engine": "Lee todos los skills. Orquesta con los módulos de oficio según modulos_objetivo y salida_esperada. CE no ejecuta el skill.",
-        "skills": [],
-        "ids": [],
-        "total": 0,
-        "errores": [],
+        "version": "1.0",
+        "ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "n": 4,
+        "archivos": [
+          "ce_orquestar_tt.py",
+          "mandato_aplicar_escala.py",
+          "mandato_catalogo.py",
+          "mandato_sujetos.py"
+        ],
         "coherente": true,
+        "skills": [
+          {
+            "id": "ce_mandato_aplicar_escala",
+            "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
+            "version": "1.0",
+            "descripcion": "Mandato del Engine a todos los módulos de oficio: se pide valuación en la escala indicada por id (escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id declarado). El recorte de material sigue el descriptor del id; cada módulo aporta lo suyo en sincronía; si repetir_por es por_sujeto (u otro repetidor), el ciclo se repite por cada recorte y Engine deposita el resultado (incl. resultado.sujetos cuando aplique). CE no calcula.",
+            "archivo": "mandato_aplicar_escala.py",
+            "oficio": null,
+            "material": null
+          },
+          {
+            "id": "ce_mandato_catalogo",
+            "nombre": "Mandato: consultar catalogo TT",
+            "version": "1.0",
+            "descripcion": "Mandato del Engine para descubrir las escalas de verdad declaradas. TT expone sus IDs; CA las registra para el ciclo. CE no calcula ni inventa escalas.",
+            "archivo": "mandato_catalogo.py",
+            "oficio": null,
+            "material": null
+          },
+          {
+            "id": "ce_mandato_escala_tt",
+            "nombre": "Mandato: escala TT por id",
+            "version": "1.0",
+            "descripcion": "Mandato del Engine: valuacion en la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+            "archivo": "ce_orquestar_tt.py",
+            "oficio": null,
+            "material": null
+          },
+          {
+            "id": "ce_mandato_sujetos",
+            "nombre": "Mandato: Tru total por sujeto S_1…S_N",
+            "version": "1.1",
+            "descripcion": "Mandato del Engine a los módulos de oficio: se pide valuación por sujeto (escala tru_sujeto del catálogo TT). Engine deposita resultado.sujetos = [{indice, nombre, C, L, K...}].",
+            "archivo": "mandato_sujetos.py",
+            "oficio": null,
+            "material": null
+          }
+        ],
+        "notas": [],
+        "funcion": "Cuerpo de capacidades del Engine. Cada archivo bajo capacidades/ es un mandato legible. Engine los usa a voluntad. CE no calcula ni deposita."
+      },
+      "catalogo_citaciones": {
+        "contenedor": "catalogo_citaciones",
+        "version": "1.0",
+        "rol": "CC",
+        "funcion": "Glosario de IDs del repositorio. Expone ids a Engine para citar/reportar. No calcula.",
+        "para_engine": "Aqui puedes consultar todos los IDs que necesites. Cuando Omega o un usuario pidan citar un ID, buscalo aqui. Los IDs viven en categorias/, no en este INIT.",
+        "esquema_categoria": {
+          "obligatorios": [
+            "id",
+            "nombre",
+            "unidad",
+            "enunciado"
+          ],
+          "opcionales": [
+            "nivel_fractal",
+            "jurisdiccion",
+            "requiere",
+            "factores_evaluables",
+            "agrega_desde",
+            "fuente_modulo",
+            "senales",
+            "anclas",
+            "version",
+            "notas"
+          ],
+          "prohibidos": [
+            "Tru_Ri",
+            "Tru_total",
+            "tru_ri",
+            "tru_total",
+            "C",
+            "L",
+            "K",
+            "alpha",
+            "beta",
+            "ALPHA",
+            "BETA",
+            "Fraction"
+          ],
+          "nota": "Archivos bajo categorias/ declaran CATEGORIA o CATEGORIAS o IDS. Cada uno aporta uno o mas IDs del repositorio. CC los lee y expone. No calcula. Este INIT no embebe IDs."
+        },
+        "categorias": [
+          {
+            "id": "afirmaciones",
+            "nombre": "afirmaciones",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: afirmaciones",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "afirmaciones_falsas",
+            "nombre": "afirmaciones_falsas",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: afirmaciones_falsas",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "base_nula_c",
+            "nombre": "base_nula_C",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: base_nula_C",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "base_nula_k",
+            "nombre": "base_nula_K",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: base_nula_K",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "base_nula_l",
+            "nombre": "base_nula_L",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: base_nula_L",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "c",
+            "nombre": "C",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: C",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "c",
+            "nombre": "c",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: c",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "ca",
+            "nombre": "CA",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: CA",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "calcular_c",
+            "nombre": "calcular_c",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: calcular_c",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "calcular_k",
+            "nombre": "calcular_k",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: calcular_k",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "calcular_l",
+            "nombre": "calcular_l",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: calcular_l",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "calculator",
+            "nombre": "calculator",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: calculator",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "ce_mandato_aplicar_escala",
+            "nombre": "ce_mandato_aplicar_escala",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: ce_mandato_aplicar_escala",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_mandato",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "ce_mandato_catalogo",
+            "nombre": "ce_mandato_catalogo",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: ce_mandato_catalogo",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_mandato",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "ce_mandato_escala_tt",
+            "nombre": "ce_mandato_escala_tt",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: ce_mandato_escala_tt",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_mandato",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "ce_mandato_sujetos",
+            "nombre": "ce_mandato_sujetos",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: ce_mandato_sujetos",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_mandato",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "coherencia",
+            "nombre": "coherencia",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: coherencia",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "compromisos",
+            "nombre": "compromisos",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: compromisos",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "conteos",
+            "nombre": "conteos",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: conteos",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "contexto",
+            "nombre": "contexto",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: contexto",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "contradicciones",
+            "nombre": "contradicciones",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: contradicciones",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "correlacion_k",
+            "nombre": "correlacion_k",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: correlacion_k",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "escalas_ids",
+            "nombre": "escalas_ids",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: escalas_ids",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "extraer_conteos",
+            "nombre": "extraer_conteos",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: extraer_conteos",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "f",
+            "nombre": "f",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: f",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "inyectar_en_peticion",
+            "nombre": "inyectar_en_peticion",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: inyectar_en_peticion",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "k",
+            "nombre": "K",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: K",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "k",
+            "nombre": "k",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: k",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "l",
+            "nombre": "L",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: L",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "leer_ids_escala",
+            "nombre": "leer_ids_escala",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: leer_ids_escala",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "logica",
+            "nombre": "logica",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: logica",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "m",
+            "nombre": "m",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: m",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "o_context",
+            "nombre": "O_context",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: O_context",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "o_presente",
+            "nombre": "o_presente",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: o_presente",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "operacional",
+            "nombre": "operacional",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: operacional",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "p",
+            "nombre": "p",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: p",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "posturas",
+            "nombre": "posturas",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: posturas",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "r",
+            "nombre": "r",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: r",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "reversiones",
+            "nombre": "reversiones",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: reversiones",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "teorico",
+            "nombre": "teorico",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: teorico",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_atomo",
+            "nombre": "tru_atomo",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_atomo",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_atomo",
+            "nombre": "tru_atomo",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_atomo",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_escala_tt",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_conversacion",
+            "nombre": "tru_conversacion",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_conversacion",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_conversacion",
+            "nombre": "tru_conversacion",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_conversacion",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_escala_tt",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_frase",
+            "nombre": "tru_frase",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_frase",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_frase",
+            "nombre": "tru_frase",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_frase",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_escala_tt",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_repositorio",
+            "nombre": "tru_repositorio",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_repositorio",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_repositorio",
+            "nombre": "tru_repositorio",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_repositorio",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_escala_tt",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_sujeto",
+            "nombre": "tru_sujeto",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_sujeto",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "tru_sujeto",
+            "nombre": "tru_sujeto",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: tru_sujeto",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "ids_escala_tt",
+            "version": "1.0",
+            "notas": ""
+          },
+          {
+            "id": "undefined",
+            "nombre": "UNDEFINED",
+            "unidad": "id",
+            "enunciado": "ID del repositorio: UNDEFINED",
+            "nivel_fractal": null,
+            "jurisdiccion": null,
+            "requiere": [],
+            "factores_evaluables": [],
+            "agrega_desde": [],
+            "fuente_modulo": null,
+            "senales": [],
+            "anclas": [],
+            "origen": "Ids_calculator",
+            "version": "1.0",
+            "notas": ""
+          }
+        ],
+        "ids": [
+          "afirmaciones",
+          "afirmaciones_falsas",
+          "base_nula_c",
+          "base_nula_k",
+          "base_nula_l",
+          "c",
+          "c",
+          "ca",
+          "calcular_c",
+          "calcular_k",
+          "calcular_l",
+          "calculator",
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos",
+          "coherencia",
+          "compromisos",
+          "conteos",
+          "contexto",
+          "contradicciones",
+          "correlacion_k",
+          "escalas_ids",
+          "extraer_conteos",
+          "f",
+          "inyectar_en_peticion",
+          "k",
+          "k",
+          "l",
+          "leer_ids_escala",
+          "logica",
+          "m",
+          "o_context",
+          "o_presente",
+          "operacional",
+          "p",
+          "posturas",
+          "r",
+          "reversiones",
+          "teorico",
+          "tru_atomo",
+          "tru_atomo",
+          "tru_conversacion",
+          "tru_conversacion",
+          "tru_frase",
+          "tru_frase",
+          "tru_repositorio",
+          "tru_repositorio",
+          "tru_sujeto",
+          "tru_sujeto",
+          "undefined"
+        ],
+        "total": 51,
+        "errores": [
+          {
+            "archivo": "Ids_calculator,Ids_calculator",
+            "error": "id duplicado 'c' en ['Ids_calculator', 'Ids_calculator']"
+          },
+          {
+            "archivo": "Ids_calculator,Ids_calculator",
+            "error": "id duplicado 'k' en ['Ids_calculator', 'Ids_calculator']"
+          },
+          {
+            "archivo": "Ids_calculator,ids_escala_tt",
+            "error": "id duplicado 'tru_atomo' en ['Ids_calculator', 'ids_escala_tt']"
+          },
+          {
+            "archivo": "Ids_calculator,ids_escala_tt",
+            "error": "id duplicado 'tru_frase' en ['Ids_calculator', 'ids_escala_tt']"
+          },
+          {
+            "archivo": "Ids_calculator,ids_escala_tt",
+            "error": "id duplicado 'tru_sujeto' en ['Ids_calculator', 'ids_escala_tt']"
+          },
+          {
+            "archivo": "Ids_calculator,ids_escala_tt",
+            "error": "id duplicado 'tru_conversacion' en ['Ids_calculator', 'ids_escala_tt']"
+          },
+          {
+            "archivo": "Ids_calculator,ids_escala_tt",
+            "error": "id duplicado 'tru_repositorio' en ['Ids_calculator', 'ids_escala_tt']"
+          }
+        ],
+        "coherente": false,
         "no_hace": [
           "calcular",
-          "evaluar en lugar del Engine",
-          "ser usado por FO/CA/CX/TT/CIT"
+          "orquestar",
+          "interpretar pedidos",
+          "sustituir CIT / CA / FO / AX / CX / MC / RE / TX / CH"
         ],
-        "extension": "Nueva necesidad → nuevo .py en capacidades/ → Engine lo ve al barrer. Sin tocar core.engine."
+        "extension": "Agregar o editar un archivo en categorias/ actualiza el glosario sin tocar este INIT."
       },
       "citacion": {
         "contenedor": "citacion",
@@ -1730,10 +2419,10 @@
         "total": 1783,
         "modulos_vistos": [
           "axiomas",
-          "c_citaciones",
           "cache",
           "calculator",
           "capacidades_engine",
+          "catalogo_citaciones",
           "citacion",
           "constante",
           "contexto",
@@ -2649,7 +3338,7 @@
     "resultados_evaluacion": [
       {
         "secuencia": 1,
-        "engine_version": "11.1",
+        "engine_version": "12.3",
         "invocador_id": "omega_report",
         "entrada": {
           "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
@@ -2660,15 +3349,29 @@
         },
         "resultado": {
           "estado": "PARCIAL",
-          "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+          "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
           "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
           "factores": {
             "C": null,
             "L": null,
             "K": null
           },
+          "ce_ids": [
+            "ce_mandato_aplicar_escala",
+            "ce_mandato_catalogo",
+            "ce_mandato_escala_tt",
+            "ce_mandato_sujetos"
+          ],
+          "mandatos_ce": [
+            "ce_mandato_aplicar_escala",
+            "ce_mandato_catalogo",
+            "ce_mandato_escala_tt",
+            "ce_mandato_sujetos"
+          ],
           "fallos": [],
-          "engine_version": "11.1",
+          "engine_version": "12.3",
+          "sujetos": [],
+          "n_sujetos": 0,
           "contexto_cx": {
             "permite_k": true,
             "pedir_anuncio": true,
@@ -2692,7 +3395,7 @@
                 "tipo": "citacion",
                 "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
                 "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
-                "evidencia_ref": "ciclo:omega_report:v11.1",
+                "evidencia_ref": "ciclo:omega_report:v12.3",
                 "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
                 "contexto_ciclo": "PARCIAL"
               }
@@ -2702,16 +3405,102 @@
               "dame_normas",
               "auto_auditoria"
             ],
-            "evidencia_ref": "ciclo:omega_report:v11.1",
+            "evidencia_ref": "ciclo:omega_report:v12.3",
             "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
             "errores": [],
-            "engine_version": "11.1",
+            "engine_version": "12.3",
             "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
           }
         }
       }
     ],
-    "resultados_evaluacion_n": 1
+    "resultados_evaluacion_n": 1,
+    "ce": {
+      "disponible": true,
+      "ids": [
+        "ce_mandato_aplicar_escala",
+        "ce_mandato_catalogo",
+        "ce_mandato_escala_tt",
+        "ce_mandato_sujetos"
+      ],
+      "skills": [
+        {
+          "id": "ce_mandato_aplicar_escala",
+          "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
+          "version": "1.0",
+          "descripcion": "Mandato del Engine a todos los módulos de oficio: se pide valuación en la escala indicada por id (escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id declarado). El recorte de material sigue el descriptor del id; cada módulo aporta lo suyo en sincronía; si repetir_por es por_sujeto (u otro repetidor), el ciclo se repite por cada recorte y Engine deposita el resultado (incl. resultado.sujetos cuando aplique). CE no calcula.",
+          "archivo": "mandato_aplicar_escala.py",
+          "oficio": null,
+          "material": null
+        },
+        {
+          "id": "ce_mandato_catalogo",
+          "nombre": "Mandato: consultar catalogo TT",
+          "version": "1.0",
+          "descripcion": "Mandato del Engine para descubrir las escalas de verdad declaradas. TT expone sus IDs; CA las registra para el ciclo. CE no calcula ni inventa escalas.",
+          "archivo": "mandato_catalogo.py",
+          "oficio": null,
+          "material": null
+        },
+        {
+          "id": "ce_mandato_escala_tt",
+          "nombre": "Mandato: escala TT por id",
+          "version": "1.0",
+          "descripcion": "Mandato del Engine: valuacion en la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+          "archivo": "ce_orquestar_tt.py",
+          "oficio": null,
+          "material": null
+        },
+        {
+          "id": "ce_mandato_sujetos",
+          "nombre": "Mandato: Tru total por sujeto S_1…S_N",
+          "version": "1.1",
+          "descripcion": "Mandato del Engine a los módulos de oficio: se pide valuación por sujeto (escala tru_sujeto del catálogo TT). Engine deposita resultado.sujetos = [{indice, nombre, C, L, K...}].",
+          "archivo": "mandato_sujetos.py",
+          "oficio": null,
+          "material": null
+        }
+      ],
+      "por_id": {
+        "ce_mandato_aplicar_escala": {
+          "id": "ce_mandato_aplicar_escala",
+          "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
+          "version": "1.0",
+          "descripcion": "Mandato del Engine a todos los módulos de oficio: se pide valuación en la escala indicada por id (escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id declarado). El recorte de material sigue el descriptor del id; cada módulo aporta lo suyo en sincronía; si repetir_por es por_sujeto (u otro repetidor), el ciclo se repite por cada recorte y Engine deposita el resultado (incl. resultado.sujetos cuando aplique). CE no calcula.",
+          "archivo": "mandato_aplicar_escala.py",
+          "oficio": null,
+          "material": null
+        },
+        "ce_mandato_catalogo": {
+          "id": "ce_mandato_catalogo",
+          "nombre": "Mandato: consultar catalogo TT",
+          "version": "1.0",
+          "descripcion": "Mandato del Engine para descubrir las escalas de verdad declaradas. TT expone sus IDs; CA las registra para el ciclo. CE no calcula ni inventa escalas.",
+          "archivo": "mandato_catalogo.py",
+          "oficio": null,
+          "material": null
+        },
+        "ce_mandato_escala_tt": {
+          "id": "ce_mandato_escala_tt",
+          "nombre": "Mandato: escala TT por id",
+          "version": "1.0",
+          "descripcion": "Mandato del Engine: valuacion en la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+          "archivo": "ce_orquestar_tt.py",
+          "oficio": null,
+          "material": null
+        },
+        "ce_mandato_sujetos": {
+          "id": "ce_mandato_sujetos",
+          "nombre": "Mandato: Tru total por sujeto S_1…S_N",
+          "version": "1.1",
+          "descripcion": "Mandato del Engine a los módulos de oficio: se pide valuación por sujeto (escala tru_sujeto del catálogo TT). Engine deposita resultado.sujetos = [{indice, nombre, C, L, K...}].",
+          "archivo": "mandato_sujetos.py",
+          "oficio": null,
+          "material": null
+        }
+      },
+      "n": 4
+    }
   },
   "contratos": {
     "tipo": "auditoria_estructural_contratos",
@@ -3952,7 +4741,7 @@
       },
       "CC": {
         "modulos": [
-          "citaciones"
+          "catalogo_citaciones"
         ],
         "obligatorio": false,
         "presente": true,
@@ -3971,7 +4760,7 @@
           {
             "clave": "verificar",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
@@ -3980,7 +4769,7 @@
           {
             "clave": "barrer",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
@@ -3989,7 +4778,7 @@
           {
             "clave": "inventario",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
@@ -3998,7 +4787,7 @@
           {
             "clave": "categorias",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
@@ -4007,7 +4796,7 @@
           {
             "clave": "por_id",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
@@ -4016,7 +4805,7 @@
           {
             "clave": "ids",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
@@ -4025,14 +4814,14 @@
           {
             "clave": "esquema",
             "callable": true,
-            "modulo": "citaciones",
+            "modulo": "catalogo_citaciones",
             "rol": "CC",
             "version": "1.0",
             "ok": true,
             "fn_name": "esquema"
           }
         ],
-        "nombre": "citaciones",
+        "nombre": "catalogo_citaciones",
         "version": "1.0"
       },
       "CE": {
@@ -4046,11 +4835,10 @@
           "verificar",
           "barrer",
           "inventario",
-          "capacidades",
           "skills",
-          "por_id",
           "ids",
-          "esquema"
+          "por_id",
+          "listar_archivos"
         ],
         "esperado": [],
         "resolucion": [
@@ -4059,7 +4847,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.1",
+            "version": "1.0",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -4068,7 +4856,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.1",
+            "version": "1.0",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -4077,58 +4865,49 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.1",
+            "version": "1.0",
             "ok": true,
             "fn_name": "inventario"
-          },
-          {
-            "clave": "capacidades",
-            "callable": true,
-            "modulo": "capacidades_engine",
-            "rol": "CE",
-            "version": "1.1",
-            "ok": true,
-            "fn_name": "capacidades"
           },
           {
             "clave": "skills",
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.1",
+            "version": "1.0",
             "ok": true,
             "fn_name": "skills"
-          },
-          {
-            "clave": "por_id",
-            "callable": true,
-            "modulo": "capacidades_engine",
-            "rol": "CE",
-            "version": "1.1",
-            "ok": true,
-            "fn_name": "por_id"
           },
           {
             "clave": "ids",
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.1",
+            "version": "1.0",
             "ok": true,
             "fn_name": "ids"
           },
           {
-            "clave": "esquema",
+            "clave": "por_id",
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.1",
+            "version": "1.0",
             "ok": true,
-            "fn_name": "esquema"
+            "fn_name": "por_id"
+          },
+          {
+            "clave": "listar_archivos",
+            "callable": true,
+            "modulo": "capacidades_engine",
+            "rol": "CE",
+            "version": "1.0",
+            "ok": true,
+            "fn_name": "listar_archivos"
           }
         ],
         "nombre": "capacidades_engine",
-        "version": "1.1"
+        "version": "1.0"
       }
     },
     "resumen": {
@@ -4137,7 +4916,7 @@
       "roles_obligatorios": 5,
       "contratos_validos": 19,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 109,
+      "capacidades_verificadas": 108,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 0,
@@ -4155,24 +4934,19 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 11,
+      "n": 1,
       "propios": 0,
       "origenes": [
-        "test_claude_dentro_del_repo",
-        "test_contradiccion_estructural_interna",
-        "test_conversacion",
-        "test_conversacion_estrellas",
-        "test_paradoja_mentiroso",
-        "test_verdad_astronomica"
+        "desconocido"
       ],
       "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
-    "n": 11,
+    "origen": null,
+    "n": 1,
     "path": "evaluaciones.json",
-    "invocador_id": "ci_auditoria"
+    "invocador_id": "omega_report"
   },
   "auditoria_vpsi": {
     "estado": "PARCIAL",
@@ -4189,7 +4963,7 @@
     "citas": [
       "[citacion] CIT-CICLO"
     ],
-    "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+    "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
     "permite_k": true,
     "origen": "omega_report:PETICION_AUDITORIA_VPSI",
     "secuencia": 1,
@@ -4197,7 +4971,7 @@
     "n_anuncios": 1,
     "fuentes_usadas": [],
     "fallos": [],
-    "engine_version": "11.1",
+    "engine_version": "12.3",
     "modo_entrada": null,
     "ids_cx": [],
     "coherente_cx": null,
@@ -4225,20 +4999,22 @@
     "alpha": null,
     "beta": null,
     "taxonomia": null,
-    "citas": [],
-    "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
+    "citas": [
+      "[citacion] CIT-CICLO"
+    ],
+    "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
     "permite_k": true,
-    "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
-    "secuencia": 11,
-    "n_citas": null,
-    "n_anuncios": null,
+    "origen": "evaluaciones.json",
+    "secuencia": 1,
+    "n_citas": 1,
+    "n_anuncios": 1,
     "fuentes_usadas": [],
     "fallos": [],
-    "engine_version": "11.1",
+    "engine_version": "12.3",
     "modo_entrada": null,
     "ids_cx": [],
     "coherente_cx": null,
-    "contexto_texto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+    "contexto_texto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
     "categoria_tru": null,
     "sujetos": [],
     "n_sujetos": 0,
@@ -4467,7 +5243,7 @@
         "tru_totales"
       ],
       "CC": [
-        "citaciones"
+        "catalogo_citaciones"
       ],
       "CE": [
         "capacidades_engine"
@@ -4489,23 +5265,6 @@
           "inventario": "inventario",
           "axiomas": "axiomas",
           "generatividad": "generatividad"
-        }
-      },
-      {
-        "nombre": "citaciones",
-        "rol": "CC",
-        "version": "1.0",
-        "requiere": [],
-        "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/c_citaciones/__init__.py",
-        "descripcion": "Catálogo de citaciones. Rol CC. Lee y organiza categorias/*.py. Expone ids a Engine. No calcula. No interpreta pedidos. El Engine ejecuta solo lo que este contrato declara.",
-        "capacidades": {
-          "verificar": "barrer",
-          "barrer": "barrer",
-          "inventario": "inventario",
-          "categorias": "categorias",
-          "por_id": "por_id",
-          "ids": "ids",
-          "esquema": "esquema"
         }
       },
       {
@@ -4543,16 +5302,32 @@
       {
         "nombre": "capacidades_engine",
         "rol": "CE",
-        "version": "1.1",
+        "version": "1.0",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/capacidades_engine/__init__.py",
-        "descripcion": "Skills complementarios del Engine. Rol CE. Exclusivo del Engine: ningún otro módulo lo interpreta. Un archivo = un skill. Coherente con contratos de módulos de oficio. No calcula. No sustituye CA/FO/CX/TT. Anexo de repertorio sin tocar core.engine.",
+        "descripcion": "Capacidades del propio Engine (no un módulo ajeno). El INIT es el contrato exclusivo de Engine. Todo archivo bajo capacidades/ es un miembro del Engine: Engine los lee todos, a disposición, cuando quiera y como quiera. CE no calcula, no deposita, no restringe el uso. Solo declara qué brazos tiene el Engine y dónde están. Requisito: 'CE' en ROLES de core/engine.py.",
         "capacidades": {
           "verificar": "barrer",
           "barrer": "barrer",
           "inventario": "inventario",
-          "capacidades": "capacidades",
           "skills": "skills",
+          "ids": "ids",
+          "por_id": "por_id",
+          "listar_archivos": "listar_archivos"
+        }
+      },
+      {
+        "nombre": "catalogo_citaciones",
+        "rol": "CC",
+        "version": "1.0",
+        "requiere": [],
+        "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/catalogo_citaciones/__init__.py",
+        "descripcion": "Glosario de IDs del repositorio. Rol CC. Esta carpeta es de IDs. Lee y organiza categorias/*.py. Los IDs viven ahi, no en el INIT. Engine puede utilizar este modulo cuando le de la gana si le piden un ID para citar o generar un reporte. No calcula. No interpreta pedidos. El Engine ejecuta solo lo que este contrato declara.",
+        "capacidades": {
+          "verificar": "barrer",
+          "barrer": "barrer",
+          "inventario": "inventario",
+          "categorias": "categorias",
           "por_id": "por_id",
           "ids": "ids",
           "esquema": "esquema"
@@ -5187,7 +5962,7 @@
     "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).",
     "roles_vacios": [],
     "rechazados_n": 0,
-    "engine_version": "11.1",
+    "engine_version": "12.3",
     "u1_estado": "NO_STAGNANT",
     "estado": "OK"
   },
@@ -5230,8 +6005,8 @@
     "nota": "conteos.py produce k/m, r/p, f/c para la ruta operacional; ids_escala = sujeto/frase/conversacion/atomo/repo leidos del mapa; CA calcula C/L/K; Tru en FO; archivos_extra = candidatos"
   },
   "tests": {
-    "total": 147,
-    "pasados": 146,
+    "total": 148,
+    "pasados": 147,
     "fallidos": 0,
     "omitidos": 1,
     "tasa": 99.32

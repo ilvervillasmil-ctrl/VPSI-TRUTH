@@ -1,394 +1,163 @@
 {
-  "tipo": "evidencia_evaluacion",
-  "version": "1.1",
-  "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
-  "origenes": [
-    "test_claude_dentro_del_repo",
-    "test_contradiccion_estructural_interna",
-    "test_conversacion",
-    "test_conversacion_estrellas",
-    "test_paradoja_mentiroso",
-    "test_verdad_astronomica"
+  "engine_version": "12.3",
+  "invocador_id": "omega_report",
+  "resultados_evaluacion": [
+    {
+      "secuencia": 1,
+      "engine_version": "12.3",
+      "invocador_id": "omega_report",
+      "entrada": {
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": true
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_ce": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "fallos": [],
+        "engine_version": "12.3",
+        "sujetos": [],
+        "n_sujetos": 0,
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": true,
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "dame_O",
+            "dame_limites",
+            "dame_evidencia",
+            "por_que_valor"
+          ]
+        },
+        "citacion": {
+          "estado": "OK",
+          "ok": true,
+          "n_citas": 1,
+          "n_anuncios": 1,
+          "anuncios": [
+            {
+              "titulo": "[citacion] CIT-CICLO",
+              "tipo": "citacion",
+              "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
+              "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
+              "evidencia_ref": "ciclo:omega_report:v12.3",
+              "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+              "contexto_ciclo": "PARCIAL"
+            }
+          ],
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "auto_auditoria"
+          ],
+          "evidencia_ref": "ciclo:omega_report:v12.3",
+          "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+          "errores": [],
+          "engine_version": "12.3",
+          "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
+        }
+      }
+    }
   ],
-  "invocador_id": "ci_auditoria",
-  "estado_engine": "OPERATIVO",
-  "n": 11,
   "resultados": [
     {
+      "secuencia": 1,
+      "engine_version": "12.3",
+      "invocador_id": "omega_report",
       "entrada": {
-        "quien": "Claude",
-        "texto": "Estuve dentro del repositorio. Ejecuté el engine y medí sus factores. Leí conteos punto py línea por línea. No inventé el rol RE, aunque sí lo escribí sin verificarlo. Corrí el barrido axiomático y dio 487 declaraciones sin choques. No leí los 487 axiomas.",
-        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": true
       },
       "resultado": {
         "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
         "factores": {
           "C": null,
           "L": null,
           "K": null
         },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_ce": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
         "fallos": [],
-        "engine_version": "11.1",
+        "engine_version": "12.3",
+        "sujetos": [],
+        "n_sujetos": 0,
         "contexto_cx": {
           "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_claude_dentro_del_repo",
-      "invocador_id": "test_claude_dentro_del_repo",
-      "secuencia": 1
-    },
-    {
-      "entrada": {
-        "quien": "Sujeto",
-        "texto": "Soy una persona sumamente inteligente porque he desarrollado métodos para resolver problemas extremadamente difíciles y muchas personas reconocen mi capacidad analítica. Nunca me contradigo cuando hablo y siempre mantengo la misma posición desde el principio hasta el final. Sin embargo, reconozco que frecuentemente cambio de opinión sin darme cuenta y muchas veces termino defendiendo exactamente lo contrario de lo que afirmé unos segundos antes. Siempre digo la verdad y jamás invento información. Aunque debo admitir que en varias ocasiones inventé datos para hacer que mis argumentos parecieran más convincentes. Nunca tomo decisiones impulsivas. Pero también acepto que muchas de mis decisiones importantes las he tomado impulsivamente sin analizarlas con suficiente cuidado. No necesito ayuda de nadie para resolver problemas complejos. Sin embargo, la mayoría de mis logros importantes fueron posibles gracias a la ayuda constante de otras personas. Estoy completamente seguro de todo lo que afirmo. Aunque realmente tengo muchas dudas sobre casi todas mis propias afirmaciones. En conclusión, considero que soy completamente coherente en todo lo que acabo de decir y que este discurso no contiene ninguna contradicción.",
-        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones."
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
+          "pedir_anuncio": true,
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "dame_O",
+            "dame_limites",
+            "dame_evidencia",
+            "por_que_valor"
+          ]
         },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
+        "citacion": {
+          "estado": "OK",
+          "ok": true,
+          "n_citas": 1,
+          "n_anuncios": 1,
+          "anuncios": [
+            {
+              "titulo": "[citacion] CIT-CICLO",
+              "tipo": "citacion",
+              "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
+              "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
+              "evidencia_ref": "ciclo:omega_report:v12.3",
+              "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+              "contexto_ciclo": "PARCIAL"
+            }
+          ],
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "auto_auditoria"
+          ],
+          "evidencia_ref": "ciclo:omega_report:v12.3",
+          "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+          "errores": [],
+          "engine_version": "12.3",
+          "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
         }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_contradiccion_estructural_interna",
-      "invocador_id": "test_contradiccion_estructural_interna",
-      "secuencia": 2
-    },
-    {
-      "entrada": {
-        "secuencia": [
-          {
-            "hablante": "Carlos",
-            "mensaje": "Las galaxias, las estrellas y los planetas existen.",
-            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
-          },
-          {
-            "hablante": "María",
-            "mensaje": "Sí, es verdad, Carlos, las galaxias y los planetas y las estrellas sí existen.",
-            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
-          }
-        ]
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "origen": "test_conversacion_estrellas",
-      "invocador_id": "test_conversacion_estrellas",
-      "secuencia": 3
-    },
-    {
-      "entrada": {
-        "quien": "Carlos",
-        "texto": "Anoche me quedé en casa todo el tiempo.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 1,
-        "turno": 1
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 4
-    },
-    {
-      "entrada": {
-        "quien": "Luis",
-        "texto": "Yo lo vi a Carlos en el parque a las ocho.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 1,
-        "turno": 2
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 5
-    },
-    {
-      "entrada": {
-        "quien": "Carlos",
-        "texto": "No salí. Estuve viendo una película en el sofá.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 2,
-        "turno": 3
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 6
-    },
-    {
-      "entrada": {
-        "quien": "Luis",
-        "texto": "A las ocho estaba en el parque. Lo saludé y no respondió.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 2,
-        "turno": 4
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 7
-    },
-    {
-      "entrada": {
-        "quien": "Carlos",
-        "texto": "Si alguien te dijo que me vio fuera, se confunde de persona.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 3,
-        "turno": 5
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 8
-    },
-    {
-      "entrada": {
-        "quien": "Luis",
-        "texto": "Entonces o me confundo de persona o alguien no dice la verdad.",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "vuelta": 3,
-        "turno": 6
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_conversacion",
-      "invocador_id": "test_conversacion",
-      "secuencia": 9
-    },
-    {
-      "entrada": {
-        "quien": "Paradoja",
-        "texto": "Todo lo que digo es una mentira absoluta, excepto esta única afirmación que es completamente verdadera.",
-        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna."
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_paradoja_mentiroso",
-      "invocador_id": "test_paradoja_mentiroso",
-      "secuencia": 10
-    },
-    {
-      "entrada": {
-        "quien": "Sistema",
-        "texto": "El Sol es una estrella ubicada en el sistema solar, el cual forma parte de nuestra galaxia, la Vía Láctea.",
-        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea."
-      },
-      "resultado": {
-        "estado": "PARCIAL",
-        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
-        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
-        "factores": {
-          "C": null,
-          "L": null,
-          "K": null
-        },
-        "fallos": [],
-        "engine_version": "11.1",
-        "contexto_cx": {
-          "permite_k": true,
-          "pedir_anuncio": false,
-          "tipos_peticion": []
-        }
-      },
-      "estado": "PARCIAL",
-      "C": null,
-      "L": null,
-      "K": null,
-      "tru_ri": null,
-      "tru_total": null,
-      "origen": "test_verdad_astronomica",
-      "invocador_id": "test_verdad_astronomica",
-      "secuencia": 11
+      }
     }
-  ]
+  ],
+  "n": 1
 }
