@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 12.2 — orquestador por contrato; CE = extension del Engine.
+Version 12.3 — orquestador por contrato; CE = extension del Engine.
 
 Principio
   - Descubre modulos por CONTENEDOR (roles y capacidades).
@@ -296,7 +296,7 @@ class Engine:
     segun salida_esperada de cada skill. No hardcodea nombres.
     """
 
-    VERSION = "12.2"
+    VERSION = "12.3"
 
     def __init__(
         self,
@@ -715,6 +715,22 @@ class Engine:
                 if kl.startswith("por_") and (k not in body or body[k] is None):
                     body[k] = relleno.get(k, {})
 
+        # 3) Si algun mandato pide sujetos/n_sujetos, garantizar presencia
+        pide_sujetos = False
+        for m in mandatos:
+            for clave in m.get("salida_esperada") or []:
+                if str(clave).strip().lower() in ("sujetos", "n_sujetos"):
+                    pide_sujetos = True
+                    break
+            if pide_sujetos:
+                break
+        if pide_sujetos:
+            if "sujetos" not in body or body["sujetos"] is None:
+                body["sujetos"] = relleno.get("sujetos", [])
+            if not isinstance(body["sujetos"], list):
+                body["sujetos"] = list(body["sujetos"]) if body["sujetos"] else []
+            body["n_sujetos"] = len(body["sujetos"])
+
     def _recortes_desde_peticion(
         self, peticion: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
@@ -1098,6 +1114,13 @@ class Engine:
         if segs and not _o_ausente(o_ctx):
             recortes_calc = self._ciclo_por_recortes(peticion, o_ctx, segs)
         relleno = self._relleno_desde_recortes(mandatos, recortes_calc)
+        # Bornes ce_mandato_sujetos: si hay recortes, anclar sujetos/n_sujetos
+        if recortes_calc:
+            relleno["sujetos"] = list(recortes_calc)
+            relleno["n_sujetos"] = len(recortes_calc)
+        else:
+            relleno.setdefault("sujetos", [])
+            relleno.setdefault("n_sujetos", 0)
 
         if _o_ausente(o_ctx):
             ids_cx = list((cx or {}).get("ids_cx_relevantes") or [])
