@@ -1,3 +1,4 @@
+# core/engine.py
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
@@ -658,6 +659,12 @@ class Engine:
         relleno: Optional[Dict[str, Any]] = None,
     ) -> None:
         relleno = relleno or {}
+        
+        # Volcamos todo el relleno dinámico al body forzosamente
+        for k, v in relleno.items():
+            if k not in body:
+                body[k] = v
+
         for m in mandatos:
             for clave in m.get("salida_esperada") or []:
                 key = str(clave).strip()
@@ -764,7 +771,8 @@ class Engine:
             for k, kl in zip(sal, sal_l):
                 if kl.startswith("n_") or kl.startswith("por_"):
                     continue
-                if kl in ("tru_ri", "tru_total", "c", "l", "k", "resultado_ciclo"):
+                # Filtramos las llaves operativas para encontrar la lista real (ej: 'sujetos')
+                if kl in ("tru_ri", "tru_total", "c", "l", "k", "resultado_ciclo", "categoria_tru", "escala_id", "citacion"):
                     continue
                 lista_key = k
                 break
@@ -776,16 +784,16 @@ class Engine:
             if lista_key:
                 relleno[lista_key] = list(recortes)
                 relleno["n_" + str(lista_key)] = len(recortes)
+                
+                # Generamos automáticamente el "por_..." (ej: por_sujeto)
+                singular = lista_key[:-1] if lista_key.endswith('s') else lista_key
+                relleno["por_" + str(singular)] = dict(por)
+
                 for k, kl in zip(sal, sal_l):
                     if kl.startswith("n_"):
                         relleno[k] = len(recortes)
                     if kl.startswith("por_"):
                         relleno[k] = dict(por)
-            for k, kl in zip(sal, sal_l):
-                if kl.startswith("por_") and k not in relleno:
-                    relleno[k] = dict(por)
-                if kl.startswith("n_") and k not in relleno:
-                    relleno[k] = len(recortes)
         return relleno
 
     def ejecutar_capacidad(
