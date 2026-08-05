@@ -118,7 +118,7 @@ class ContratoError(Exception):
 # ===============================================================
 ROLES: Tuple[str, ...] = (
     "CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "DI",
-    "RE", "VX", "TX", "CH", "CIT", "UI", "GL",
+    "RE", "VX", "TX", "CH", "CIT", "UI", "GL", "TT", "CE" "CC",
 )
 OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
 
