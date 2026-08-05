@@ -1,14 +1,14 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 10.0)
-Generado: 2026-08-05 00:28:03 UTC    Commit: 7a2a26e80f93
-Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas
-Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo
+VPSI-TRUTH (Versión 10.1)
+Generado: 2026-08-05 00:36:03 UTC    Commit: eb12bdfa51ec
+Orden: (1) Repo Tru  (2) Sujetos 1…N  (3) Último test  (4) Mapa
+Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
 ================================================================================
 
 ══════════════════════════════════════════════════════════════════════════════
-  AUDITORÍA DEL VPSI  ·  el repositorio como objeto
-  Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores LEÍDOS del ciclo
+  🗂  AUDITORÍA DEL VPSI  ·  Tru del repositorio
+  Tru_Ri y Tru_total del sistema (O_VPSI_REPO) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
   Estado     : ✅ OK
   permite_k  : True
@@ -24,7 +24,7 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   │  ✅ Tru_total  =  181/324                                 │
   │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
-  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
+  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
@@ -49,6 +49,15 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
 ══════════════════════════════════════════════════════════════════════════════
 
 ══════════════════════════════════════════════════════════════════════════════
+  👤  SUJETOS (S_1…S_N)  ·  Tru total por sujeto
+  Solo lectura · N = 0 depositado(s) por el ciclo · Omega no calcula
+══════════════════════════════════════════════════════════════════════════════
+  ⚪ Ningún sujeto depositado en el ciclo.
+  Cuando Engine deposite resultado.sujetos / por_sujeto,
+  aquí aparecerán automáticamente Tru_total de S_1…S_N.
+══════════════════════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════════════════════
   ÚLTIMO TEST EVALUADO
   Último ciclo real depositado (tests / uso) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
@@ -66,7 +75,7 @@ Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta to
   │  ✅ Tru_total  =  191/243                                 │
   │  ancla      α=26/27  β=1/27                           │
   └─────────────────────────────────────────────────────────┘
-  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado
+  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
@@ -90,6 +99,7 @@ ESTADO GLOBAL
   📦 Contenedores : 18
   ✅ Roles vacíos : 0
   ✅ Rechazados   : 0
+  ⚪ Sujetos (N)  : 0
   ✅ Salud        : OPERATIVO — listo para avanzar
 
 📦  MÓDULOS Y ROLES
@@ -120,7 +130,10 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ✅ Sin acciones pendientes.
+  ⚪ 1. [DATOS] sujetos
+     Detalle   : ciclo sin resultado.sujetos / por_sujeto
+     Impacto   : No se listan Tru_total de S_1…S_N
+     Acción    : Engine debe depositar totales por sujeto cuando el material tenga varios hablantes (catálogo TT tru_sujeto)
 
 ================================================================================
 ℹ️  SALUD POR CAPA
@@ -195,12 +208,13 @@ Rechazado:
 ================================================================================
 ✅  CIERRE
 ================================================================================
-  Versión Omega      : 10.0
+  Versión Omega      : 10.1
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 0
+  Acciones abiertas  : 1
   Bloqueantes        : 0
-  Sección 1          : Auditoría del VPSI (sistema) — LECTURA ABIERTA
-  Sección 2          : Último test evaluado — LECTURA ABIERTA
+  Sección 1          : Tru_Ri / Tru_total del repositorio — LECTURA
+  Sección 2          : Sujetos S_1…S_N (N=0) — LECTURA
+  Sección 3          : Último test — LECTURA
   Omega no inventa C/L/K/Tru; lee lo que el ciclo depositó.
   0 = cero real · UNDEFINED = base nula · no depositado = no vino
 ================================================================================
