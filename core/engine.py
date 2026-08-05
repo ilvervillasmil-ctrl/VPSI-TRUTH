@@ -1243,12 +1243,13 @@ class Engine:
             resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
         resultado["estado"] = "OK"
         return resultado
-    def auditar_estructura(self) -> Dict[str, Any]:
-        
+
+
 # ===================================================
 # AUDITORÍA
 # ===================================================
-def auditar_estructura(self) -> Dict[str, Any]:
+    def auditar_estructura(self) -> Dict[str, Any]:
+
     """
     ===========================================================
     AUDITORÍA ESTRUCTURAL DEL ENGINE (CONCIENCIA TOTAL Y NATIVA)
