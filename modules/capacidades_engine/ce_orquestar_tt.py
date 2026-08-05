@@ -1,59 +1,38 @@
+# modules/capacidades_engine/ce_mandato_catalogo.py
 # -*- coding: utf-8 -*-
 """
 Skill CE — exclusivo Engine.
 
-Mandato de sincronización: escala Tru (catálogo TT).
-Engine emite el mandato; cada módulo ejecuta su contrato.
+Mandato de sincronización: lectura del catálogo de escalas.
+Engine exige conocer las categorías disponibles.
 CE no calcula.
 """
 
 SKILL = {
-    "id": "ce_mandato_escala_tt",
-    "nombre": "Mandato: calcular escala Tru del catálogo TT",
+    "id": "ce_mandato_catalogo",
+    "nombre": "Mandato: leer inventario del catálogo TT",
     "enunciado": (
-        "Mandato del Engine a los módulos de oficio: "
-        "se pide valuación en la escala indicada por el catálogo TT "
-        "(categoria_tru / id de casilla). "
-        "Cada módulo aporta lo suyo en sincronía; "
-        "Engine deposita el resultado del ciclo. "
-        "CE no calcula."
+        "Mandato del Engine para descubrir las escalas de verdad declaradas. "
+        "El módulo TT expone sus IDs de categoría y CA las registra para el ciclo. "
+        "CE no calcula ni inventa escalas."
     ),
     "version": "1.0",
     "modulos_objetivo": [
         "tru_totales",
-        "contexto",
-        "correlacion_mecanica",
         "calculator",
-        "formulas",
-        "citacion",
-        "cache",
-        "taxonomia",
-        "axiomas",
     ],
-    "requiere_roles": ["TT", "CX", "MC", "CA", "FO", "CIT", "CH", "TX", "AX"],
-    "entrada": [
-        "categoria_tru",
-        "O_id",
-        "enunciado_O",
-        "material",
-    ],
+    "requiere_roles": ["TT", "CA"],
+    "entrada": [],
     "salida_esperada": [
-        "C",
-        "L",
-        "K",
-        "tru_ri",
-        "tru_total",
-        "categoria_tru",
-        "citacion",
+        "escalas_disponibles",
+        "ids_tt",
     ],
     "sincroniza_con": [
-        "ce_mandato_sujetos",
+        "ce_mandato_escala_tt",
     ],
-    "prioridad": 10,
+    "prioridad": 1,
     "notas": (
-        "Engine lanza el mandato. "
-        "TT aporta la casilla; CX el O; MC la correlación; "
-        "CA los factores; FO la fórmula; CIT/CH/TX/AX su oficio. "
-        "El conjunto en sincronía produce el depósito. CE solo declara el mandato."
+        "Es el paso previo a cualquier cálculo de escala. "
+        "Sin este mandato, Engine no sabe qué escalas puede exigir a CA."
     ),
 }
