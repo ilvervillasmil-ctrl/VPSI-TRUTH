@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-VPSI-TRUTH --- modules/c_citaciones/__init__.py
+VPSI-TRUTH --- modules/catalogo_citaciones/__init__.py
 
 Rol CC — catálogo de citaciones.
 
