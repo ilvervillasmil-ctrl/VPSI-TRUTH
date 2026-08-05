@@ -504,4 +504,7 @@ __all__ = [
     "CacheEvidencia",
     "verificar_salida_paquete",
     "verificar_salida",
+    "verificar_estructura_engine",
 ]
+
+
