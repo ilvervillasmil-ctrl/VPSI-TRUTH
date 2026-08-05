@@ -255,4 +255,4 @@ def por_id(skill_id: str):
 
 
 def listar() -> List[Dict[str, Any]]:
-    return [dict(s) for s in 
+    return [dict(s) for s in SKILLS]
