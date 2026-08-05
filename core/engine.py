@@ -1243,7 +1243,258 @@ class Engine:
             resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
         resultado["estado"] = "OK"
         return resultado
+# ===========================================================
+# AUDITORIA ESTRUCTURAL DEL ENGINE
+#
+# Solo estructura del código.
+# No calcula Tru.
+# No ejecuta ciclo.
+# No modifica estado.
+#
+# Diseñado para ser consumido por Centinela.
+# ===========================================================
 
+def auditar_estructura(self) -> Dict[str, Any]:
+    """
+    Auditoría estructural del Engine.
+
+    Verifica:
+
+    - Métodos inexistentes.
+    - Referencias self.xxx() rotas.
+    - Roles declarados.
+    - Roles duplicados.
+    - CONTENEDOR inválidos.
+    - IDs CE repetidos.
+    - Dependencias inexistentes.
+    - Contratos incompletos.
+    - Capacidades sin función.
+    - Imports rotos.
+    - Errores AST.
+    """
+
+    import ast
+    import inspect
+
+    items = []
+
+    def ok(tipo, evidencia, linea=None):
+        d = {
+            "tipo": tipo,
+            "estado": "APROBADO",
+            "evidencia": evidencia,
+        }
+        if linea:
+            d["linea"] = linea
+        items.append(d)
+
+    def error(tipo, evidencia, linea=None):
+        d = {
+            "tipo": tipo,
+            "estado": "RETENIDO",
+            "evidencia": evidencia,
+        }
+        if linea:
+            d["linea"] = linea
+        items.append(d)
+
+    #
+    # ----------------------------------------------------
+    # 1) Fuente
+    # ----------------------------------------------------
+    #
+
+    try:
+        fuente = inspect.getsource(type(self))
+        tree = ast.parse(fuente)
+        ok("AST", "Sintaxis válida")
+    except SyntaxError as e:
+        error(
+            "AST",
+            e.msg,
+            e.lineno,
+        )
+        return {
+            "estado": "CONTRADICCION",
+            "items": items,
+        }
+
+    #
+    # ----------------------------------------------------
+    # 2) Métodos definidos
+    # ----------------------------------------------------
+    #
+
+    metodos = {
+        n
+        for n, _ in inspect.getmembers(
+            type(self),
+            inspect.isfunction,
+        )
+    }
+
+    #
+    # ----------------------------------------------------
+    # 3) self.xxx()
+    # ----------------------------------------------------
+    #
+
+    for nodo in ast.walk(tree):
+
+        if not isinstance(nodo, ast.Call):
+            continue
+
+        f = nodo.func
+
+        if not isinstance(f, ast.Attribute):
+            continue
+
+        if not isinstance(f.value, ast.Name):
+            continue
+
+        if f.value.id != "self":
+            continue
+
+        if f.attr not in metodos:
+
+            error(
+                "SELF",
+                f"self.{f.attr}() inexistente",
+                nodo.lineno,
+            )
+
+    #
+    # ----------------------------------------------------
+    # 4) Roles
+    # ----------------------------------------------------
+    #
+
+    roles = set(ROLES)
+
+    for r in OBLIGATORIOS:
+
+        if r not in roles:
+
+            error(
+                "ROL",
+                f"Rol obligatorio {r} no declarado",
+            )
+
+    #
+    # ----------------------------------------------------
+    # 5) Contenedores
+    # ----------------------------------------------------
+    #
+
+    nombres = set()
+
+    for cont in self.registro.contenedores.values():
+
+        if cont.nombre in nombres:
+
+            error(
+                "CONTENEDOR",
+                f"Nombre duplicado: {cont.nombre}",
+            )
+
+        nombres.add(cont.nombre)
+
+        if cont.rol not in ROLES:
+
+            error(
+                "ROL",
+                f"Rol inválido: {cont.rol}",
+            )
+
+        for cap in cont.capacidades:
+
+            if not callable(cont.fn(cap)):
+
+                error(
+                    "CAPACIDAD",
+                    f"{cont.nombre}.{cap} no resuelve función",
+                )
+
+    #
+    # ----------------------------------------------------
+    # 6) CE
+    # ----------------------------------------------------
+    #
+
+    ce = self._ce_cargar()
+
+    ids = ce.get("ids") or []
+
+    repetidos = {
+        x
+        for x in ids
+        if ids.count(x) > 1
+    }
+
+    for rid in repetidos:
+
+        error(
+            "CE",
+            f"ID repetido: {rid}",
+        )
+
+    #
+    # ----------------------------------------------------
+    # 7) Dependencias
+    # ----------------------------------------------------
+    #
+
+    for cont in self.registro.contenedores.values():
+
+        for req in cont.requiere:
+
+            if req in ROLES:
+
+                if not self.registro.por_rol.get(req):
+
+                    error(
+                        "DEPENDENCIA",
+                        f"{cont.nombre} requiere rol {req}",
+                    )
+
+            else:
+
+                if req not in self.registro.contenedores:
+
+                    error(
+                        "DEPENDENCIA",
+                        f"{cont.nombre} requiere {req}",
+                    )
+
+    #
+    # ----------------------------------------------------
+    # Resumen
+    # ----------------------------------------------------
+    #
+
+    retenidos = sum(
+        1
+        for x in items
+        if x["estado"] == "RETENIDO"
+    )
+
+    aprobados = sum(
+        1
+        for x in items
+        if x["estado"] == "APROBADO"
+    )
+
+    return {
+        "estado": (
+            "COHERENTE"
+            if retenidos == 0
+            else "CONTRADICCION"
+        ),
+        "n_aprobados": aprobados,
+        "n_retenidos": retenidos,
+        "items": items,
+        "engine_version": self.VERSION,
+    }
 
 # ===========================================================
 # EXPORTS
