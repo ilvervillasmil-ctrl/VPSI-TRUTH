@@ -453,6 +453,17 @@ class Centinela:
             })
         except Exception:
             pass  # el veredicto en memoria ya se devolvió; cache best-effort de fase
+# ---------------------------------------------------------------------------
+# Verificación estructural del Engine en Centinela
+# ---------------------------------------------------------------------------
+def verificar_estructura_engine(self, engine) -> Dict[str, Any]:
+    """Verifica únicamente la estructura del Engine a través de su informe nativo. No calcula Tru. No modifica el Engine. No orquesta. No entra en módulos. Consume exclusivamente el informe emitido por Engine.auditar_estructura()."""
+    try: informe = engine.auditar_estructura()
+    except Exception as e: return {"estado": "RETENIDO", "motivos": ["No fue posible ejecutar Engine.auditar_estructura().", "{0}: {1}".format(type(e).__name__, e)]}
+    if not isinstance(informe, dict): return {"estado": "RETENIDO", "motivos": ["Engine.auditar_estructura() no devolvió un dict."]}
+    estado = str(informe.get("estado") or "").upper()
+    if estado == "COHERENTE": return {"estado": "APROBADO", "motivos": ["Auditoría estructural del Engine aprobada."], "informe": informe}
+    return {"estado": "RETENIDO", "motivos": ["La auditoría estructural del Engine detectó inconsistencias."], "informe": informe}
 
 
 # ---------------------------------------------------------------------------
