@@ -1245,9 +1245,9 @@ class Engine:
         return resultado
     def auditar_estructura(self) -> Dict[str, Any]:
         
-# ===========================================================
-# AUDITORÍA ESTRUCTURAL
-# ===========================================================
+# ===================================================
+# AUDITORÍA
+# ===================================================
 def auditar_estructura(self) -> Dict[str, Any]:
     """
     ===========================================================
@@ -1452,7 +1452,6 @@ def auditar_estructura(self) -> Dict[str, Any]:
         "items": items,
         "engine_version": getattr(self, "VERSION", "12.0"),
     }
-
 
 # ===========================================================
 # EXPORTS
