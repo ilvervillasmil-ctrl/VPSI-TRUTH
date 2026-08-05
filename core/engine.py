@@ -1513,4 +1513,6 @@ __all__ = [
     "EvaluacionError",
     "DominioError",
     "ContratoError",
+    "auditar_estructura",
 ]
+
