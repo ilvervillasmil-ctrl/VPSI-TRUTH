@@ -1,31 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 12.0 — orquestador por contrato + extension CE.
+Version 12.1 — orquestador por contrato; CE = extension del Engine.
 
 Principio
-  - Conoce la arquitectura solo por CONTENEDOR (roles, capacidades).
+  - Descubre modulos por CONTENEDOR (roles y capacidades).
   - Actua solo por lo que cada contrato declara.
-  - No inventa operaciones ni interpreta resultados de oficio ajeno.
-  - No sustituye la logica interna de un modulo.
-  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
-  - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
-  - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
-  - CE: extension del Engine (mandatos). CE no calcula.
-  - TT / CC / demas: se usan si el contrato y el mandato lo permiten.
-
-12.0
-  - Lee CE (ids/skills) en el ciclo.
-  - Recombina ciclos de oficio ya permitido (p. ej. por sujeto).
-  - Deposita resultado.sujetos / n_sujetos cuando aplica.
-  - Nuevos modulos/roles con CONTENEDOR valido se descubren al arrancar.
-  - La secuencia no es una jaula: el esqueleto seguro se mantiene;
-    los mandatos CE abren recortes adicionales dentro del contrato.
+  - CE no es un modulo ajeno: es extension del propio Engine.
+  - Todo archivo/mandato bajo CE se lee automaticamente.
+  - Engine no hardcodea "sujeto", "objeto" ni nombres de mandato:
+    deposita lo que cada skill declara en salida_esperada (u homologos).
+  - Nuevos mandatos en CE no exigen tocar este archivo.
+  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru. CX: marco. CIT: anuncio.
+  - Sin O usable → UNDEFINED. Nunca bool(UNDEFINED). No fabrica K/O.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import sys
 import traceback
@@ -61,9 +54,7 @@ def es_undefined(v: Any) -> bool:
 
 
 def _o_ausente(o: Any) -> bool:
-    if o is None:
-        return True
-    if es_undefined(o):
+    if o is None or es_undefined(o):
         return True
     if isinstance(o, str):
         s = o.strip()
@@ -90,30 +81,29 @@ def _truthy_pedido(v: Any) -> bool:
 # EXCEPCIONES
 # ===============================================================
 class ArranqueError(Exception):
-    """Incoherencia axiomatica, mecanica o dependencias faltantes."""
+    pass
 
 
 class EvaluacionError(Exception):
-    """Error en el camino de evaluacion."""
+    pass
 
 
 class DominioError(Exception):
-    """Error de dominio / O_context."""
+    pass
 
 
 class ContratoError(Exception):
-    """Contrato CONTENEDOR invalido o capacidad no resoluble."""
+    pass
 
 
 # ===============================================================
-# ROLES (admitidos al registrar; nuevos se agregan aqui cuando existan)
+# ROLES
 # ===============================================================
 ROLES: Tuple[str, ...] = (
     "CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "DI",
     "RE", "VX", "TX", "CH", "CIT", "UI", "GL", "TT", "CC", "CE",
 )
 OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
-
 
 ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "barrer": ("barrer", "verificar", "evaluar"),
@@ -132,6 +122,10 @@ ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "skills": ("skills",),
     "por_id": ("por_id",),
 }
+
+_CE_SKIP_IDS = frozenset({
+    "barrer", "verificar", "inventario", "ids", "skills", "listar_archivos",
+})
 
 
 # ===============================================================
@@ -238,32 +232,11 @@ class Registro:
 
 
 # ===============================================================
-# SEGMENTACION DETERMINISTA DE SUJETOS (recorte de material)
+# Material / recortes
 # ===============================================================
 _RE_HABLANTE = re.compile(
     r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
 )
-
-
-def _segmentar_sujetos(texto: str) -> List[Dict[str, Any]]:
-    """
-    Recorte determinista. No es semantica libre:
-    lineas 'Nombre: enunciado'. Si no hay, lista vacia.
-    """
-    if not texto or not str(texto).strip():
-        return []
-    hallados: List[Dict[str, Any]] = []
-    for m in _RE_HABLANTE.finditer(str(texto)):
-        nombre = m.group(1).strip()
-        cuerpo = m.group(2).strip()
-        if not nombre or not cuerpo:
-            continue
-        hallados.append({
-            "nombre": nombre,
-            "texto": cuerpo,
-            "indice": len(hallados) + 1,
-        })
-    return hallados
 
 
 def _texto_peticion(peticion: Dict[str, Any]) -> str:
@@ -282,19 +255,47 @@ def _texto_peticion(peticion: Dict[str, Any]) -> str:
     return ""
 
 
+def _segmentar_lineas_nombre(texto: str) -> List[Dict[str, Any]]:
+    if not texto or not str(texto).strip():
+        return []
+    out: List[Dict[str, Any]] = []
+    for m in _RE_HABLANTE.finditer(str(texto)):
+        nombre = m.group(1).strip()
+        cuerpo = m.group(2).strip()
+        if nombre and cuerpo:
+            out.append({
+                "indice": len(out) + 1,
+                "nombre": nombre,
+                "texto": cuerpo,
+            })
+    return out
+
+
+def _default_para_clave(clave: str) -> Any:
+    k = str(clave).strip().lower()
+    if k.startswith("n_") or k.endswith("_n") or k in ("n", "count"):
+        return 0
+    if k in ("sujetos", "por_sujeto", "items", "recortes", "lista"):
+        return [] if k != "por_sujeto" else {}
+    if k.startswith("por_"):
+        return {}
+    if k in ("tru_ri", "tru_total", "c", "l", "k"):
+        return None
+    return None
+
+
 # ===============================================================
 # ENGINE
 # ===============================================================
 class Engine:
     """
-    Orquestador v12.0
+    Orquestador v12.1
 
-    Descubre modulos por CONTENEDOR.
-    Consulta CE (mandatos) y recombina ciclos de oficio permitido.
-    No interpreta teoremas. No fabrica O/K.
+    CE es extension del Engine: lee todos los mandatos y deposita
+    segun salida_esperada de cada skill. No hardcodea nombres.
     """
 
-    VERSION = "12.0"
+    VERSION = "12.1"
 
     def __init__(
         self,
@@ -318,7 +319,6 @@ class Engine:
 
         self._descubrir()
         self._resolver_dependencias()
-
         if self.verificar_axiomas:
             self._ejecutar_compuertas()
 
@@ -332,16 +332,12 @@ class Engine:
         else:
             self.estado = "OPERATIVO"
 
-    # -----------------------------------------------------------
-    # Descubrimiento de modulos (todos los CONTENEDOR validos)
-    # -----------------------------------------------------------
     def _descubrir(self) -> None:
         if not self.raiz.exists():
             self.errores_arranque.append(
                 "Raiz de modulos no existe: {0}".format(self.raiz)
             )
             return
-
         for path in sorted(self.raiz.rglob("__init__.py")):
             try:
                 rel = path.relative_to(self.raiz)
@@ -369,7 +365,6 @@ class Engine:
         )
         if spec is None or spec.loader is None:
             return None
-
         mod = importlib.util.module_from_spec(spec)
         sys.modules[nombre_mod] = mod
         try:
@@ -380,7 +375,6 @@ class Engine:
                 "razon": "import: {0}: {1}".format(type(e).__name__, e),
             })
             return None
-
         meta = getattr(mod, "CONTENEDOR", None)
         if not isinstance(meta, dict):
             self.registro.rechazados.append({
@@ -388,25 +382,21 @@ class Engine:
                 "razon": "sin CONTENEDOR dict",
             })
             return None
-
         nombre = meta.get("nombre")
         rol = meta.get("rol")
         version = str(meta.get("version", "0.0"))
-
         if not nombre or not rol:
             self.registro.rechazados.append({
                 "ruta": str(path),
                 "razon": "CONTENEDOR sin nombre o rol",
             })
             return None
-
         if rol not in ROLES:
             self.registro.rechazados.append({
                 "ruta": str(path),
                 "razon": "rol desconocido: {0}".format(rol),
             })
             return None
-
         return Contenedor(
             nombre=str(nombre),
             rol=str(rol),
@@ -433,15 +423,8 @@ class Engine:
                     )
                 )
 
-    # -----------------------------------------------------------
-    # Ejecucion fail-closed por contrato
-    # -----------------------------------------------------------
     def _ejecutar_capacidad(
-        self,
-        cont: Contenedor,
-        capacidad: str,
-        *args: Any,
-        **kwargs: Any,
+        self, cont: Contenedor, capacidad: str, *args: Any, **kwargs: Any
     ) -> Any:
         fn = cont.fn(capacidad)
         if not callable(fn):
@@ -465,11 +448,7 @@ class Engine:
             return UNDEFINED
 
     def _ejecutar_oficio(
-        self,
-        cont: Contenedor,
-        oficio: str,
-        *args: Any,
-        **kwargs: Any,
+        self, cont: Contenedor, oficio: str, *args: Any, **kwargs: Any
     ) -> Any:
         fn = cont.fn_oficio(oficio)
         if not callable(fn):
@@ -510,7 +489,6 @@ class Engine:
                 self.errores_arranque.append(
                     "Falta rol obligatorio {0}".format(rol)
                 )
-
         for cont in self.registro.por_rol.get("MC", []):
             for cap in ("verificar", "barrer", "evaluar"):
                 if cont.tiene(cap):
@@ -526,7 +504,6 @@ class Engine:
                                 "MC/{0}: incoherente".format(cont.nombre)
                             )
                     break
-
         for cont in self.registro.por_rol.get("AX", []):
             for cap in ("verificar", "barrer", "evaluar"):
                 if cont.tiene(cap):
@@ -542,15 +519,11 @@ class Engine:
                                 "AX/{0}: incoherente".format(cont.nombre)
                             )
                     break
-
         try:
             self.get_constantes()
         except ArranqueError as e:
             self.errores_arranque.append(str(e))
 
-    # -----------------------------------------------------------
-    # Anclas CT / FO
-    # -----------------------------------------------------------
     def get_constantes(self) -> Dict[str, Fraction]:
         for cont in self.registro.por_rol.get("CT", []):
             mod = cont.modulo
@@ -561,9 +534,7 @@ class Engine:
             a_fn, b_fn = cont.fn("alpha"), cont.fn("beta")
             if callable(a_fn) and callable(b_fn):
                 return {"ALPHA": a_fn(), "BETA": b_fn()}
-        raise ArranqueError(
-            "Constantes ALPHA/BETA no disponibles (ancla CT)"
-        )
+        raise ArranqueError("Constantes ALPHA/BETA no disponibles (ancla CT)")
 
     def get_formulas(self):
         for cont in self.registro.por_rol.get("FO", []):
@@ -584,13 +555,16 @@ class Engine:
                 "Formulas tru_ri/tru_total no disponibles: {0}".format(e)
             )
 
-    # -----------------------------------------------------------
-    # CE — brazo del Engine (solo lectura de mandatos)
-    # -----------------------------------------------------------
-    def _ce_ids_skills(self) -> Dict[str, Any]:
+    def _ce_cargar(self) -> Dict[str, Any]:
         cont = self.registro.primero("CE")
         if cont is None:
-            return {"ids": [], "skills": [], "disponible": False}
+            return {
+                "disponible": False,
+                "ids": [],
+                "skills": [],
+                "por_id": {},
+                "n": 0,
+            }
         ids: List[str] = []
         skills: List[Dict[str, Any]] = []
         if cont.tiene("ids"):
@@ -603,76 +577,217 @@ class Engine:
                 for s in out:
                     if isinstance(s, dict) and s.get("id"):
                         skills.append(dict(s))
-        if not ids and skills:
-            ids = [str(s["id"]).strip().lower() for s in skills if s.get("id")]
-        # dedup estable
         vistos = set()
-        ids_u = []
+        ids_u: List[str] = []
         for i in ids:
             if i not in vistos:
                 vistos.add(i)
                 ids_u.append(i)
+        if not ids_u and skills:
+            for s in skills:
+                sid = str(s.get("id") or "").strip().lower()
+                if sid and sid not in vistos:
+                    vistos.add(sid)
+                    ids_u.append(sid)
+        por_id: Dict[str, Dict[str, Any]] = {}
+        for s in skills:
+            sid = str(s.get("id") or "").strip().lower()
+            if not sid:
+                continue
+            if cont.tiene("por_id") and "raw" not in s:
+                extra = self._ejecutar_capacidad(cont, "por_id", sid)
+                if isinstance(extra, dict):
+                    merged = dict(extra)
+                    merged.update(s)
+                    s = merged
+            por_id[sid] = s
         return {
-            "ids": ids_u,
-            "skills": skills,
             "disponible": True,
+            "ids": ids_u,
+            "skills": list(por_id.values()) if por_id else skills,
+            "por_id": por_id,
             "n": len(ids_u),
         }
 
-    def _mandatos_aplicables(
+    def _skill_meta(self, skill: Dict[str, Any]) -> Dict[str, Any]:
+        raw = skill.get("raw") if isinstance(skill.get("raw"), dict) else {}
+        base = dict(raw)
+        base.update({k: v for k, v in skill.items() if k != "raw"})
+        sid = str(base.get("id") or "").strip().lower()
+        salidas = (
+            base.get("salida_esperada")
+            or base.get("produce")
+            or base.get("salidas")
+            or []
+        )
+        if isinstance(salidas, str):
+            salidas = [salidas]
+        salidas = [str(x).strip() for x in salidas if str(x).strip()]
+        entradas = base.get("entrada") or base.get("requiere") or []
+        if isinstance(entradas, str):
+            entradas = [entradas]
+        entradas = [str(x).strip() for x in entradas if str(x).strip()]
+        return {
+            "id": sid,
+            "salida_esperada": salidas,
+            "entrada": entradas,
+            "nombre": base.get("nombre"),
+            "version": base.get("version"),
+            "raw": base,
+        }
+
+    def _mandatos_ciclo(self, ce: Dict[str, Any]) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for s in ce.get("skills") or []:
+            meta = self._skill_meta(s)
+            if not meta["id"] or meta["id"] in _CE_SKIP_IDS:
+                continue
+            out.append(meta)
+        known = {m["id"] for m in out}
+        for sid in ce.get("ids") or []:
+            if sid in _CE_SKIP_IDS or sid in known:
+                continue
+            por = (ce.get("por_id") or {}).get(sid) or {"id": sid}
+            out.append(self._skill_meta(por))
+        return out
+
+    def _depositar_segun_mandatos(
+        self,
+        body: Dict[str, Any],
+        mandatos: List[Dict[str, Any]],
+        relleno: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        relleno = relleno or {}
+        for m in mandatos:
+            for clave in m.get("salida_esperada") or []:
+                key = str(clave).strip()
+                if not key:
+                    continue
+                if key in body and body[key] not in (None,):
+                    continue
+                if key in relleno:
+                    body[key] = relleno[key]
+                else:
+                    body[key] = _default_para_clave(key)
+            sal = [str(x).strip().lower() for x in (m.get("salida_esperada") or [])]
+            for cand in list(sal):
+                if cand.startswith("n_"):
+                    base = cand[2:]
+                    if base and base not in body:
+                        body[base] = relleno.get(base, [])
+                    if cand not in body or body[cand] is None:
+                        base_val = body.get(base)
+                        body[cand] = len(base_val) if isinstance(base_val, list) else (
+                            relleno.get(cand, 0)
+                        )
+                if cand.startswith("por_") and cand not in body:
+                    body[cand] = relleno.get(cand, {})
+
+    def _recortes_desde_peticion(
+        self, peticion: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        for key in ("sujetos", "recortes", "items", "segmentos"):
+            raw = peticion.get(key)
+            if isinstance(raw, list) and raw:
+                segs: List[Dict[str, Any]] = []
+                for i, s in enumerate(raw, start=1):
+                    if isinstance(s, dict):
+                        nombre = str(
+                            s.get("nombre") or s.get("id") or "R{0}".format(i)
+                        )
+                        texto = str(
+                            s.get("texto") or s.get("mensaje") or s.get("D") or ""
+                        )
+                    else:
+                        nombre = "R{0}".format(i)
+                        texto = str(s)
+                    if texto.strip():
+                        segs.append({
+                            "indice": i,
+                            "nombre": nombre,
+                            "texto": texto,
+                        })
+                if segs:
+                    return segs
+        return _segmentar_lineas_nombre(_texto_peticion(peticion))
+
+    def _ciclo_por_recortes(
         self,
         peticion: Dict[str, Any],
-        ce: Dict[str, Any],
-    ) -> List[str]:
-        """
-        Que mandatos CE aplican a esta peticion.
-        No ejecuta skills: solo selecciona ids declarados.
-        """
-        ids = set(ce.get("ids") or [])
-        if not ids:
-            return []
-        aplicables: List[str] = []
-        escala = None
-        for k in ("escala_id", "categoria_tru", "id_escala", "escala"):
-            v = peticion.get(k)
-            if v is not None and str(v).strip():
-                escala = str(v).strip().lower()
+        o_ctx: Any,
+        segs: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for seg in segs:
+            p = dict(peticion)
+            p["mensaje"] = seg["texto"]
+            p["texto"] = seg["texto"]
+            p["descripcion"] = seg["texto"]
+            if not _o_ausente(o_ctx):
+                p.setdefault("contexto", o_ctx)
+                p.setdefault("O_context", o_ctx)
+            for k in ("C", "L", "K"):
+                p.pop(k, None)
+            ciclo = self._ciclo_factores_tru(p)
+            item = {
+                "indice": seg["indice"],
+                "nombre": seg["nombre"],
+                "texto": seg["texto"],
+                "estado": ciclo.get("estado"),
+            }
+            if ciclo.get("estado") == "OK":
+                item["C"] = ciclo["factores"]["C"]
+                item["L"] = ciclo["factores"]["L"]
+                item["K"] = ciclo["factores"]["K"]
+                item["tru_ri"] = ciclo["tru_ri"]
+                item["tru_total"] = ciclo["tru_total"]
+            else:
+                item["razon"] = ciclo.get("razon")
+                item["factores"] = ciclo.get("factores")
+            out.append(item)
+        return out
+
+    def _relleno_desde_recortes(
+        self,
+        mandatos: List[Dict[str, Any]],
+        recortes: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        relleno: Dict[str, Any] = {}
+        por = {
+            (r.get("nombre") or "R{0}".format(r.get("indice"))): r
+            for r in recortes
+        }
+        for m in mandatos:
+            sal = [str(x).strip() for x in (m.get("salida_esperada") or [])]
+            sal_l = [x.lower() for x in sal]
+            lista_key = None
+            for k, kl in zip(sal, sal_l):
+                if kl.startswith("n_") or kl.startswith("por_"):
+                    continue
+                if kl in ("tru_ri", "tru_total", "c", "l", "k", "resultado_ciclo"):
+                    continue
+                lista_key = k
                 break
-        pedido = peticion.get("mandatos") or peticion.get("ce_mandatos") or []
-        if isinstance(pedido, str):
-            pedido = [pedido]
-        pedido_l = {str(x).strip().lower() for x in pedido if str(x).strip()}
+            if lista_key is None:
+                for k, kl in zip(sal, sal_l):
+                    if not kl.startswith("n_") and not kl.startswith("por_"):
+                        lista_key = k
+                        break
+            if lista_key:
+                relleno[lista_key] = list(recortes)
+                relleno["n_" + str(lista_key)] = len(recortes)
+                for k, kl in zip(sal, sal_l):
+                    if kl.startswith("n_"):
+                        relleno[k] = len(recortes)
+                    if kl.startswith("por_"):
+                        relleno[k] = dict(por)
+            for k, kl in zip(sal, sal_l):
+                if kl.startswith("por_") and k not in relleno:
+                    relleno[k] = dict(por)
+                if kl.startswith("n_") and k not in relleno:
+                    relleno[k] = len(recortes)
+        return relleno
 
-        # explicitos
-        for mid in pedido_l:
-            if mid in ids and mid not in aplicables:
-                aplicables.append(mid)
-
-        # por escala / material
-        if "ce_mandato_catalogo" in ids and "ce_mandato_catalogo" not in aplicables:
-            aplicables.append("ce_mandato_catalogo")
-        if escala and "ce_mandato_escala_tt" in ids and "ce_mandato_escala_tt" not in aplicables:
-            aplicables.append("ce_mandato_escala_tt")
-        if escala and "ce_mandato_aplicar_escala" in ids and "ce_mandato_aplicar_escala" not in aplicables:
-            aplicables.append("ce_mandato_aplicar_escala")
-
-        texto = _texto_peticion(peticion)
-        segs = _segmentar_sujetos(texto)
-        sujetos_en_pet = peticion.get("sujetos")
-        multi = bool(segs) or (
-            isinstance(sujetos_en_pet, list) and len(sujetos_en_pet) > 0
-        )
-        if multi or escala == "tru_sujeto":
-            if "ce_mandato_sujetos" in ids and "ce_mandato_sujetos" not in aplicables:
-                aplicables.append("ce_mandato_sujetos")
-            if "ce_mandato_aplicar_escala" in ids and "ce_mandato_aplicar_escala" not in aplicables:
-                aplicables.append("ce_mandato_aplicar_escala")
-
-        return aplicables
-
-    # -----------------------------------------------------------
-    # API de oficio
-    # -----------------------------------------------------------
     def ejecutar_capacidad(
         self, rol: str, capacidad: str, *args: Any, **kwargs: Any
     ) -> Any:
@@ -689,11 +804,27 @@ class Engine:
             return UNDEFINED
         return self._ejecutar_oficio(cont, oficio, *args, **kwargs)
 
-    # -----------------------------------------------------------
-    # Evidencia
-    # -----------------------------------------------------------
     def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
         return list(self.resultados_evaluacion)
+
+    def _persistir_evaluaciones(self) -> None:
+        try:
+            root = self.raiz.parent if self.raiz.name == "modules" else self.raiz
+            path = root / "diagnostics" / "evaluaciones.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            doc = {
+                "engine_version": self.VERSION,
+                "invocador_id": self.invocador_id,
+                "resultados_evaluacion": list(self.resultados_evaluacion),
+                "resultados": list(self.resultados_evaluacion),
+                "n": len(self.resultados_evaluacion),
+            }
+            path.write_text(
+                json.dumps(doc, ensure_ascii=False, indent=2, default=str),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
 
     def _emit(
         self,
@@ -721,11 +852,9 @@ class Engine:
             "resultado": dict(resultado),
         }
         self.resultados_evaluacion.append(registro)
+        self._persistir_evaluaciones()
         return resultado
 
-    # -----------------------------------------------------------
-    # Ciclo
-    # -----------------------------------------------------------
     def _peticion_con_meta(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         p = dict(peticion or {})
         p.setdefault("invocador_id", self.invocador_id)
@@ -793,11 +922,9 @@ class Engine:
         try:
             tru_ri_fn, tru_total_fn = self.get_formulas()
             constantes = self.get_constantes()
-            ri = tru_ri_fn(C, L, K)
-            tt = tru_total_fn(C, L, K)
             return {
-                "tru_ri": ri,
-                "tru_total": tt,
+                "tru_ri": tru_ri_fn(C, L, K),
+                "tru_total": tru_total_fn(C, L, K),
                 "alpha": constantes["ALPHA"],
                 "beta": constantes["BETA"],
             }
@@ -832,67 +959,7 @@ class Engine:
             "tru_total": str(tru["tru_total"]),
             "alpha": str(tru["alpha"]),
             "beta": str(tru["beta"]),
-            "C": C,
-            "L": L,
-            "K": K,
         }
-
-    def _ciclo_por_sujetos(
-        self,
-        peticion: Dict[str, Any],
-        o_ctx: Any,
-    ) -> List[Dict[str, Any]]:
-        """
-        Recombina: un ciclo CA+FO por sujeto.
-        Segmentacion determinista o lista en peticion['sujetos'].
-        """
-        sujetos_in = peticion.get("sujetos")
-        segs: List[Dict[str, Any]] = []
-        if isinstance(sujetos_in, list) and sujetos_in:
-            for i, s in enumerate(sujetos_in, start=1):
-                if isinstance(s, dict):
-                    nombre = str(s.get("nombre") or s.get("id") or "S{0}".format(i))
-                    texto = str(s.get("texto") or s.get("mensaje") or "")
-                else:
-                    nombre = "S{0}".format(i)
-                    texto = str(s)
-                if texto.strip():
-                    segs.append({"indice": i, "nombre": nombre, "texto": texto})
-        if not segs:
-            segs = _segmentar_sujetos(_texto_peticion(peticion))
-
-        out: List[Dict[str, Any]] = []
-        for seg in segs:
-            p = dict(peticion)
-            p["mensaje"] = seg["texto"]
-            p["texto"] = seg["texto"]
-            p["descripcion"] = seg["texto"]
-            p.setdefault("escala_id", "tru_sujeto")
-            p.setdefault("categoria_tru", "tru_sujeto")
-            if not _o_ausente(o_ctx):
-                p.setdefault("contexto", o_ctx)
-                p.setdefault("O_context", o_ctx)
-            # no reutilizar C/L/K globales del padre
-            for k in ("C", "L", "K"):
-                p.pop(k, None)
-            ciclo = self._ciclo_factores_tru(p)
-            item = {
-                "indice": seg["indice"],
-                "nombre": seg["nombre"],
-                "texto": seg["texto"],
-                "estado": ciclo.get("estado"),
-            }
-            if ciclo.get("estado") == "OK":
-                item["C"] = ciclo["factores"]["C"]
-                item["L"] = ciclo["factores"]["L"]
-                item["K"] = ciclo["factores"]["K"]
-                item["tru_ri"] = ciclo["tru_ri"]
-                item["tru_total"] = ciclo["tru_total"]
-            else:
-                item["razon"] = ciclo.get("razon")
-                item["factores"] = ciclo.get("factores")
-            out.append(item)
-        return out
 
     def _cierre_cit(
         self,
@@ -902,7 +969,6 @@ class Engine:
     ) -> Optional[Dict[str, Any]]:
         pedir = _truthy_pedido(peticion.get("pedir_anuncio"))
         tipos: List[str] = list(peticion.get("tipos_peticion") or [])
-
         if cx:
             pedir = pedir or _truthy_pedido(cx.get("pedir_anuncio"))
             if not tipos:
@@ -912,10 +978,8 @@ class Engine:
                 pedir = pedir or _truthy_pedido(reg.get("pedir_anuncio"))
                 if not tipos:
                     tipos = list(reg.get("tipos_peticion") or [])
-
         if not pedir:
             return None
-
         cont = self.registro.primero("CIT")
         if cont is None:
             self.fallos.append({
@@ -928,7 +992,6 @@ class Engine:
                 "pedir_anuncio": True,
                 "tipos_peticion": tipos,
             }
-
         paquete = {
             "peticion": peticion,
             "contexto_cx": cx,
@@ -952,10 +1015,6 @@ class Engine:
         return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Orquesta un ciclo por contratos disponibles + mandatos CE.
-        No interpreta Tru. No inventa O ni factores.
-        """
         self.fallos = []
         peticion = self._peticion_con_meta(peticion)
 
@@ -968,19 +1027,21 @@ class Engine:
                 "engine_version": self.VERSION,
             }, peticion)
 
-        # --- CE: extension (mandatos a disposicion) ---
-        ce = self._ce_ids_skills()
-        mandatos = self._mandatos_aplicables(peticion, ce)
+        ce = self._ce_cargar()
+        mandatos = self._mandatos_ciclo(ce)
+        mandatos_ids = [m["id"] for m in mandatos]
 
-        # 1. Marco CX
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        # 2. Sin O usable
+        segs = self._recortes_desde_peticion(peticion)
+        recortes_calc: List[Dict[str, Any]] = []
+        if segs and not _o_ausente(o_ctx):
+            recortes_calc = self._ciclo_por_recortes(peticion, o_ctx, segs)
+        relleno = self._relleno_desde_recortes(mandatos, recortes_calc)
+
         if _o_ausente(o_ctx):
-            ids_cx = []
-            if cx is not None:
-                ids_cx = list(cx.get("ids_cx_relevantes") or [])
+            ids_cx = list((cx or {}).get("ids_cx_relevantes") or [])
             body: Dict[str, Any] = {
                 "estado": "UNDEFINED",
                 "razon": (
@@ -991,32 +1052,24 @@ class Engine:
                 "tru_ri": "UNDEFINED",
                 "tru_total": "UNDEFINED",
                 "ce_ids": ce.get("ids") or [],
-                "mandatos_aplicados": mandatos,
+                "mandatos_ce": mandatos_ids,
                 "valuacion": {
                     "capa_objeto": "indefinido",
                     "capa_meta": "anuncio_de_indefinido",
                     "es_error_sistema": False,
                     "ids": [
-                        "Def-5.3.1",
-                        "IND-D1",
-                        "IND-A1",
-                        "IND-A2",
-                        "IND-A4",
-                        "IND-A5",
-                        "IND-L1",
-                        "IND-T1",
-                        "IND-C2",
-                        "IND-C3",
+                        "Def-5.3.1", "IND-D1", "IND-A1", "IND-A2", "IND-A4",
+                        "IND-A5", "IND-L1", "IND-T1", "IND-C2", "IND-C3",
                     ] + ids_cx,
                     "nota": (
                         "Resultado de ciclo, no rechazo de arranque. "
-                        "Engine permanece OPERATIVO. "
                         "No se fabrica O ni K=0."
                     ),
                 },
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
+            self._depositar_segun_mandatos(body, mandatos, relleno)
             if cx is not None:
                 body["contexto_cx"] = {
                     "permite_k": cx.get("permite_k"),
@@ -1031,35 +1084,19 @@ class Engine:
                 body["citacion"] = cit
             return self._emit(body, peticion)
 
-        # 3. Recombinacion por mandato de sujetos (si aplica)
-        sujetos: List[Dict[str, Any]] = []
-        if "ce_mandato_sujetos" in mandatos or (
-            str(peticion.get("escala_id") or peticion.get("categoria_tru") or "")
-            .strip()
-            .lower()
-            == "tru_sujeto"
-        ):
-            sujetos = self._ciclo_por_sujetos(peticion, o_ctx)
-
-        # 4. Ciclo principal CA + FO (material completo / factores explicitos)
         ciclo = self._ciclo_factores_tru(peticion)
+
         if ciclo.get("estado") == "ERROR":
             body = {
                 "estado": "ERROR",
                 "razon": ciclo.get("razon"),
                 "contexto": o_ctx,
                 "ce_ids": ce.get("ids") or [],
-                "mandatos_aplicados": mandatos,
+                "mandatos_ce": mandatos_ids,
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
-            if sujetos:
-                body["sujetos"] = sujetos
-                body["n_sujetos"] = len(sujetos)
-                body["por_sujeto"] = {
-                    s.get("nombre") or "S{0}".format(s.get("indice")): s
-                    for s in sujetos
-                }
+            self._depositar_segun_mandatos(body, mandatos, relleno)
             if cx is not None:
                 body["contexto_cx"] = {
                     "permite_k": cx.get("permite_k"),
@@ -1074,17 +1111,11 @@ class Engine:
                 "contexto": o_ctx,
                 "factores": ciclo.get("factores"),
                 "ce_ids": ce.get("ids") or [],
-                "mandatos_aplicados": mandatos,
+                "mandatos_ce": mandatos_ids,
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
-            if sujetos:
-                body["sujetos"] = sujetos
-                body["n_sujetos"] = len(sujetos)
-                body["por_sujeto"] = {
-                    s.get("nombre") or "S{0}".format(s.get("indice")): s
-                    for s in sujetos
-                }
+            self._depositar_segun_mandatos(body, mandatos, relleno)
             if cx is not None:
                 body["contexto_cx"] = {
                     "permite_k": cx.get("permite_k"),
@@ -1107,17 +1138,11 @@ class Engine:
             "R_i_equals_R": False,
             "fuentes_usadas": ["X", "O_context"],
             "ce_ids": ce.get("ids") or [],
-            "mandatos_aplicados": mandatos,
+            "mandatos_ce": mandatos_ids,
             "fallos": list(self.fallos),
             "engine_version": self.VERSION,
         }
-        if sujetos:
-            body["sujetos"] = sujetos
-            body["n_sujetos"] = len(sujetos)
-            body["por_sujeto"] = {
-                s.get("nombre") or "S{0}".format(s.get("indice")): s
-                for s in sujetos
-            }
+        self._depositar_segun_mandatos(body, mandatos, relleno)
         if cx is not None:
             body["contexto_cx"] = {
                 "permite_k": cx.get("permite_k"),
@@ -1127,17 +1152,12 @@ class Engine:
                 "ids_cx_relevantes": cx.get("ids_cx_relevantes"),
                 "coherente": cx.get("coherente"),
             }
-
         cit = self._cierre_cit(peticion, cx, body)
         if cit is not None:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
-
         return self._emit(body, peticion)
 
-    # -----------------------------------------------------------
-    # Introspeccion
-    # -----------------------------------------------------------
     def censar(self) -> Dict[str, Any]:
         return self.registro.resumen()
 
@@ -1161,7 +1181,7 @@ class Engine:
             "informe_mecanica": self.informe_mecanica,
             "resultados_evaluacion": list(self.resultados_evaluacion),
             "resultados_evaluacion_n": len(self.resultados_evaluacion),
-            "ce": self._ce_ids_skills() if self.estado == "OPERATIVO" else {},
+            "ce": self._ce_cargar() if self.estado == "OPERATIVO" else {},
         }
 
     def censar_generatividad(self) -> Dict[str, Any]:
@@ -1170,10 +1190,8 @@ class Engine:
             resumen = self.censar()
         except Exception:
             resumen = {}
-
         roles_vacios = list(resumen.get("roles_vacios") or [])
         rechazados = list(resumen.get("rechazados") or [])
-
         if es_undefined(out) or not isinstance(out, dict):
             return {
                 "estado": "UNDEFINED",
@@ -1187,7 +1205,6 @@ class Engine:
                     "TR1 vive en AX, no en Engine."
                 ),
             }
-
         resultado = dict(out)
         resultado["roles_vacios"] = roles_vacios
         resultado["rechazados_n"] = len(rechazados)
