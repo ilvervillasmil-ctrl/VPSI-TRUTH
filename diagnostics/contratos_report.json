@@ -1224,15 +1224,100 @@
       ],
       "nombre": "tru_totales",
       "version": "1.1"
+    },
+    "CC": {
+      "modulos": [
+        "citaciones"
+      ],
+      "obligatorio": false,
+      "presente": true,
+      "n_modulos": 1,
+      "claves_contrato": [
+        "verificar",
+        "barrer",
+        "inventario",
+        "categorias",
+        "por_id",
+        "ids",
+        "esquema"
+      ],
+      "esperado": [],
+      "resolucion": [
+        {
+          "clave": "verificar",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "barrer",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "barrer"
+        },
+        {
+          "clave": "inventario",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "inventario"
+        },
+        {
+          "clave": "categorias",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "categorias"
+        },
+        {
+          "clave": "por_id",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "por_id"
+        },
+        {
+          "clave": "ids",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "ids"
+        },
+        {
+          "clave": "esquema",
+          "callable": true,
+          "modulo": "citaciones",
+          "rol": "CC",
+          "version": "1.0",
+          "ok": true,
+          "fn_name": "esquema"
+        }
+      ],
+      "nombre": "citaciones",
+      "version": "1.0"
     }
   },
   "resumen": {
-    "roles_totales": 17,
-    "roles_presentes": 17,
+    "roles_totales": 18,
+    "roles_presentes": 18,
     "roles_obligatorios": 5,
-    "contratos_validos": 17,
+    "contratos_validos": 18,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 93,
+    "capacidades_verificadas": 100,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 0,
