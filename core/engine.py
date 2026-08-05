@@ -123,6 +123,7 @@ ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "por_id": ("por_id",),
 }
 
+# Claves de skill que no son mandatos de ciclo (introspeccion)
 _CE_SKIP_IDS = frozenset({
     "barrer", "verificar", "inventario", "ids", "skills", "listar_archivos",
 })
@@ -232,7 +233,7 @@ class Registro:
 
 
 # ===============================================================
-# Material / recortes
+# Material / recortes (determinista; sin semantica libre)
 # ===============================================================
 _RE_HABLANTE = re.compile(
     r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
@@ -289,7 +290,7 @@ def _default_para_clave(clave: str) -> Any:
 # ===============================================================
 class Engine:
     """
-    Orquestador v12.2
+    Orquestador v12.1
 
     CE es extension del Engine: lee todos los mandatos y deposita
     segun salida_esperada de cada skill. No hardcodea nombres.
@@ -332,6 +333,9 @@ class Engine:
         else:
             self.estado = "OPERATIVO"
 
+    # -----------------------------------------------------------
+    # Descubrimiento
+    # -----------------------------------------------------------
     def _descubrir(self) -> None:
         if not self.raiz.exists():
             self.errores_arranque.append(
@@ -423,6 +427,9 @@ class Engine:
                     )
                 )
 
+    # -----------------------------------------------------------
+    # Ejecucion por contrato
+    # -----------------------------------------------------------
     def _ejecutar_capacidad(
         self, cont: Contenedor, capacidad: str, *args: Any, **kwargs: Any
     ) -> Any:
@@ -555,7 +562,14 @@ class Engine:
                 "Formulas tru_ri/tru_total no disponibles: {0}".format(e)
             )
 
+    # -----------------------------------------------------------
+    # CE = extension del Engine (lee TODO automaticamente)
+    # -----------------------------------------------------------
     def _ce_cargar(self) -> Dict[str, Any]:
+        """
+        Carga ids + skills completos desde el contrato CE.
+        No filtra por nombre de mandato. Todo lo valido queda a disposicion.
+        """
         cont = self.registro.primero("CE")
         if cont is None:
             return {
@@ -577,6 +591,7 @@ class Engine:
                 for s in out:
                     if isinstance(s, dict) and s.get("id"):
                         skills.append(dict(s))
+        # dedup ids
         vistos = set()
         ids_u: List[str] = []
         for i in ids:
@@ -594,6 +609,7 @@ class Engine:
             sid = str(s.get("id") or "").strip().lower()
             if not sid:
                 continue
+            # enriquecer con raw si CE lo expuso via por_id
             if cont.tiene("por_id") and "raw" not in s:
                 extra = self._ejecutar_capacidad(cont, "por_id", sid)
                 if isinstance(extra, dict):
@@ -610,6 +626,7 @@ class Engine:
         }
 
     def _skill_meta(self, skill: Dict[str, Any]) -> Dict[str, Any]:
+        """Normaliza campos del contrato del skill sin imponer nombres."""
         raw = skill.get("raw") if isinstance(skill.get("raw"), dict) else {}
         base = dict(raw)
         base.update({k: v for k, v in skill.items() if k != "raw"})
@@ -637,12 +654,14 @@ class Engine:
         }
 
     def _mandatos_ciclo(self, ce: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Todos los skills CE que son mandatos de ciclo (no introspeccion)."""
         out: List[Dict[str, Any]] = []
         for s in ce.get("skills") or []:
             meta = self._skill_meta(s)
             if not meta["id"] or meta["id"] in _CE_SKIP_IDS:
                 continue
             out.append(meta)
+        # skills solo como id sin detalle
         known = {m["id"] for m in out}
         for sid in ce.get("ids") or []:
             if sid in _CE_SKIP_IDS or sid in known:
@@ -699,6 +718,10 @@ class Engine:
     def _recortes_desde_peticion(
         self, peticion: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
+        """
+        Recortes de material si la peticion o el texto los traen.
+        Generico: lista 'sujetos'/'recortes'/'items' o lineas Nombre:.
+        """
         for key in ("sujetos", "recortes", "items", "segmentos"):
             raw = peticion.get(key)
             if isinstance(raw, list) and raw:
@@ -802,8 +825,7 @@ class Engine:
             if lista_key:
                 relleno[lista_key] = list(recortes)
                 relleno["n_" + str(lista_key)] = len(recortes)
-                singular = lista_key[:-1] if lista_key.endswith("s") else lista_key
-                relleno["por_" + str(singular)] = dict(por)
+            # Solo generar n_/por_ si el mandato lo declaro en salida_esperada
             for k, kl in zip(sal, sal_l):
                 if kl.startswith("n_"):
                     relleno[k] = len(recortes)
@@ -811,6 +833,9 @@ class Engine:
                     relleno[k] = dict(por)
         return relleno
 
+    # -----------------------------------------------------------
+    # API
+    # -----------------------------------------------------------
     def ejecutar_capacidad(
         self, rol: str, capacidad: str, *args: Any, **kwargs: Any
     ) -> Any:
@@ -831,7 +856,12 @@ class Engine:
         return list(self.resultados_evaluacion)
 
     def _persistir_evaluaciones(self) -> None:
+        """
+        Escribe diagnostics/evaluaciones.json con el historial de ciclos.
+        Permite a Omega / diagnostico leer el deposito.
+        """
         try:
+            # raiz del repo = padre de modules/
             root = self.raiz.parent if self.raiz.name == "modules" else self.raiz
             path = root / "diagnostics" / "evaluaciones.json"
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -1038,6 +1068,10 @@ class Engine:
         return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ciclo por contratos + extension CE.
+        CE se lee entero; el deposito sigue salida_esperada de cada mandato.
+        """
         self.fallos = []
         peticion = self._peticion_con_meta(peticion)
 
@@ -1050,6 +1084,7 @@ class Engine:
                 "engine_version": self.VERSION,
             }, peticion)
 
+        # --- CE: extension completa ---
         ce = self._ce_cargar()
         mandatos = self._mandatos_ciclo(ce)
         mandatos_ids = [m["id"] for m in mandatos]
@@ -1057,6 +1092,7 @@ class Engine:
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
+        # Recortes de material (si hay)
         segs = self._recortes_desde_peticion(peticion)
         recortes_calc: List[Dict[str, Any]] = []
         if segs and not _o_ausente(o_ctx):
@@ -1092,6 +1128,7 @@ class Engine:
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
+            # deposito segun contratos CE aunque el ciclo sea UNDEFINED
             self._depositar_segun_mandatos(body, mandatos, relleno)
             if cx is not None:
                 body["contexto_cx"] = {
