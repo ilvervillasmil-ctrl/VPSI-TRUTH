@@ -1265,7 +1265,7 @@ def auditar_estructura(self) -> Dict[str, Any]:
     - Roles declarados.
     - Roles duplicados.
     - CONTENEDOR inválidos.
-    - IDs CE repetidos.
+    - IDs del repositorio / CE repetidos o inconsistentes.
     - Dependencias inexistentes.
     - Contratos incompletos.
     - Capacidades sin función.
@@ -1417,12 +1417,11 @@ def auditar_estructura(self) -> Dict[str, Any]:
 
     #
     # ----------------------------------------------------
-    # 6) CE
+    # 6) IDs
     # ----------------------------------------------------
     #
 
-    ce = self._ce_cargar()
-
+    ce = self._ce_ids_skills()
     ids = ce.get("ids") or []
 
     repetidos = {
@@ -1434,7 +1433,7 @@ def auditar_estructura(self) -> Dict[str, Any]:
     for rid in repetidos:
 
         error(
-            "CE",
+            "IDS",
             f"ID repetido: {rid}",
         )
 
@@ -1495,6 +1494,7 @@ def auditar_estructura(self) -> Dict[str, Any]:
         "items": items,
         "engine_version": self.VERSION,
     }
+
 
 # ===========================================================
 # EXPORTS
