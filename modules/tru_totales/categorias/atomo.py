@@ -1,3 +1,4 @@
+# modules/tru_totales/categorias/atomo.py
 # -*- coding: utf-8 -*-
 """
 modules/tru_totales/categorias/atomo.py
@@ -27,4 +28,5 @@ CATEGORIA = {
         "Tru_total",
     ],
     "agrega_desde": [],
-    "notas": "Escala mínima del catálogo TT.",
+    "notas": "Escala mínima del catálogo TT."
+}
