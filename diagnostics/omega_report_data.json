@@ -313,40 +313,25 @@
         "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1/8"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "1/8",
-        "tru_total": "17/108",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "tru_ri": "1/8",
-      "tru_total": "17/108",
+      "estado": "PARCIAL",
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_claude_dentro_del_repo",
       "invocador_id": "test_claude_dentro_del_repo",
       "secuencia": 1
@@ -358,43 +343,28 @@
         "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones."
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
         "factores": {
-          "C": "19/20",
-          "L": "1",
-          "K": "7/200"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "133/4000",
-        "tru_total": "1243/18000",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "19/20",
-      "L": "1",
-      "K": "7/200",
-      "tru_ri": "133/4000",
-      "tru_total": "1243/18000",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_contradiccion_estructural_interna",
       "invocador_id": "test_contradiccion_estructural_interna",
       "secuencia": 2
@@ -415,38 +385,23 @@
         ]
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "1",
-        "tru_total": "1",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "secuencia",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
+      "estado": "PARCIAL",
       "origen": "test_conversacion_estrellas",
       "invocador_id": "test_conversacion_estrellas",
       "secuencia": 3
@@ -460,43 +415,28 @@
         "turno": 1
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1/4"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "1/4",
-        "tru_total": "5/18",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "1/4",
-      "tru_ri": "1/4",
-      "tru_total": "5/18",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 4
@@ -510,43 +450,28 @@
         "turno": 2
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "1/4"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "1/4",
-        "tru_total": "5/18",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "1/4",
-      "tru_ri": "1/4",
-      "tru_total": "5/18",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 5
@@ -560,43 +485,28 @@
         "turno": 3
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "0"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "0",
-        "tru_total": "1/27",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "0",
-      "tru_ri": "0",
-      "tru_total": "1/27",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 6
@@ -610,43 +520,28 @@
         "turno": 4
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "0"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "0",
-        "tru_total": "1/27",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "0",
-      "tru_ri": "0",
-      "tru_total": "1/27",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 7
@@ -660,43 +555,28 @@
         "turno": 5
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "0"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "0",
-        "tru_total": "1/27",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "0",
-      "tru_ri": "0",
-      "tru_total": "1/27",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 8
@@ -710,43 +590,28 @@
         "turno": 6
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "0"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "0",
-        "tru_total": "1/27",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "0",
-      "tru_ri": "0",
-      "tru_total": "1/27",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_conversacion",
       "invocador_id": "test_conversacion",
       "secuencia": 9
@@ -758,43 +623,28 @@
         "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna."
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "0"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "0",
-        "tru_total": "1/27",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "0",
-      "tru_ri": "0",
-      "tru_total": "1/27",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_paradoja_mentiroso",
       "invocador_id": "test_paradoja_mentiroso",
       "secuencia": 10
@@ -806,43 +656,28 @@
         "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea."
       },
       "resultado": {
-        "estado": "OK",
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
         "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
         "factores": {
-          "C": "1",
-          "L": "1",
-          "K": "7/9"
+          "C": null,
+          "L": null,
+          "K": null
         },
-        "tru_ri": "7/9",
-        "tru_total": "191/243",
-        "alpha": "26/27",
-        "beta": "1/27",
-        "R_i_equals_R": false,
-        "fuentes_usadas": [
-          "X",
-          "O_context"
-        ],
         "fallos": [],
         "engine_version": "11.1",
         "contexto_cx": {
           "permite_k": true,
           "pedir_anuncio": false,
-          "tipos_peticion": [],
-          "modo_entrada": "auditoria",
-          "ids_cx_relevantes": [
-            "CX-A14",
-            "CX-A1",
-            "CX-C4"
-          ],
-          "coherente": false
+          "tipos_peticion": []
         }
       },
-      "estado": "OK",
-      "C": "1",
-      "L": "1",
-      "K": "7/9",
-      "tru_ri": "7/9",
-      "tru_total": "191/243",
+      "estado": "PARCIAL",
+      "C": null,
+      "L": null,
+      "K": null,
+      "tru_ri": null,
+      "tru_total": null,
       "origen": "test_verdad_astronomica",
       "invocador_id": "test_verdad_astronomica",
       "secuencia": 11
@@ -968,10 +803,10 @@
         {
           "nombre": "calculator",
           "rol": "CA",
-          "version": "2.0",
+          "version": "1.2",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/calculator/__init__.py",
-          "descripcion": "Calcula C, L, K bajo anclas de medición (AM v1.0). C/L UNDEFINED = base nula (AM-D6 / AM-A3). K is None = sin O_context (contrato público / Def-5.3.1). No calcula Tru_Ri ni Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py v2. barrer = centinela de carpeta + smoke de anclas. Las mejoras futuras de fórmula viven en los submódulos; este orquestador solo exige las APIs públicas.",
+          "descripcion": "Calcula C, L, K. None = dato no disponible. Sin contexto/O, K queda None (Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. verificar = centinela de carpeta; calcular = oficio de factores.",
           "capacidades": {
             "calcular": "calcular",
             "verificar": "barrer",
@@ -1608,7 +1443,7 @@
       },
       "calculator": {
         "contenedor": "calculator",
-        "version": "2.0",
+        "version": "1.2",
         "rol": "CA",
         "archivos": [
           "coherencia.py",
@@ -1619,19 +1454,12 @@
         ],
         "factores_api": [
           "C",
-          "L",
-          "K"
+          "K",
+          "L"
         ],
         "conteos_disponible": true,
-        "versiones": {
-          "C": "2.0",
-          "L": "2.0",
-          "K": "2.0",
-          "conteos": "3.2",
-          "orquestador": "2.0"
-        },
         "coherente": true,
-        "funcion": "Calcula C, L, K bajo anclas de medición (AM). C/L UNDEFINED = base nula (AM-D6). K is None = sin O_context (contrato público / Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. barrer = centinela de carpeta + smoke de anclas."
+        "funcion": "Calcula C, L, K. No calcula Tru. K ausente sin contexto/O (Def-5.3.1). Si metodo=operacional y faltan conteos, los produce conteos.py."
       },
       "capacidades_engine": {
         "contenedor": "capacidades_engine",
@@ -2814,22 +2642,14 @@
           "pedir_anuncio": true
         },
         "resultado": {
-          "estado": "OK",
+          "estado": "PARCIAL",
+          "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
           "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
           "factores": {
-            "C": "1",
-            "L": "1",
-            "K": "13/24"
+            "C": null,
+            "L": null,
+            "K": null
           },
-          "tru_ri": "13/24",
-          "tru_total": "181/324",
-          "alpha": "26/27",
-          "beta": "1/27",
-          "R_i_equals_R": false,
-          "fuentes_usadas": [
-            "X",
-            "O_context"
-          ],
           "fallos": [],
           "engine_version": "11.1",
           "contexto_cx": {
@@ -2842,18 +2662,7 @@
               "dame_limites",
               "dame_evidencia",
               "por_que_valor"
-            ],
-            "modo_entrada": "auditoria",
-            "ids_cx_relevantes": [
-              "CX-A14",
-              "CX-A1",
-              "CX-C4",
-              "PA-A1",
-              "PA-A2",
-              "PA-T1",
-              "PA-C2"
-            ],
-            "coherente": false
+            ]
           },
           "citacion": {
             "estado": "OK",
@@ -2864,11 +2673,11 @@
               {
                 "titulo": "[citacion] CIT-CICLO",
                 "tipo": "citacion",
-                "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=OK; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
+                "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
                 "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
                 "evidencia_ref": "ciclo:omega_report:v11.1",
                 "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
-                "contexto_ciclo": "OK"
+                "contexto_ciclo": "PARCIAL"
               }
             ],
             "tipos_peticion": [
@@ -3286,7 +3095,7 @@
             "callable": true,
             "modulo": "calculator",
             "rol": "CA",
-            "version": "2.0",
+            "version": "1.2",
             "ok": true,
             "fn_name": "calcular"
           },
@@ -3295,7 +3104,7 @@
             "callable": true,
             "modulo": "calculator",
             "rol": "CA",
-            "version": "2.0",
+            "version": "1.2",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -3304,7 +3113,7 @@
             "callable": true,
             "modulo": "calculator",
             "rol": "CA",
-            "version": "2.0",
+            "version": "1.2",
             "ok": true,
             "fn_name": "inventario"
           },
@@ -3313,7 +3122,7 @@
             "callable": true,
             "modulo": "calculator",
             "rol": "CA",
-            "version": "2.0",
+            "version": "1.2",
             "ok": true,
             "fn_name": "extraer_conteos"
           },
@@ -3322,13 +3131,13 @@
             "callable": true,
             "modulo": "calculator",
             "rol": "CA",
-            "version": "2.0",
+            "version": "1.2",
             "ok": true,
             "fn_name": "inyectar_en_peticion"
           }
         ],
         "nombre": "calculator",
-        "version": "2.0"
+        "version": "1.2"
       },
       "CX": {
         "modulos": [
@@ -4339,108 +4148,79 @@
     "invocador_id": "ci_auditoria"
   },
   "auditoria_vpsi": {
-    "estado": "OK",
-    "C": "1",
-    "L": "1",
-    "K": "13/24",
-    "tru_ri": "13/24",
-    "tru_total": "181/324",
+    "estado": "PARCIAL",
+    "C": null,
+    "L": null,
+    "K": null,
+    "tru_ri": null,
+    "tru_total": null,
     "tru_ri_repositorio": null,
     "tru_total_repositorio": null,
-    "alpha": "26/27",
-    "beta": "1/27",
+    "alpha": null,
+    "beta": null,
     "taxonomia": null,
     "citas": [
-      "CX-A14",
-      "CX-A1",
-      "CX-C4",
-      "PA-A1",
-      "PA-A2",
-      "PA-T1",
-      "PA-C2",
       "[citacion] CIT-CICLO"
     ],
-    "razon": null,
+    "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
     "permite_k": true,
     "origen": "omega_report:PETICION_AUDITORIA_VPSI",
     "secuencia": 1,
     "n_citas": 1,
     "n_anuncios": 1,
-    "fuentes_usadas": [
-      "X",
-      "O_context"
-    ],
+    "fuentes_usadas": [],
     "fallos": [],
     "engine_version": "11.1",
-    "modo_entrada": "auditoria",
-    "ids_cx": [
-      "CX-A14",
-      "CX-A1",
-      "CX-C4",
-      "PA-A1",
-      "PA-A2",
-      "PA-T1",
-      "PA-C2"
-    ],
-    "coherente_cx": false,
+    "modo_entrada": null,
+    "ids_cx": [],
+    "coherente_cx": null,
     "contexto_texto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
     "categoria_tru": null,
     "sujetos": [],
     "n_sujetos": 0,
     "lectura": {
-      "C": true,
-      "L": true,
-      "K": true,
-      "tru_ri": true,
-      "tru_total": true
+      "C": false,
+      "L": false,
+      "K": false,
+      "tru_ri": false,
+      "tru_total": false
     }
   },
   "ultimo_test": {
-    "estado": "OK",
-    "C": "1",
-    "L": "1",
-    "K": "7/9",
-    "tru_ri": "7/9",
-    "tru_total": "191/243",
+    "estado": "PARCIAL",
+    "C": null,
+    "L": null,
+    "K": null,
+    "tru_ri": null,
+    "tru_total": null,
     "tru_ri_repositorio": null,
     "tru_total_repositorio": null,
-    "alpha": "26/27",
-    "beta": "1/27",
+    "alpha": null,
+    "beta": null,
     "taxonomia": null,
-    "citas": [
-      "CX-A14",
-      "CX-A1",
-      "CX-C4"
-    ],
-    "razon": null,
+    "citas": [],
+    "razon": "Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)",
     "permite_k": true,
     "origen": "test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
     "secuencia": 11,
     "n_citas": null,
     "n_anuncios": null,
-    "fuentes_usadas": [
-      "X",
-      "O_context"
-    ],
+    "fuentes_usadas": [],
     "fallos": [],
     "engine_version": "11.1",
-    "modo_entrada": "auditoria",
-    "ids_cx": [
-      "CX-A14",
-      "CX-A1",
-      "CX-C4"
-    ],
-    "coherente_cx": false,
+    "modo_entrada": null,
+    "ids_cx": [],
+    "coherente_cx": null,
     "contexto_texto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
     "categoria_tru": null,
     "sujetos": [],
     "n_sujetos": 0,
     "lectura": {
-      "C": true,
-      "L": true,
-      "K": true,
-      "tru_ri": true,
-      "tru_total": true
+      "C": false,
+      "L": false,
+      "K": false,
+      "tru_ri": false,
+      "tru_total": false
     }
   },
   "informe_mecanica": {
@@ -4720,10 +4500,10 @@
       {
         "nombre": "calculator",
         "rol": "CA",
-        "version": "2.0",
+        "version": "1.2",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/calculator/__init__.py",
-        "descripcion": "Calcula C, L, K bajo anclas de medición (AM v1.0). C/L UNDEFINED = base nula (AM-D6 / AM-A3). K is None = sin O_context (contrato público / Def-5.3.1). No calcula Tru_Ri ni Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py v2. barrer = centinela de carpeta + smoke de anclas. Las mejoras futuras de fórmula viven en los submódulos; este orquestador solo exige las APIs públicas.",
+        "descripcion": "Calcula C, L, K. None = dato no disponible. Sin contexto/O, K queda None (Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. verificar = centinela de carpeta; calcular = oficio de factores.",
         "capacidades": {
           "calcular": "calcular",
           "verificar": "barrer",
@@ -5386,11 +5166,9 @@
   "informe_calculator": {
     "contenedor": "calculator",
     "rol": "CA",
-    "version": "2.0",
     "coherente": true,
     "errores": [],
     "choques": [],
-    "avisos": [],
     "archivos": [
       "coherencia.py",
       "conteos.py",
@@ -5400,21 +5178,14 @@
     ],
     "factores_api": [
       "C",
-      "L",
-      "K"
+      "K",
+      "L"
     ],
     "archivos_extra": [
       "escalas_ids"
     ],
     "conteos_disponible": true,
-    "versiones": {
-      "C": "2.0",
-      "L": "2.0",
-      "K": "2.0",
-      "conteos": "3.2",
-      "orquestador": "2.0"
-    },
-    "nota": "conteos.py produce k/m, r/p, f/c bajo anclas AM; base nula C/L → UNDEFINED; sin O → K is None; CA no calcula Tru (FO)."
+    "nota": "conteos.py produce k/m, r/p, f/c para la ruta operacional; archivos_extra son candidatos a nuevos factores"
   },
   "tests": {
     "total": 147,

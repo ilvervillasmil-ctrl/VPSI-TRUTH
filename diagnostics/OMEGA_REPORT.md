@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.1)
-Generado: 2026-08-05 01:31:03 UTC    Commit: aa16fdcf14c5
+Generado: 2026-08-05 01:44:24 UTC    Commit: 76a6cdd5b498
 Orden: (1) Repo Tru  (2) Sujetos 1…N  (3) Último test  (4) Mapa
 Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
 ================================================================================
@@ -10,41 +10,30 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
   🗂  AUDITORÍA DEL VPSI  ·  Tru del repositorio
   Tru_Ri y Tru_total del sistema (O_VPSI_REPO) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ✅ OK
+  Estado     : ⚠️ PARCIAL
+  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
-  Factores leídos: 3/3  (C=✅ L=✅ K=✅)
+  Factores leídos: 0/3  (C=⚪ L=⚪ K=⚪)
   ┌─────────────────────────────────────────────────────────┐
-  │  ✅ C (coherencia  ) =  1                               │
-  │  ✅ L (lógica      ) =  1                               │
-  │  ✅ K (correlación ) =  13/24                           │
+  │  ⚪ C (coherencia  ) =  no depositado                   │
+  │  ⚪ L (lógica      ) =  no depositado                   │
+  │  ⚪ K (correlación ) =  no depositado                   │
   │─────────────────────────────────────────────────────────│
-  │  ✅ Tru_Ri     =  13/24                                   │
-  │  ✅ Tru_total  =  181/324                                 │
-  │  ancla      α=26/27  β=1/27                           │
+  │  ⚪ Tru_Ri     =  no depositado                           │
+  │  ⚪ Tru_total  =  no depositado                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
   📎 Citas (teoremas / axiomas / normas):
-       1. CX-A14
-       2. CX-A1
-       3. CX-C4
-       4. PA-A1
-       5. PA-A2
-       6. PA-T1
-       7. PA-C2
-       8. [citacion] CIT-CICLO
+       1. [citacion] CIT-CICLO
   CIT resumen: n_citas=1  n_anuncios=1
   Origen     : omega_report:PETICION_AUDITORIA_VPSI
   Secuencia  : 1
   Engine     : 11.1
-  modo_entrada: auditoria
-  coherente_cx: False
-  Fuentes    : X, O_context
-  ids_cx     : CX-A14, CX-A1, CX-C4, PA-A1, PA-A2, PA-T1, PA-C2
   Contexto   : Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación ...
 ══════════════════════════════════════════════════════════════════════════════
 
@@ -61,35 +50,28 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
   ÚLTIMO TEST EVALUADO
   Último ciclo real depositado (tests / uso) · valores LEÍDOS del ciclo
 ══════════════════════════════════════════════════════════════════════════════
-  Estado     : ✅ OK
+  Estado     : ⚠️ PARCIAL
+  Razón      : Faltan factores C/L/K (CA no los entregó o no vinieron en la petición)
   permite_k  : True
 
   📖  LECTURA DEL CICLO  (Omega no calcula; solo presenta)
-  Factores leídos: 3/3  (C=✅ L=✅ K=✅)
+  Factores leídos: 0/3  (C=⚪ L=⚪ K=⚪)
   ┌─────────────────────────────────────────────────────────┐
-  │  ✅ C (coherencia  ) =  1                               │
-  │  ✅ L (lógica      ) =  1                               │
-  │  ✅ K (correlación ) =  7/9                             │
+  │  ⚪ C (coherencia  ) =  no depositado                   │
+  │  ⚪ L (lógica      ) =  no depositado                   │
+  │  ⚪ K (correlación ) =  no depositado                   │
   │─────────────────────────────────────────────────────────│
-  │  ✅ Tru_Ri     =  7/9                                     │
-  │  ✅ Tru_total  =  191/243                                 │
-  │  ancla      α=26/27  β=1/27                           │
+  │  ⚪ Tru_Ri     =  no depositado                           │
+  │  ⚪ Tru_total  =  no depositado                           │
   └─────────────────────────────────────────────────────────┘
   Nota: ✅ leído del ciclo · ⚠️ UNDEFINED · ⚪ no depositado
         0 es valor real. Omega no rellena ni recalcula.
 
   Taxonomía  : none
-  📎 Citas (teoremas / axiomas / normas):
-       1. CX-A14
-       2. CX-A1
-       3. CX-C4
+  📎 Citas      : — (sin ids/anuncios en el ciclo)
   Origen     : test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica
   Secuencia  : 11
   Engine     : 11.1
-  modo_entrada: auditoria
-  coherente_cx: False
-  Fuentes    : X, O_context
-  ids_cx     : CX-A14, CX-A1, CX-C4
   Contexto   : Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema s...
 ══════════════════════════════════════════════════════════════════════════════
 
@@ -131,7 +113,12 @@ ESTADO GLOBAL
 ⚠️  MAPA DE INTERVENCIÓN
 ================================================================================
 
-  ⚪ 1. [DATOS] sujetos
+  ⚪ 1. [DATOS] auditoria_vpsi
+     Detalle   : Ciclo de auto-auditoría sin factores depositados legibles
+     Impacto   : La caja repo no muestra C/L/K / Tru leídos
+     Acción    : Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado
+
+  ⚪ 2. [DATOS] sujetos
      Detalle   : ciclo sin resultado.sujetos / por_sujeto
      Impacto   : No se listan Tru_total de S_1…S_N
      Acción    : Engine debe depositar totales por sujeto cuando el material tenga varios hablantes (catálogo TT tru_sujeto)
@@ -212,7 +199,7 @@ Rechazado:
 ================================================================================
   Versión Omega      : 10.1
   Salud              : ✅ OPERATIVO — listo para avanzar
-  Acciones abiertas  : 1
+  Acciones abiertas  : 2
   Bloqueantes        : 0
   Sección 1          : Tru_Ri / Tru_total del repositorio — LECTURA
   Sección 2          : Sujetos S_1…S_N (N=0) — LECTURA

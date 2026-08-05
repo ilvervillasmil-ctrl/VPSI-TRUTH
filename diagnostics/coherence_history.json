@@ -1,17 +1,5 @@
 [
   {
-    "utc": "2026-08-02T22:44:01.234903+00:00",
-    "sha": "6b0b1ebfdba2",
-    "ref": "refs/heads/main",
-    "total": 134,
-    "passed": 133,
-    "failed": 0,
-    "skipped": 1,
-    "rate": 99.25,
-    "previo": 133,
-    "estado": "STABLE"
-  },
-  {
     "utc": "2026-08-02T22:47:05.705482+00:00",
     "sha": "f3b5da6a7911",
     "ref": "refs/heads/main",
@@ -1190,6 +1178,18 @@
   {
     "utc": "2026-08-05T01:31:03.565328+00:00",
     "sha": "aa16fdcf14c5",
+    "ref": "refs/heads/main",
+    "total": 147,
+    "passed": 146,
+    "failed": 0,
+    "skipped": 1,
+    "rate": 99.32,
+    "previo": 146,
+    "estado": "STABLE"
+  },
+  {
+    "utc": "2026-08-05T01:44:24.234607+00:00",
+    "sha": "76a6cdd5b498",
     "ref": "refs/heads/main",
     "total": 147,
     "passed": 146,
