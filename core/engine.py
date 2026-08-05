@@ -723,8 +723,12 @@ class Engine:
         self.resultados_evaluacion.append(registro)
         return resultado
 
+        # ===========================================================
+    # CICLO
+    # ===========================================================
+
     # -----------------------------------------------------------
-    # Ciclo
+    # peticion + meta
     # -----------------------------------------------------------
     def _peticion_con_meta(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         p = dict(peticion or {})
@@ -732,6 +736,9 @@ class Engine:
         p.setdefault("engine_version", self.VERSION)
         return p
 
+    # -----------------------------------------------------------
+    # marco CX
+    # -----------------------------------------------------------
     def _marco_cx(self, peticion: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         cont = self.registro.primero("CX")
         if cont is None:
@@ -743,6 +750,9 @@ class Engine:
             return None
         return out
 
+    # -----------------------------------------------------------
+    # O usable
+    # -----------------------------------------------------------
     def _o_usable(
         self,
         peticion: Dict[str, Any],
@@ -769,6 +779,9 @@ class Engine:
             return o_cx
         return None
 
+    # -----------------------------------------------------------
+    # factores CA (C L K)
+    # -----------------------------------------------------------
     def _factores_ca(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         C = L = K = None
         ca = self.registro.primero("CA")
@@ -789,6 +802,9 @@ class Engine:
             return {"error": "C, L o K invalidos: {0}".format(e)}
         return {"C": C, "L": L, "K": K}
 
+    # -----------------------------------------------------------
+    # Tru FO (Tru_Ri / Tru_total)
+    # -----------------------------------------------------------
     def _tru_fo(self, C: Any, L: Any, K: Any) -> Dict[str, Any]:
         try:
             tru_ri_fn, tru_total_fn = self.get_formulas()
@@ -804,6 +820,9 @@ class Engine:
         except Exception as e:
             return {"error": "calculo Tru: {0}: {1}".format(type(e).__name__, e)}
 
+    # -----------------------------------------------------------
+    # ciclo factores + Tru
+    # -----------------------------------------------------------
     def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         fac = self._factores_ca(peticion)
         if fac.get("error"):
@@ -837,6 +856,9 @@ class Engine:
             "K": K,
         }
 
+    # -----------------------------------------------------------
+    # ciclo por sujetos (hablante Nombre:)
+    # -----------------------------------------------------------
     def _ciclo_por_sujetos(
         self,
         peticion: Dict[str, Any],
@@ -872,7 +894,6 @@ class Engine:
             if not _o_ausente(o_ctx):
                 p.setdefault("contexto", o_ctx)
                 p.setdefault("O_context", o_ctx)
-            # no reutilizar C/L/K globales del padre
             for k in ("C", "L", "K"):
                 p.pop(k, None)
             ciclo = self._ciclo_factores_tru(p)
@@ -894,6 +915,9 @@ class Engine:
             out.append(item)
         return out
 
+    # -----------------------------------------------------------
+    # cierre CIT
+    # -----------------------------------------------------------
     def _cierre_cit(
         self,
         peticion: Dict[str, Any],
@@ -951,6 +975,9 @@ class Engine:
             return out
         return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
 
+    # -----------------------------------------------------------
+    # evaluar (orquestacion)
+    # -----------------------------------------------------------
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         """
         Orquesta un ciclo por contratos disponibles + mandatos CE.
@@ -1041,7 +1068,7 @@ class Engine:
         ):
             sujetos = self._ciclo_por_sujetos(peticion, o_ctx)
 
-        # 4. Ciclo principal CA + FO (material completo / factores explicitos)
+        # 4. Ciclo principal CA + FO
         ciclo = self._ciclo_factores_tru(peticion)
         if ciclo.get("estado") == "ERROR":
             body = {
