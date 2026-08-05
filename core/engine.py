@@ -245,72 +245,91 @@ class Registro:
         }
 
 
-# ===============================================================
-# ENGINE
-# ===============================================================
+===============================================================
+ENGINE
+===============================================================
 class Engine:
-    """
-    Orquestador v11.1
+"""
+Orquestador v11.1
+No interpreta IND-T1 ni Def-5.3.1.
+Solo: contratos, oficios, permite_k de CX, no fabricar O/K.
+Extension CE (capacidades_engine)
+El rol CE no es un modulo ajeno: es complemento del propio Engine.
+Todo archivo / skill / contrato bajo modules/capacidades_engine/
+es extension de este orquestador. Engine los lee a disposicion
+(ids, skills, PUENTE_DEPOSITO, DEFINICION_SUJETO, inventario)
+segun lo que cada CONTENEDOR y cada skill declaran.
+Agregar un mandato en CE no exige reescribir el nucleo: se descubre
+y se consulta por contrato.
+Sujeto (termino del ciclo, no gramatica)
+En este codigo, "sujeto" NO es el sujeto gramatical de la oracion.
+Sujeto = hablante etiquetado en el material con la forma
+"Nombre: mensaje" (ej. Carlo:, Maria:, Juan:).
+sujetos = lista de esos nombres; n_sujetos = cuantos hay.
+Ver DEFINICION_SUJETO en el rol CE cuando este cargado.
+"""
+VERSION = "11.1"
+def init(
+self,
+raiz_modulos: str | Path,
+invocador_id: str = "core",
+verificar_axiomas: bool = True,
+strict: bool = True,
+) -> None:
+self.raiz = Path(raiz_modulos).resolve()
+self.invocador_id = invocador_id
+self.verificar_axiomas = verificar_axiomas
+self.strict = strict
+self.registro = Registro()
+self.informe_axiomas: Optional[Dict[str, Any]] = None
+self.informe_mecanica: Optional[Dict[str, Any]] = None
+self.estado = "NO_INICIADO"
+self.errores_arranque: List[str] = []
+self.fallos: List[Dict[str, Any]] = []
+self.resultados_evaluacion: List[Dict[str, Any]] = []
+# Sustrato: descubre CONTENEDOR de cada modulo bajo raiz
+# (incluye CE como extension; TT/CC como roles de catalogo).
+self._descubrir()
+self._resolver_dependencias()
+if self.verificar_axiomas:
+self._ejecutar_compuertas()
+if self.errores_arranque:
+self.estado = "RECHAZADO"
+if self.strict:
+raise ArranqueError(
+"Engine no pudo arrancar:\n  - "
++ "\n  - ".join(self.errores_arranque)
+)
+else:
+self.estado = "OPERATIVO"
+def _extraer_sujetos_conversacion(self, peticion: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], int]:
+"""
+Extrae los sujetos conversacionales (hablantes en formato 'Nombre: mensaje')
+y cuenta cuántos hay (n_sujetos) para cumplir estrictamente el contrato
+que Omega y el diagnóstico de escala esperan encontrar en evaluaciones.json.
+"""
+sujetos_in = peticion.get("sujetos")
+segs: List[Dict[str, Any]] = []
+if isinstance(sujetos_in, list) and sujetos_in:
+for i, s in enumerate(sujetos_in, start=1):
+if isinstance(s, dict):
+nombre = str(s.get("nombre") or s.get("id") or "S{0}".format(i))
+texto = str(s.get("texto") or s.get("mensaje") or "")
+else:
+nombre = "S{0}".format(i)
+texto = str(s)
+if texto.strip():
+segs.append({
+"indice": i,
+"nombre": nombre,
+"texto": texto,
+"estado": "OK"
+})
+if not segs:
+texto_pet = _texto_peticion(peticion)
+segs = _segmentar_sujetos(texto_pet)
+return segs, len(segs)
 
-    No interpreta IND-T1 ni Def-5.3.1.
-    Solo: contratos, oficios, permite_k de CX, no fabricar O/K.
-
-    Extension CE (capacidades_engine)
-      El rol CE no es un modulo ajeno: es complemento del propio Engine.
-      Todo archivo / skill / contrato bajo modules/capacidades_engine/
-      es extension de este orquestador. Engine los lee a disposicion
-      (ids, skills, PUENTE_DEPOSITO, DEFINICION_SUJETO, inventario)
-      segun lo que cada CONTENEDOR y cada skill declaran.
-      Agregar un mandato en CE no exige reescribir el nucleo: se descubre
-      y se consulta por contrato.
-
-    Sujeto (termino del ciclo, no gramatica)
-      En este codigo, "sujeto" NO es el sujeto gramatical de la oracion.
-      Sujeto = hablante etiquetado en el material con la forma
-      "Nombre: mensaje" (ej. Carlo:, Maria:, Juan:).
-      sujetos = lista de esos nombres; n_sujetos = cuantos hay.
-      Ver DEFINICION_SUJETO en el rol CE cuando este cargado.
-    """
-
-    VERSION = "11.1"
-
-    def __init__(
-        self,
-        raiz_modulos: str | Path,
-        invocador_id: str = "core",
-        verificar_axiomas: bool = True,
-        strict: bool = True,
-    ) -> None:
-        self.raiz = Path(raiz_modulos).resolve()
-        self.invocador_id = invocador_id
-        self.verificar_axiomas = verificar_axiomas
-        self.strict = strict
-
-        self.registro = Registro()
-        self.informe_axiomas: Optional[Dict[str, Any]] = None
-        self.informe_mecanica: Optional[Dict[str, Any]] = None
-        self.estado = "NO_INICIADO"
-        self.errores_arranque: List[str] = []
-        self.fallos: List[Dict[str, Any]] = []
-        self.resultados_evaluacion: List[Dict[str, Any]] = []
-
-        # Sustrato: descubre CONTENEDOR de cada modulo bajo raiz
-        # (incluye CE como extension; TT/CC como roles de catalogo).
-        self._descubrir()
-        self._resolver_dependencias()
-
-        if self.verificar_axiomas:
-            self._ejecutar_compuertas()
-
-        if self.errores_arranque:
-            self.estado = "RECHAZADO"
-            if self.strict:
-                raise ArranqueError(
-                    "Engine no pudo arrancar:\n  - "
-                    + "\n  - ".join(self.errores_arranque)
-                )
-        else:
-            self.estado = "OPERATIVO"
 
 
     # -----------------------------------------------------------
