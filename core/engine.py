@@ -1391,7 +1391,7 @@ class Engine:
             if r not in roles:
                 retenido("ROL", "Rol obligatorio {0} no declarado".format(r))
 
-        # ===========================================================
+                # ===========================================================
         # 5) CONTENEDORES Y CAPACIDADES DEL REPOSITORIO
         # ===========================================================
         nombres = set()
@@ -1440,18 +1440,17 @@ class Engine:
                             ),
                         )
 
-                    if not resuelve_fn:
-                        if hasattr(cont, "fn_oficio") and callable(
-                            getattr(cont, "fn_oficio", None)
-                        ):
-                            try:
-                                if callable(cont.fn_oficio(cap_s)):
-                                    resuelve_fn = True
-                            except Exception:
-                                pass
-                        if cap_s in capacidades_conocidas_engine:
-                            resuelve_fn = True
+                    if not resuelve_fn and hasattr(cont, "fn_oficio"):
+                        try:
+                            of = cont.fn_oficio(cap_s)
+                            if callable(of):
+                                resuelve_fn = True
+                        except Exception:
+                            pass
 
+                    # Contrato: la capacidad del CONTENEDOR debe resolver
+                    # a funcion ejecutable en ESTE contenedor.
+                    # No se valida por existir el nombre en el Engine.
                     if not resuelve_fn:
                         retenido(
                             "CAPACIDAD",
