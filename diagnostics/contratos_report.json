@@ -385,6 +385,7 @@
         "calcular",
         "verificar",
         "inventario",
+        "leer_ids_escala",
         "extraer_conteos",
         "inyectar_conteos"
       ],
@@ -418,6 +419,15 @@
           "version": "1.2",
           "ok": true,
           "fn_name": "inventario"
+        },
+        {
+          "clave": "leer_ids_escala",
+          "callable": true,
+          "modulo": "calculator",
+          "rol": "CA",
+          "version": "1.2",
+          "ok": true,
+          "fn_name": "leer_ids_escala"
         },
         {
           "clave": "extraer_conteos",
@@ -1412,7 +1422,7 @@
     "roles_obligatorios": 5,
     "contratos_validos": 19,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 108,
+    "capacidades_verificadas": 109,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 0,

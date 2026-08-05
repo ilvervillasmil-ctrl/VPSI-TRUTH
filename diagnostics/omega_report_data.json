@@ -806,11 +806,12 @@
           "version": "1.2",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/calculator/__init__.py",
-          "descripcion": "Calcula C, L, K. None = dato no disponible. Sin contexto/O, K queda None (Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. verificar = centinela de carpeta; calcular = oficio de factores.",
+          "descripcion": "Calcula C, L, K. None = dato no disponible. Sin contexto/O, K queda None (Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. Lee ids de escala (sujeto, frase, conversacion, atomo, repo) del mapa. verificar = centinela de carpeta; calcular = oficio de factores C/L/K.",
           "capacidades": {
             "calcular": "calcular",
             "verificar": "barrer",
             "inventario": "inventario",
+            "leer_ids_escala": "leer_ids_escala",
             "extraer_conteos": "extraer_conteos",
             "inyectar_conteos": "inyectar_en_peticion"
           }
@@ -1458,8 +1459,24 @@
           "L"
         ],
         "conteos_disponible": true,
+        "escalas_ids_disponible": true,
+        "ids_escala": {
+          "ids": [
+            "tru_atomo",
+            "tru_frase",
+            "tru_sujeto",
+            "tru_conversacion",
+            "tru_repositorio"
+          ],
+          "n": 5,
+          "origenes": [
+            "escalas_ids",
+            "tru_totales"
+          ],
+          "disponible": true
+        },
         "coherente": true,
-        "funcion": "Calcula C, L, K. No calcula Tru. K ausente sin contexto/O (Def-5.3.1). Si metodo=operacional y faltan conteos, los produce conteos.py."
+        "funcion": "Calcula C, L, K. No calcula Tru (FO). K ausente sin contexto/O (Def-5.3.1). Si metodo=operacional y faltan conteos, los produce conteos.py. Lee todos los ids de escala (sujeto, frase, conversacion, atomo, repo) para el pedido; el recorte del material lo trae quien orquesta."
       },
       "capacidades_engine": {
         "contenedor": "capacidades_engine",
@@ -3083,6 +3100,7 @@
           "calcular",
           "verificar",
           "inventario",
+          "leer_ids_escala",
           "extraer_conteos",
           "inyectar_conteos"
         ],
@@ -3116,6 +3134,15 @@
             "version": "1.2",
             "ok": true,
             "fn_name": "inventario"
+          },
+          {
+            "clave": "leer_ids_escala",
+            "callable": true,
+            "modulo": "calculator",
+            "rol": "CA",
+            "version": "1.2",
+            "ok": true,
+            "fn_name": "leer_ids_escala"
           },
           {
             "clave": "extraer_conteos",
@@ -4110,7 +4137,7 @@
       "roles_obligatorios": 5,
       "contratos_validos": 19,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 108,
+      "capacidades_verificadas": 109,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 0,
@@ -4503,11 +4530,12 @@
         "version": "1.2",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/calculator/__init__.py",
-        "descripcion": "Calcula C, L, K. None = dato no disponible. Sin contexto/O, K queda None (Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. verificar = centinela de carpeta; calcular = oficio de factores.",
+        "descripcion": "Calcula C, L, K. None = dato no disponible. Sin contexto/O, K queda None (Def-5.3.1). No calcula Tru_total (FO). Si metodo=operacional y faltan conteos, los produce conteos.py. Lee ids de escala (sujeto, frase, conversacion, atomo, repo) del mapa. verificar = centinela de carpeta; calcular = oficio de factores C/L/K.",
         "capacidades": {
           "calcular": "calcular",
           "verificar": "barrer",
           "inventario": "inventario",
+          "leer_ids_escala": "leer_ids_escala",
           "extraer_conteos": "extraer_conteos",
           "inyectar_conteos": "inyectar_en_peticion"
         }
@@ -5181,11 +5209,25 @@
       "K",
       "L"
     ],
-    "archivos_extra": [
-      "escalas_ids"
-    ],
+    "archivos_extra": [],
     "conteos_disponible": true,
-    "nota": "conteos.py produce k/m, r/p, f/c para la ruta operacional; archivos_extra son candidatos a nuevos factores"
+    "escalas_ids_disponible": true,
+    "ids_escala": {
+      "ids": [
+        "tru_atomo",
+        "tru_frase",
+        "tru_sujeto",
+        "tru_conversacion",
+        "tru_repositorio"
+      ],
+      "n": 5,
+      "origenes": [
+        "escalas_ids",
+        "tru_totales"
+      ],
+      "disponible": true
+    },
+    "nota": "conteos.py produce k/m, r/p, f/c para la ruta operacional; ids_escala = sujeto/frase/conversacion/atomo/repo leidos del mapa; CA calcula C/L/K; Tru en FO; archivos_extra = candidatos"
   },
   "tests": {
     "total": 147,
