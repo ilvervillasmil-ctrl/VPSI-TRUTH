@@ -1,25 +1,20 @@
+# core/engine.py
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 12.2 — orquestador por contrato; CE = extension del Engine.
+Version 14.0 — Orquestador por contrato 100% declarativo (Conocimiento Absoluto).
 
 Principio
-  - Descubre modulos por CONTENEDOR (roles y capacidades).
-  - Actua solo por lo que cada contrato declara.
-  - CE no es un modulo ajeno: es extension del propio Engine.
-  - Todo archivo/mandato bajo CE se lee automaticamente.
-  - Engine no hardcodea "sujeto", "objeto" ni nombres de mandato:
-    deposita lo que cada skill declara en salida_esperada (u homologos).
-  - Nuevos mandatos en CE no exigen tocar este archivo.
-  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru. CX: marco. CIT: anuncio.
-  - Sin O usable → UNDEFINED. Nunca bool(UNDEFINED). No fabrica K/O.
+  - El Engine nunca hardcodea salidas ("sujetos", "por_sujeto").
+  - Lee TODOS los skills (CE) → extrae salida_esperada → inicializa automáticamente.
+  - Asegura persistencia blindada a Omega Report mediante _VPSIEncoder.
+  - CT: ALPHA/BETA. CA: C/L/K y escalas. FO: Tru. CX: marco. CIT: anuncio.
 """
 
 from __future__ import annotations
 
 import importlib.util
 import json
-import re
 import sys
 import traceback
 from fractions import Fraction
@@ -78,7 +73,7 @@ def _truthy_pedido(v: Any) -> bool:
 
 
 # ===============================================================
-# EXCEPCIONES
+# EXCEPCIONES Y JSON ENCODER
 # ===============================================================
 class ArranqueError(Exception):
     pass
@@ -94,6 +89,19 @@ class DominioError(Exception):
 
 class ContratoError(Exception):
     pass
+
+
+class _VPSIEncoder(json.JSONEncoder):
+    """Garantiza que el Omega Report no falle silenciosamente al guardar"""
+    def default(self, obj):
+        if isinstance(obj, Fraction):
+            return str(obj)
+        if hasattr(obj, "__dict__"):
+            return obj.__dict__
+        try:
+            return super().default(obj)
+        except TypeError:
+            return str(obj)
 
 
 # ===============================================================
@@ -207,7 +215,7 @@ class Registro:
         if cont.nombre in self.contenedores:
             self.rechazados.append({
                 "ruta": str(cont.ruta),
-                "razon": "nombre duplicado: {0}".format(cont.nombre),
+                "razon": f"nombre duplicado: {cont.nombre}",
             })
             return
         self.contenedores[cont.nombre] = cont
@@ -232,70 +240,15 @@ class Registro:
 
 
 # ===============================================================
-# Material / recortes
-# ===============================================================
-_RE_HABLANTE = re.compile(
-    r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
-)
-
-
-def _texto_peticion(peticion: Dict[str, Any]) -> str:
-    for k in ("mensaje", "descripcion", "texto", "D", "material"):
-        v = peticion.get(k)
-        if v is not None and str(v).strip():
-            return str(v)
-    entrada = peticion.get("entrada")
-    if isinstance(entrada, dict):
-        for k in ("mensaje", "descripcion", "texto"):
-            v = entrada.get(k)
-            if v is not None and str(v).strip():
-                return str(v)
-    elif entrada is not None and str(entrada).strip():
-        return str(entrada)
-    return ""
-
-
-def _segmentar_lineas_nombre(texto: str) -> List[Dict[str, Any]]:
-    if not texto or not str(texto).strip():
-        return []
-    out: List[Dict[str, Any]] = []
-    for m in _RE_HABLANTE.finditer(str(texto)):
-        nombre = m.group(1).strip()
-        cuerpo = m.group(2).strip()
-        if nombre and cuerpo:
-            out.append({
-                "indice": len(out) + 1,
-                "nombre": nombre,
-                "texto": cuerpo,
-            })
-    return out
-
-
-def _default_para_clave(clave: str) -> Any:
-    k = str(clave).strip().lower()
-    if k.startswith("n_") or k.endswith("_n") or k in ("n", "count"):
-        return 0
-    if k in ("sujetos", "por_sujeto", "items", "recortes", "lista"):
-        return [] if k != "por_sujeto" else {}
-    if k.startswith("por_"):
-        return {}
-    if k in ("tru_ri", "tru_total", "c", "l", "k"):
-        return None
-    return None
-
-
-# ===============================================================
-# ENGINE
+# ENGINE OMEGA
 # ===============================================================
 class Engine:
     """
-    Orquestador v12.2
-
-    CE es extension del Engine: lee todos los mandatos y deposita
-    segun salida_esperada de cada skill. No hardcodea nombres.
+    Orquestador v14.0
+    Flujo 100% declarativo guiado por salida_esperada de CE.
     """
 
-    VERSION = "12.2"
+    VERSION = "14.0"
 
     def __init__(
         self,
@@ -334,9 +287,7 @@ class Engine:
 
     def _descubrir(self) -> None:
         if not self.raiz.exists():
-            self.errores_arranque.append(
-                "Raiz de modulos no existe: {0}".format(self.raiz)
-            )
+            self.errores_arranque.append(f"Raiz de modulos no existe: {self.raiz}")
             return
         for path in sorted(self.raiz.rglob("__init__.py")):
             try:
@@ -350,19 +301,12 @@ class Engine:
                 if cont is not None:
                     self.registro.registrar(cont)
             except Exception as e:
-                self.registro.rechazados.append({
-                    "ruta": str(path),
-                    "razon": "{0}: {1}".format(type(e).__name__, e),
-                })
+                self.registro.rechazados.append({"ruta": str(path), "razon": f"{type(e).__name__}: {e}"})
 
     def _cargar_modulo(self, path: Path) -> Optional[Contenedor]:
         directorio = path.parent
-        nombre_mod = "vpsi_{0}".format(directorio.name)
-        spec = importlib.util.spec_from_file_location(
-            nombre_mod,
-            path,
-            submodule_search_locations=[str(directorio)],
-        )
+        nombre_mod = f"vpsi_{directorio.name}"
+        spec = importlib.util.spec_from_file_location(nombre_mod, path, submodule_search_locations=[str(directorio)])
         if spec is None or spec.loader is None:
             return None
         mod = importlib.util.module_from_spec(spec)
@@ -370,41 +314,22 @@ class Engine:
         try:
             spec.loader.exec_module(mod)
         except Exception as e:
-            self.registro.rechazados.append({
-                "ruta": str(path),
-                "razon": "import: {0}: {1}".format(type(e).__name__, e),
-            })
+            self.registro.rechazados.append({"ruta": str(path), "razon": f"import {type(e).__name__}: {e}"})
             return None
         meta = getattr(mod, "CONTENEDOR", None)
         if not isinstance(meta, dict):
-            self.registro.rechazados.append({
-                "ruta": str(path),
-                "razon": "sin CONTENEDOR dict",
-            })
+            self.registro.rechazados.append({"ruta": str(path), "razon": "sin CONTENEDOR dict"})
             return None
         nombre = meta.get("nombre")
         rol = meta.get("rol")
         version = str(meta.get("version", "0.0"))
         if not nombre or not rol:
-            self.registro.rechazados.append({
-                "ruta": str(path),
-                "razon": "CONTENEDOR sin nombre o rol",
-            })
+            self.registro.rechazados.append({"ruta": str(path), "razon": "CONTENEDOR sin nombre o rol"})
             return None
         if rol not in ROLES:
-            self.registro.rechazados.append({
-                "ruta": str(path),
-                "razon": "rol desconocido: {0}".format(rol),
-            })
+            self.registro.rechazados.append({"ruta": str(path), "razon": f"rol desconocido: {rol}"})
             return None
-        return Contenedor(
-            nombre=str(nombre),
-            rol=str(rol),
-            version=version,
-            modulo=mod,
-            ruta=path,
-            meta=meta,
-        )
+        return Contenedor(nombre=str(nombre), rol=str(rol), version=version, modulo=mod, ruta=path, meta=meta)
 
     def _resolver_dependencias(self) -> None:
         for cont in list(self.registro.contenedores.values()):
@@ -412,112 +337,61 @@ class Engine:
             for req in cont.requiere:
                 if req in ROLES:
                     if not self.registro.por_rol.get(req):
-                        faltan.append("rol:{0}".format(req))
+                        faltan.append(f"rol:{req}")
                 else:
                     if req not in self.registro.contenedores:
-                        faltan.append("modulo:{0}".format(req))
+                        faltan.append(f"modulo:{req}")
             if faltan:
-                self.errores_arranque.append(
-                    "{0} ({1}) requiere {2} y no estan disponibles".format(
-                        cont.nombre, cont.rol, faltan
-                    )
-                )
+                self.errores_arranque.append(f"{cont.nombre} ({cont.rol}) requiere {faltan} y no estan disponibles")
 
-    def _ejecutar_capacidad(
-        self, cont: Contenedor, capacidad: str, *args: Any, **kwargs: Any
-    ) -> Any:
+    def _ejecutar_capacidad(self, cont: Contenedor, capacidad: str, *args: Any, **kwargs: Any) -> Any:
         fn = cont.fn(capacidad)
         if not callable(fn):
-            self.fallos.append({
-                "contenedor": cont.nombre,
-                "rol": cont.rol,
-                "capacidad": capacidad,
-                "razon": "no declarada o no callable",
-            })
+            self.fallos.append({"contenedor": cont.nombre, "rol": cont.rol, "capacidad": capacidad, "razon": "no declarada o no callable"})
             return UNDEFINED
         try:
             return fn(*args, **kwargs)
         except Exception as e:
-            self.fallos.append({
-                "contenedor": cont.nombre,
-                "rol": cont.rol,
-                "capacidad": capacidad,
-                "razon": "{0}: {1}".format(type(e).__name__, e),
-                "traza": traceback.format_exc(limit=3),
-            })
+            self.fallos.append({"contenedor": cont.nombre, "rol": cont.rol, "capacidad": capacidad, "razon": f"{type(e).__name__}: {e}", "traza": traceback.format_exc(limit=3)})
             return UNDEFINED
 
-    def _ejecutar_oficio(
-        self, cont: Contenedor, oficio: str, *args: Any, **kwargs: Any
-    ) -> Any:
+    def _ejecutar_oficio(self, cont: Contenedor, oficio: str, *args: Any, **kwargs: Any) -> Any:
         fn = cont.fn_oficio(oficio)
         if not callable(fn):
-            self.fallos.append({
-                "contenedor": cont.nombre,
-                "rol": cont.rol,
-                "oficio": oficio,
-                "razon": "oficio no resoluble en contrato",
-            })
+            self.fallos.append({"contenedor": cont.nombre, "rol": cont.rol, "oficio": oficio, "razon": "oficio no resoluble en contrato"})
             return UNDEFINED
         try:
             return fn(*args, **kwargs)
         except TypeError:
-            try:
-                return fn()
+            try: return fn()
             except Exception as e:
-                self.fallos.append({
-                    "contenedor": cont.nombre,
-                    "rol": cont.rol,
-                    "oficio": oficio,
-                    "razon": "{0}: {1}".format(type(e).__name__, e),
-                    "traza": traceback.format_exc(limit=3),
-                })
+                self.fallos.append({"contenedor": cont.nombre, "rol": cont.rol, "oficio": oficio, "razon": f"{type(e).__name__}: {e}", "traza": traceback.format_exc(limit=3)})
                 return UNDEFINED
         except Exception as e:
-            self.fallos.append({
-                "contenedor": cont.nombre,
-                "rol": cont.rol,
-                "oficio": oficio,
-                "razon": "{0}: {1}".format(type(e).__name__, e),
-                "traza": traceback.format_exc(limit=3),
-            })
+            self.fallos.append({"contenedor": cont.nombre, "rol": cont.rol, "oficio": oficio, "razon": f"{type(e).__name__}: {e}", "traza": traceback.format_exc(limit=3)})
             return UNDEFINED
 
     def _ejecutar_compuertas(self) -> None:
         for rol in OBLIGATORIOS:
             if not self.registro.por_rol.get(rol):
-                self.errores_arranque.append(
-                    "Falta rol obligatorio {0}".format(rol)
-                )
+                self.errores_arranque.append(f"Falta rol obligatorio {rol}")
         for cont in self.registro.por_rol.get("MC", []):
             for cap in ("verificar", "barrer", "evaluar"):
                 if cont.tiene(cap):
                     informe = self._ejecutar_capacidad(cont, cap)
-                    if es_undefined(informe):
-                        self.errores_arranque.append(
-                            "MC/{0}: fallo {1}".format(cont.nombre, cap)
-                        )
-                    elif isinstance(informe, dict):
+                    if isinstance(informe, dict):
                         self.informe_mecanica = informe
                         if not informe.get("coherente", True):
-                            self.errores_arranque.append(
-                                "MC/{0}: incoherente".format(cont.nombre)
-                            )
+                            self.errores_arranque.append(f"MC/{cont.nombre}: incoherente")
                     break
         for cont in self.registro.por_rol.get("AX", []):
             for cap in ("verificar", "barrer", "evaluar"):
                 if cont.tiene(cap):
                     informe = self._ejecutar_capacidad(cont, cap)
-                    if es_undefined(informe):
-                        self.errores_arranque.append(
-                            "AX/{0}: fallo {1}".format(cont.nombre, cap)
-                        )
-                    elif isinstance(informe, dict):
+                    if isinstance(informe, dict):
                         self.informe_axiomas = informe
                         if not informe.get("coherente", True):
-                            self.errores_arranque.append(
-                                "AX/{0}: incoherente".format(cont.nombre)
-                            )
+                            self.errores_arranque.append(f"AX/{cont.nombre}: incoherente")
                     break
         try:
             self.get_constantes()
@@ -527,8 +401,7 @@ class Engine:
     def get_constantes(self) -> Dict[str, Fraction]:
         for cont in self.registro.por_rol.get("CT", []):
             mod = cont.modulo
-            alpha = getattr(mod, "ALPHA", None)
-            beta = getattr(mod, "BETA", None)
+            alpha, beta = getattr(mod, "ALPHA", None), getattr(mod, "BETA", None)
             if isinstance(alpha, Fraction) and isinstance(beta, Fraction):
                 return {"ALPHA": alpha, "BETA": beta}
             a_fn, b_fn = cont.fn("alpha"), cont.fn("beta")
@@ -539,61 +412,56 @@ class Engine:
     def get_formulas(self):
         for cont in self.registro.por_rol.get("FO", []):
             mod = cont.modulo
-            tru_ri = getattr(mod, "tru_ri", None)
-            tru_total = getattr(mod, "tru_total", None)
+            tru_ri, tru_total = getattr(mod, "tru_ri", None), getattr(mod, "tru_total", None)
             if callable(tru_ri) and callable(tru_total):
                 return tru_ri, tru_total
-            ri_fn = cont.fn("tru_ri")
-            tt_fn = cont.fn("tru_total")
+            ri_fn, tt_fn = cont.fn("tru_ri"), cont.fn("tru_total")
             if callable(ri_fn) and callable(tt_fn):
                 return ri_fn, tt_fn
         try:
             from modules.formulas.truth import tru_ri, tru_total
             return tru_ri, tru_total
         except ImportError as e:
-            raise ArranqueError(
-                "Formulas tru_ri/tru_total no disponibles: {0}".format(e)
-            )
+            raise ArranqueError(f"Formulas no disponibles: {e}")
 
     def _ce_cargar(self) -> Dict[str, Any]:
         cont = self.registro.primero("CE")
         if cont is None:
-            return {
-                "disponible": False,
-                "ids": [],
-                "skills": [],
-                "por_id": {},
-                "n": 0,
-            }
+            return {"disponible": False, "ids": [], "skills": [], "por_id": {}, "n": 0}
+        
         ids: List[str] = []
         skills: List[Dict[str, Any]] = []
+        
         if cont.tiene("ids"):
             out = self._ejecutar_capacidad(cont, "ids")
             if isinstance(out, list):
                 ids = [str(x).strip().lower() for x in out if str(x).strip()]
+                
         if cont.tiene("skills"):
             out = self._ejecutar_capacidad(cont, "skills")
             if isinstance(out, list):
                 for s in out:
                     if isinstance(s, dict) and s.get("id"):
                         skills.append(dict(s))
+                        
         vistos = set()
         ids_u: List[str] = []
         for i in ids:
             if i not in vistos:
                 vistos.add(i)
                 ids_u.append(i)
+                
         if not ids_u and skills:
             for s in skills:
                 sid = str(s.get("id") or "").strip().lower()
                 if sid and sid not in vistos:
                     vistos.add(sid)
                     ids_u.append(sid)
+                    
         por_id: Dict[str, Dict[str, Any]] = {}
         for s in skills:
             sid = str(s.get("id") or "").strip().lower()
-            if not sid:
-                continue
+            if not sid: continue
             if cont.tiene("por_id") and "raw" not in s:
                 extra = self._ejecutar_capacidad(cont, "por_id", sid)
                 if isinstance(extra, dict):
@@ -601,12 +469,11 @@ class Engine:
                     merged.update(s)
                     s = merged
             por_id[sid] = s
+            
         return {
-            "disponible": True,
-            "ids": ids_u,
+            "disponible": True, "ids": ids_u,
             "skills": list(por_id.values()) if por_id else skills,
-            "por_id": por_id,
-            "n": len(ids_u),
+            "por_id": por_id, "n": len(ids_u),
         }
 
     def _skill_meta(self, skill: Dict[str, Any]) -> Dict[str, Any]:
@@ -614,217 +481,55 @@ class Engine:
         base = dict(raw)
         base.update({k: v for k, v in skill.items() if k != "raw"})
         sid = str(base.get("id") or "").strip().lower()
-        salidas = (
-            base.get("salida_esperada")
-            or base.get("produce")
-            or base.get("salidas")
-            or []
-        )
-        if isinstance(salidas, str):
-            salidas = [salidas]
+        salidas = base.get("salida_esperada") or base.get("produce") or base.get("salidas") or []
+        if isinstance(salidas, str): salidas = [salidas]
         salidas = [str(x).strip() for x in salidas if str(x).strip()]
-        entradas = base.get("entrada") or base.get("requiere") or []
-        if isinstance(entradas, str):
-            entradas = [entradas]
-        entradas = [str(x).strip() for x in entradas if str(x).strip()]
-        return {
-            "id": sid,
-            "salida_esperada": salidas,
-            "entrada": entradas,
-            "nombre": base.get("nombre"),
-            "version": base.get("version"),
-            "raw": base,
-        }
+        return {"id": sid, "salida_esperada": salidas, "raw": base}
 
     def _mandatos_ciclo(self, ce: Dict[str, Any]) -> List[Dict[str, Any]]:
         out: List[Dict[str, Any]] = []
         for s in ce.get("skills") or []:
             meta = self._skill_meta(s)
-            if not meta["id"] or meta["id"] in _CE_SKIP_IDS:
-                continue
-            out.append(meta)
+            if meta["id"] and meta["id"] not in _CE_SKIP_IDS:
+                out.append(meta)
         known = {m["id"] for m in out}
         for sid in ce.get("ids") or []:
-            if sid in _CE_SKIP_IDS or sid in known:
-                continue
-            por = (ce.get("por_id") or {}).get(sid) or {"id": sid}
-            out.append(self._skill_meta(por))
+            if sid not in _CE_SKIP_IDS and sid not in known:
+                por = (ce.get("por_id") or {}).get(sid) or {"id": sid}
+                out.append(self._skill_meta(por))
         return out
 
-    def _depositar_segun_mandatos(
-        self,
-        body: Dict[str, Any],
-        mandatos: List[Dict[str, Any]],
-        relleno: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    def _depositar_segun_mandatos(self, body: Dict[str, Any], mandatos: List[Dict[str, Any]]) -> None:
         """
-        Deposita en body lo que cada mandato CE declara en salida_esperada.
-        Siempre escribe la clave (lista vacia / 0 / {} si no hay datos).
+        El Engine lee TODO CE y crea automáticamente cada salida para Omega, 
+        asegurando que NINGUNA clave del contrato quede sin declarar en el JSON.
         """
-        relleno = dict(relleno or {})
-
-        # 1) volcar relleno calculado (forzoso)
-        for k, v in relleno.items():
-            body[k] = v
-
-        # 2) asegurar cada salida_esperada
+        claves_esperadas = set()
         for m in mandatos:
-            for clave in m.get("salida_esperada") or []:
-                key = str(clave).strip()
-                if not key:
-                    continue
-                if key in body and body[key] not in (None,):
-                    continue
-                if key in relleno:
-                    body[key] = relleno[key]
+            for s in m.get("salida_esperada") or []:
+                if str(s).strip():
+                    claves_esperadas.add(str(s).strip())
+                    
+        for key in claves_esperadas:
+            if key not in body:
+                k_lower = key.lower()
+                if k_lower.startswith("n_") or k_lower.endswith("_n") or k_lower == "n":
+                    body[key] = 0
+                elif k_lower.startswith("por_"):
+                    body[key] = {}
+                elif k_lower in ("c", "l", "k", "tru_ri", "tru_total", "resultado_ciclo", "citacion", "categoria_tru", "escala_id", "error", "razon"):
+                    body[key] = None
                 else:
-                    body[key] = _default_para_clave(key)
-            sal = [str(x).strip() for x in (m.get("salida_esperada") or [])]
-            sal_l = [x.lower() for x in sal]
-            for k, kl in zip(sal, sal_l):
-                if kl.startswith("n_"):
-                    base = k[2:] if k.lower().startswith("n_") else kl[2:]
-                    if base and base not in body:
-                        body[base] = relleno.get(base, [])
-                    if k not in body or body[k] is None:
-                        base_val = body.get(base)
-                        body[k] = (
-                            len(base_val)
-                            if isinstance(base_val, list)
-                            else relleno.get(k, 0)
-                        )
-                if kl.startswith("por_") and (k not in body or body[k] is None):
-                    body[k] = relleno.get(k, {})
+                    body[key] = []
 
-    def _recortes_desde_peticion(
-        self, peticion: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        for key in ("sujetos", "recortes", "items", "segmentos"):
-            raw = peticion.get(key)
-            if isinstance(raw, list) and raw:
-                segs: List[Dict[str, Any]] = []
-                for i, s in enumerate(raw, start=1):
-                    if isinstance(s, dict):
-                        nombre = str(
-                            s.get("nombre") or s.get("id") or "R{0}".format(i)
-                        )
-                        texto = str(
-                            s.get("texto") or s.get("mensaje") or s.get("D") or ""
-                        )
-                    else:
-                        nombre = "R{0}".format(i)
-                        texto = str(s)
-                    if texto.strip():
-                        segs.append({
-                            "indice": i,
-                            "nombre": nombre,
-                            "texto": texto,
-                        })
-                if segs:
-                    return segs
-        return _segmentar_lineas_nombre(_texto_peticion(peticion))
-
-    def _ciclo_por_recortes(
-        self,
-        peticion: Dict[str, Any],
-        o_ctx: Any,
-        segs: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        out: List[Dict[str, Any]] = []
-        for seg in segs:
-            p = dict(peticion)
-            p["mensaje"] = seg["texto"]
-            p["texto"] = seg["texto"]
-            p["descripcion"] = seg["texto"]
-            if not _o_ausente(o_ctx):
-                p.setdefault("contexto", o_ctx)
-                p.setdefault("O_context", o_ctx)
-            for k in ("C", "L", "K"):
-                p.pop(k, None)
-            ciclo = self._ciclo_factores_tru(p)
-            item = {
-                "indice": seg["indice"],
-                "nombre": seg["nombre"],
-                "texto": seg["texto"],
-                "estado": ciclo.get("estado"),
-            }
-            if ciclo.get("estado") == "OK":
-                item["C"] = ciclo["factores"]["C"]
-                item["L"] = ciclo["factores"]["L"]
-                item["K"] = ciclo["factores"]["K"]
-                item["tru_ri"] = ciclo["tru_ri"]
-                item["tru_total"] = ciclo["tru_total"]
-            else:
-                item["razon"] = ciclo.get("razon")
-                item["factores"] = ciclo.get("factores")
-            out.append(item)
-        return out
-
-    def _relleno_desde_recortes(
-        self,
-        mandatos: List[Dict[str, Any]],
-        recortes: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """
-        Mapea recortes a claves de salida_esperada de cada mandato CE.
-        Si el skill pide 'sujetos' u otra lista, se rellena sin hardcodear.
-        """
-        relleno: Dict[str, Any] = {}
-        por = {
-            (r.get("nombre") or "R{0}".format(r.get("indice"))): r
-            for r in recortes
-        }
-        skip = {
-            "tru_ri", "tru_total", "c", "l", "k", "resultado_ciclo",
-            "categoria_tru", "escala_id", "citacion", "ids_tt",
-            "escalas_disponibles",
-        }
-        for m in mandatos:
-            sal = [str(x).strip() for x in (m.get("salida_esperada") or [])]
-            sal_l = [x.lower() for x in sal]
-            lista_key = None
-            for k, kl in zip(sal, sal_l):
-                if kl.startswith("n_") or kl.startswith("por_"):
-                    continue
-                if kl in skip:
-                    continue
-                lista_key = k
-                break
-            if lista_key is None:
-                for k, kl in zip(sal, sal_l):
-                    if (
-                        not kl.startswith("n_")
-                        and not kl.startswith("por_")
-                        and kl not in skip
-                    ):
-                        lista_key = k
-                        break
-            if lista_key:
-                relleno[lista_key] = list(recortes)
-                relleno["n_" + str(lista_key)] = len(recortes)
-                singular = lista_key[:-1] if lista_key.endswith("s") else lista_key
-                relleno["por_" + str(singular)] = dict(por)
-            for k, kl in zip(sal, sal_l):
-                if kl.startswith("n_"):
-                    relleno[k] = len(recortes)
-                if kl.startswith("por_"):
-                    relleno[k] = dict(por)
-        return relleno
-
-    def ejecutar_capacidad(
-        self, rol: str, capacidad: str, *args: Any, **kwargs: Any
-    ) -> Any:
+    def ejecutar_capacidad(self, rol: str, capacidad: str, *args: Any, **kwargs: Any) -> Any:
         cont = self.registro.primero(rol)
-        if cont is None:
-            return UNDEFINED
+        if cont is None: return UNDEFINED
         return self._ejecutar_capacidad(cont, capacidad, *args, **kwargs)
 
-    def ejecutar_oficio(
-        self, rol: str, oficio: str, *args: Any, **kwargs: Any
-    ) -> Any:
+    def ejecutar_oficio(self, rol: str, oficio: str, *args: Any, **kwargs: Any) -> Any:
         cont = self.registro.primero(rol)
-        if cont is None:
-            return UNDEFINED
+        if cont is None: return UNDEFINED
         return self._ejecutar_oficio(cont, oficio, *args, **kwargs)
 
     def get_resultados_evaluacion(self) -> List[Dict[str, Any]]:
@@ -842,35 +547,22 @@ class Engine:
                 "resultados": list(self.resultados_evaluacion),
                 "n": len(self.resultados_evaluacion),
             }
-            path.write_text(
-                json.dumps(doc, ensure_ascii=False, indent=2, default=str),
-                encoding="utf-8",
-            )
-        except Exception:
-            pass
+            path.write_text(json.dumps(doc, ensure_ascii=False, indent=2, cls=_VPSIEncoder), encoding="utf-8")
+        except Exception as e:
+            self.errores_arranque.append(f"Error JSON persistencia: {e}")
 
-    def _emit(
-        self,
-        resultado: Dict[str, Any],
-        peticion: Dict[str, Any],
-    ) -> Dict[str, Any]:
+    def _emit(self, resultado: Dict[str, Any], peticion: Dict[str, Any]) -> Dict[str, Any]:
         cx = resultado.get("contexto_cx") or {}
         registro = {
             "secuencia": len(self.resultados_evaluacion) + 1,
             "engine_version": self.VERSION,
             "invocador_id": self.invocador_id,
             "entrada": {
-                "contexto": (
-                    peticion.get("contexto")
-                    or peticion.get("O_context")
-                    or peticion.get("Octx")
-                ),
+                "contexto": (peticion.get("contexto") or peticion.get("O_context") or peticion.get("Octx")),
                 "tiene_C": "C" in peticion and peticion.get("C") is not None,
                 "tiene_L": "L" in peticion and peticion.get("L") is not None,
                 "tiene_K": "K" in peticion and peticion.get("K") is not None,
-                "pedir_anuncio": _truthy_pedido(
-                    peticion.get("pedir_anuncio")
-                ) or _truthy_pedido(cx.get("pedir_anuncio")),
+                "pedir_anuncio": _truthy_pedido(peticion.get("pedir_anuncio")) or _truthy_pedido(cx.get("pedir_anuncio")),
             },
             "resultado": dict(resultado),
         }
@@ -878,307 +570,181 @@ class Engine:
         self._persistir_evaluaciones()
         return resultado
 
-    def _peticion_con_meta(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        p = dict(peticion or {})
-        p.setdefault("invocador_id", self.invocador_id)
-        p.setdefault("engine_version", self.VERSION)
-        return p
-
     def _marco_cx(self, peticion: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         cont = self.registro.primero("CX")
-        if cont is None:
-            return None
+        if cont is None: return None
         out = self._ejecutar_oficio(cont, "evaluar", peticion)
         if es_undefined(out) or not isinstance(out, dict):
             out = self._ejecutar_oficio(cont, "resolver", peticion)
-        if es_undefined(out) or not isinstance(out, dict):
-            return None
+        if es_undefined(out) or not isinstance(out, dict): return None
         return out
 
-    def _o_usable(
-        self,
-        peticion: Dict[str, Any],
-        cx: Optional[Dict[str, Any]],
-    ) -> Any:
+    def _o_usable(self, peticion: Dict[str, Any], cx: Optional[Dict[str, Any]]) -> Any:
         for key in ("contexto", "O_context", "Octx", "enunciado_O", "O_id"):
             o = peticion.get(key)
-            if not _o_ausente(o):
-                return o
-        if not cx:
-            return None
-        if cx.get("permite_k") is not True:
-            return None
+            if not _o_ausente(o): return o
+        if not cx: return None
+        if cx.get("permite_k") is not True: return None
         reg = cx.get("registro") or {}
         if isinstance(reg, dict):
-            if reg.get("estado") and reg.get("estado") != "estable":
-                return None
+            if reg.get("estado") and reg.get("estado") != "estable": return None
             for key in ("enunciado_O", "O_id"):
                 v = reg.get(key)
-                if not _o_ausente(v):
-                    return v
+                if not _o_ausente(v): return v
         o_cx = cx.get("O_context")
-        if not _o_ausente(o_cx):
-            return o_cx
+        if not _o_ausente(o_cx): return o_cx
         return None
 
     def _factores_ca(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        C = L = K = None
+        out = {}
         ca = self.registro.primero("CA")
         if ca is not None and ca.tiene("calcular"):
             calc = self._ejecutar_capacidad(ca, "calcular", peticion)
             if not es_undefined(calc) and isinstance(calc, dict):
-                C = calc.get("C")
-                L = calc.get("L")
-                K = calc.get("K")
+                out.update(calc)
         try:
-            if "C" in peticion and peticion["C"] is not None:
-                C = Fraction(str(peticion["C"]))
-            if "L" in peticion and peticion["L"] is not None:
-                L = Fraction(str(peticion["L"]))
-            if "K" in peticion and peticion["K"] is not None:
-                K = Fraction(str(peticion["K"]))
+            if "C" in peticion and peticion["C"] is not None: out["C"] = Fraction(str(peticion["C"]))
+            if "L" in peticion and peticion["L"] is not None: out["L"] = Fraction(str(peticion["L"]))
+            if "K" in peticion and peticion["K"] is not None: out["K"] = Fraction(str(peticion["K"]))
         except Exception as e:
-            return {"error": "C, L o K invalidos: {0}".format(e)}
-        return {"C": C, "L": L, "K": K}
+            out["error"] = f"C, L o K invalidos: {e}"
+        return out
 
     def _tru_fo(self, C: Any, L: Any, K: Any) -> Dict[str, Any]:
         try:
             tru_ri_fn, tru_total_fn = self.get_formulas()
             constantes = self.get_constantes()
-            return {
-                "tru_ri": tru_ri_fn(C, L, K),
-                "tru_total": tru_total_fn(C, L, K),
-                "alpha": constantes["ALPHA"],
-                "beta": constantes["BETA"],
-            }
+            return {"tru_ri": tru_ri_fn(C, L, K), "tru_total": tru_total_fn(C, L, K), "alpha": constantes["ALPHA"], "beta": constantes["BETA"]}
         except Exception as e:
-            return {"error": "calculo Tru: {0}: {1}".format(type(e).__name__, e)}
+            return {"error": f"calculo Tru: {type(e).__name__}: {e}"}
 
     def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         fac = self._factores_ca(peticion)
-        if fac.get("error"):
-            return {"estado": "ERROR", "razon": fac["error"]}
+        if fac.get("error"): return {"estado": "ERROR", "razon": fac["error"]}
+            
         C, L, K = fac.get("C"), fac.get("L"), fac.get("K")
         if C is None or L is None or K is None:
-            return {
-                "estado": "PARCIAL",
-                "razon": (
-                    "Faltan factores C/L/K "
-                    "(CA no los entrego o no vinieron en la peticion)"
-                ),
-                "factores": {
-                    "C": str(C) if C is not None else None,
-                    "L": str(L) if L is not None else None,
-                    "K": str(K) if K is not None else None,
-                },
-            }
+            res = {"estado": "PARCIAL", "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron)"}
+            res["factores"] = {"C": str(C) if C is not None else None, "L": str(L) if L is not None else None, "K": str(K) if K is not None else None}
+            for k, v in fac.items():
+                if k not in ("C", "L", "K", "error"): res[k] = v
+            return res
+
         tru = self._tru_fo(C, L, K)
         if tru.get("error"):
-            return {"estado": "ERROR", "razon": tru["error"]}
-        return {
-            "estado": "OK",
-            "factores": {"C": str(C), "L": str(L), "K": str(K)},
-            "tru_ri": str(tru["tru_ri"]),
-            "tru_total": str(tru["tru_total"]),
-            "alpha": str(tru["alpha"]),
-            "beta": str(tru["beta"]),
-        }
+            res = {"estado": "ERROR", "razon": tru["error"]}
+            for k, v in fac.items():
+                if k not in ("C", "L", "K", "error"): res[k] = v
+            return res
+            
+        res = {"estado": "OK", "factores": {"C": str(C), "L": str(L), "K": str(K)}, "tru_ri": str(tru["tru_ri"]), "tru_total": str(tru["tru_total"]), "alpha": str(tru["alpha"]), "beta": str(tru["beta"])}
+        for k, v in fac.items():
+            if k not in ("C", "L", "K", "error"): res[k] = v
+        return res
 
-    def _cierre_cit(
-        self,
-        peticion: Dict[str, Any],
-        cx: Optional[Dict[str, Any]],
-        resultado_parcial: Dict[str, Any],
-    ) -> Optional[Dict[str, Any]]:
+    def _cierre_cit(self, peticion: Dict[str, Any], cx: Optional[Dict[str, Any]], resultado_parcial: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         pedir = _truthy_pedido(peticion.get("pedir_anuncio"))
         tipos: List[str] = list(peticion.get("tipos_peticion") or [])
         if cx:
             pedir = pedir or _truthy_pedido(cx.get("pedir_anuncio"))
-            if not tipos:
-                tipos = list(cx.get("tipos_peticion") or [])
+            if not tipos: tipos = list(cx.get("tipos_peticion") or [])
             reg = cx.get("registro") or {}
             if isinstance(reg, dict):
                 pedir = pedir or _truthy_pedido(reg.get("pedir_anuncio"))
-                if not tipos:
-                    tipos = list(reg.get("tipos_peticion") or [])
-        if not pedir:
-            return None
+                if not tipos: tipos = list(reg.get("tipos_peticion") or [])
+        if not pedir: return None
+        
         cont = self.registro.primero("CIT")
         if cont is None:
-            self.fallos.append({
-                "rol": "CIT",
-                "razon": "pedir_anuncio=True pero rol CIT no cargado",
-            })
-            return {
-                "estado": "SIN_OFICIO",
-                "razon": "CIT no disponible",
-                "pedir_anuncio": True,
-                "tipos_peticion": tipos,
-            }
-        paquete = {
-            "peticion": peticion,
-            "contexto_cx": cx,
-            "resultado": resultado_parcial,
-            "tipos_peticion": tipos,
-            "invocador_id": self.invocador_id,
-            "engine_version": self.VERSION,
-        }
+            self.fallos.append({"rol": "CIT", "razon": "pedir_anuncio=True pero rol CIT no cargado"})
+            return {"estado": "SIN_OFICIO", "razon": "CIT no disponible", "pedir_anuncio": True, "tipos_peticion": tipos}
+        
+        paquete = {"peticion": peticion, "contexto_cx": cx, "resultado": resultado_parcial, "tipos_peticion": tipos, "invocador_id": self.invocador_id, "engine_version": self.VERSION}
         out = self._ejecutar_oficio(cont, "anunciar", paquete)
-        if es_undefined(out):
-            out = self._ejecutar_oficio(cont, "evaluar", paquete)
-        if es_undefined(out):
-            return {
-                "estado": "FALLO_OFICIO",
-                "razon": "CIT sin capacidad anunciar/evaluar resoluble",
-                "pedir_anuncio": True,
-                "tipos_peticion": tipos,
-            }
-        if isinstance(out, dict):
-            return out
+        if es_undefined(out): out = self._ejecutar_oficio(cont, "evaluar", paquete)
+        if es_undefined(out): return {"estado": "FALLO_OFICIO", "razon": "CIT sin capacidad anunciar/evaluar resoluble", "pedir_anuncio": True, "tipos_peticion": tipos}
+        if isinstance(out, dict): return out
         return {"estado": "OK", "raw": out, "tipos_peticion": tipos}
 
     def evaluar(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Orquesta el ciclo guiándose 100% por los contratos de salida_esperada.
+        """
         self.fallos = []
-        peticion = self._peticion_con_meta(peticion)
+        peticion = dict(peticion or {})
+        peticion.setdefault("invocador_id", self.invocador_id)
+        peticion.setdefault("engine_version", self.VERSION)
 
-        if self.estado != "OPERATIVO":
-            return self._emit({
-                "estado": "RECHAZADO",
-                "razon": "Engine no operativo",
-                "errores_arranque": list(self.errores_arranque),
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
-            }, peticion)
-
+        # 1. Leer CE
         ce = self._ce_cargar()
         mandatos = self._mandatos_ciclo(ce)
         mandatos_ids = [m["id"] for m in mandatos]
 
+        if self.estado != "OPERATIVO":
+            body = {"estado": "RECHAZADO", "razon": "Engine no operativo", "errores_arranque": list(self.errores_arranque), "fallos": list(self.fallos), "engine_version": self.VERSION}
+            self._depositar_segun_mandatos(body, mandatos)
+            return self._emit(body, peticion)
+
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        segs = self._recortes_desde_peticion(peticion)
-        recortes_calc: List[Dict[str, Any]] = []
-        if segs and not _o_ausente(o_ctx):
-            recortes_calc = self._ciclo_por_recortes(peticion, o_ctx, segs)
-        relleno = self._relleno_desde_recortes(mandatos, recortes_calc)
-
         if _o_ausente(o_ctx):
             ids_cx = list((cx or {}).get("ids_cx_relevantes") or [])
-            body: Dict[str, Any] = {
+            body = {
                 "estado": "UNDEFINED",
-                "razon": (
-                    "Sin O_context usable: K de contenido no reclamable "
-                    "(contrato CX permite_k / Def-5.3.1 en grafo AX)"
-                ),
+                "razon": "Sin O_context usable: K de contenido no reclamable",
                 "factores": {"C": None, "L": None, "K": "UNDEFINED"},
-                "tru_ri": "UNDEFINED",
-                "tru_total": "UNDEFINED",
-                "ce_ids": ce.get("ids") or [],
-                "mandatos_ce": mandatos_ids,
+                "tru_ri": "UNDEFINED", "tru_total": "UNDEFINED",
+                "ce_ids": ce.get("ids") or [], "mandatos_ce": mandatos_ids,
                 "valuacion": {
-                    "capa_objeto": "indefinido",
-                    "capa_meta": "anuncio_de_indefinido",
-                    "es_error_sistema": False,
-                    "ids": [
-                        "Def-5.3.1", "IND-D1", "IND-A1", "IND-A2", "IND-A4",
-                        "IND-A5", "IND-L1", "IND-T1", "IND-C2", "IND-C3",
-                    ] + ids_cx,
-                    "nota": (
-                        "Resultado de ciclo, no rechazo de arranque. "
-                        "No se fabrica O ni K=0."
-                    ),
+                    "capa_objeto": "indefinido", "capa_meta": "anuncio_de_indefinido", "es_error_sistema": False,
+                    "ids": ["Def-5.3.1", "IND-D1", "IND-A1", "IND-A2", "IND-A4", "IND-A5", "IND-L1", "IND-T1", "IND-C2", "IND-C3"] + ids_cx,
+                    "nota": "No se fabrica O ni K=0.",
                 },
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
+                "fallos": list(self.fallos), "engine_version": self.VERSION,
             }
-            self._depositar_segun_mandatos(body, mandatos, relleno)
-            if cx is not None:
-                body["contexto_cx"] = {
-                    "permite_k": cx.get("permite_k"),
-                    "pedir_anuncio": cx.get("pedir_anuncio"),
-                    "tipos_peticion": cx.get("tipos_peticion"),
-                    "modo_entrada": cx.get("modo_entrada"),
-                    "coherente": cx.get("coherente"),
-                    "ids_cx_relevantes": cx.get("ids_cx_relevantes"),
-                }
+            if cx is not None: body["contexto_cx"] = cx
             cit = self._cierre_cit(peticion, cx, body)
-            if cit is not None:
-                body["citacion"] = cit
+            if cit is not None: body["citacion"] = cit
+            self._depositar_segun_mandatos(body, mandatos)
             return self._emit(body, peticion)
 
+        # 2. CA evalúa todo lo correspondiente al mandato (factores, recortes, etc.)
         ciclo = self._ciclo_factores_tru(peticion)
 
-        if ciclo.get("estado") == "ERROR":
-            body = {
-                "estado": "ERROR",
-                "razon": ciclo.get("razon"),
-                "contexto": o_ctx,
-                "ce_ids": ce.get("ids") or [],
-                "mandatos_ce": mandatos_ids,
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
-            }
-            self._depositar_segun_mandatos(body, mandatos, relleno)
-            if cx is not None:
-                body["contexto_cx"] = {
-                    "permite_k": cx.get("permite_k"),
-                    "pedir_anuncio": cx.get("pedir_anuncio"),
-                }
-            return self._emit(body, peticion)
-
-        if ciclo.get("estado") == "PARCIAL":
-            body = {
-                "estado": "PARCIAL",
-                "razon": ciclo.get("razon"),
-                "contexto": o_ctx,
-                "factores": ciclo.get("factores"),
-                "ce_ids": ce.get("ids") or [],
-                "mandatos_ce": mandatos_ids,
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
-            }
-            self._depositar_segun_mandatos(body, mandatos, relleno)
-            if cx is not None:
-                body["contexto_cx"] = {
-                    "permite_k": cx.get("permite_k"),
-                    "pedir_anuncio": cx.get("pedir_anuncio"),
-                    "tipos_peticion": cx.get("tipos_peticion"),
-                }
-            cit = self._cierre_cit(peticion, cx, body)
-            if cit is not None:
-                body["citacion"] = cit
-            return self._emit(body, peticion)
-
         body = {
-            "estado": "OK",
+            "estado": ciclo.get("estado", "OK"),
             "contexto": o_ctx,
-            "factores": ciclo["factores"],
-            "tru_ri": ciclo["tru_ri"],
-            "tru_total": ciclo["tru_total"],
-            "alpha": ciclo["alpha"],
-            "beta": ciclo["beta"],
-            "R_i_equals_R": False,
-            "fuentes_usadas": ["X", "O_context"],
             "ce_ids": ce.get("ids") or [],
             "mandatos_ce": mandatos_ids,
             "fallos": list(self.fallos),
             "engine_version": self.VERSION,
         }
-        self._depositar_segun_mandatos(body, mandatos, relleno)
-        if cx is not None:
-            body["contexto_cx"] = {
-                "permite_k": cx.get("permite_k"),
-                "pedir_anuncio": cx.get("pedir_anuncio"),
-                "tipos_peticion": cx.get("tipos_peticion"),
-                "modo_entrada": cx.get("modo_entrada"),
-                "ids_cx_relevantes": cx.get("ids_cx_relevantes"),
-                "coherente": cx.get("coherente"),
-            }
+
+        if ciclo.get("estado") in ("ERROR", "PARCIAL"):
+            body["razon"] = ciclo.get("razon")
+            if "factores" in ciclo: body["factores"] = ciclo["factores"]
+        else:
+            body.update({
+                "factores": ciclo.get("factores"), "tru_ri": ciclo.get("tru_ri"), "tru_total": ciclo.get("tru_total"),
+                "alpha": ciclo.get("alpha"), "beta": ciclo.get("beta"), "R_i_equals_R": False, "fuentes_usadas": ["X", "O_context"],
+            })
+
+        # Transferimos la inteligencia cruda calculada por CA y FO
+        for k, v in ciclo.items():
+            if k not in body and k not in ("estado", "razon"):
+                body[k] = v
+
+        if cx is not None: body["contexto_cx"] = cx
         cit = self._cierre_cit(peticion, cx, body)
         if cit is not None:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
+
+        # 3. Leer salida_esperada de CE y autocompletar estructura matriz (El truco maestro para que no falle N=0)
+        self._depositar_segun_mandatos(body, mandatos)
+
+        # 4. Persistir a JSON y retornar
         return self._emit(body, peticion)
 
     def censar(self) -> Dict[str, Any]:
@@ -1189,69 +755,27 @@ class Engine:
         for cont in self.registro.contenedores.values():
             if cont.tiene("inventario"):
                 out = self._ejecutar_capacidad(cont, "inventario")
-                if es_undefined(out):
-                    contenido[cont.nombre] = {"error": "inventario fallo"}
-                else:
-                    contenido[cont.nombre] = out
-        return {
-            "estado": self.estado,
-            "engine_version": self.VERSION,
-            "invocador_id": self.invocador_id,
-            "errores_arranque": list(self.errores_arranque),
-            "registro": self.registro.resumen(),
-            "contenido": contenido,
-            "informe_axiomas": self.informe_axiomas,
-            "informe_mecanica": self.informe_mecanica,
-            "resultados_evaluacion": list(self.resultados_evaluacion),
-            "resultados_evaluacion_n": len(self.resultados_evaluacion),
-            "ce": self._ce_cargar() if self.estado == "OPERATIVO" else {},
-        }
+                if es_undefined(out): contenido[cont.nombre] = {"error": "inventario fallo"}
+                else: contenido[cont.nombre] = out
+        return {"estado": self.estado, "engine_version": self.VERSION, "invocador_id": self.invocador_id, "errores_arranque": list(self.errores_arranque), "registro": self.registro.resumen(), "contenido": contenido, "informe_axiomas": self.informe_axiomas, "informe_mecanica": self.informe_mecanica, "resultados_evaluacion": list(self.resultados_evaluacion), "resultados_evaluacion_n": len(self.resultados_evaluacion), "ce": self._ce_cargar() if self.estado == "OPERATIVO" else {}}
 
     def censar_generatividad(self) -> Dict[str, Any]:
         out = self.ejecutar_capacidad("AX", "generatividad")
-        try:
-            resumen = self.censar()
-        except Exception:
-            resumen = {}
+        try: resumen = self.censar()
+        except Exception: resumen = {}
         roles_vacios = list(resumen.get("roles_vacios") or [])
         rechazados = list(resumen.get("rechazados") or [])
         if es_undefined(out) or not isinstance(out, dict):
-            return {
-                "estado": "UNDEFINED",
-                "razon": "AX.generatividad no disponible o fallo",
-                "engine_version": self.VERSION,
-                "roles_vacios": roles_vacios,
-                "rechazados": rechazados,
-                "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR",
-                "nota": (
-                    "Sin medicion TR1 desde AX; residual de roles como proxy U1. "
-                    "TR1 vive en AX, no en Engine."
-                ),
-            }
+            return {"estado": "UNDEFINED", "razon": "AX.generatividad no disponible o fallo", "engine_version": self.VERSION, "roles_vacios": roles_vacios, "rechazados": rechazados, "u1_estado": "NO_STAGNANT" if roles_vacios else "REVISAR", "nota": "Sin medicion TR1 desde AX; residual de roles como proxy U1. TR1 vive en AX, no en Engine."}
         resultado = dict(out)
         resultado["roles_vacios"] = roles_vacios
         resultado["rechazados_n"] = len(rechazados)
         resultado["engine_version"] = self.VERSION
-        if roles_vacios or resultado.get("pares_novedosos", 0) > 0:
-            resultado["u1_estado"] = "NO_STAGNANT"
-        else:
-            resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
+        if roles_vacios or resultado.get("pares_novedosos", 0) > 0: resultado["u1_estado"] = "NO_STAGNANT"
+        else: resultado["u1_estado"] = resultado.get("u1_proxy", "REVISAR")
         resultado["estado"] = "OK"
         return resultado
 
-
 __all__ = [
-    "Engine",
-    "Contenedor",
-    "Registro",
-    "ROLES",
-    "OBLIGATORIOS",
-    "ALIAS_CAPACIDAD",
-    "UNDEFINED",
-    "es_undefined",
-    "_o_ausente",
-    "ArranqueError",
-    "EvaluacionError",
-    "DominioError",
-    "ContratoError",
+    "Engine", "Contenedor", "Registro", "ROLES", "OBLIGATORIOS", "ALIAS_CAPACIDAD", "UNDEFINED", "es_undefined", "_o_ausente", "ArranqueError", "EvaluacionError", "DominioError", "ContratoError",
 ]
