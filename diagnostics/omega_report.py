@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
 OMEGA REPORT — MAPA DE TRABAJO
-VPSI-TRUTH (Versión 10.0)
+VPSI-TRUTH (Versión 10.1)
 ==============================
 
 Orden de presentación (contrato de salida):
-  1) AUDITORÍA DEL VPSI  — valuación del repositorio como objeto
-  2) ÚLTIMO TEST         — valuación del último ciclo de prueba
-  3) Resto del mapa      — salud, intervención, capas, generatividad
+  1) AUDITORÍA DEL VPSI  — valuación del repositorio (Tru_Ri / Tru_total del repo)
+  2) SUJETOS 1…N         — Tru total por sujeto si el ciclo los depositó
+  3) ÚLTIMO TEST         — valuación del último ciclo de prueba
+  4) Resto del mapa      — salud, intervención, capas, generatividad
 
 Contrato de cálculo (inviolable):
   - C, L, K, Tru_Ri, Tru_total los produce el sistema (CA / FO / Engine).
   - Omega NO inventa Fraction, NO aplica la fórmula, NO rellena huecos.
   - Omega SOLO LEE lo que el ciclo depositó y lo presenta tal cual.
   - 0 es 0. UNDEFINED es UNDEFINED. None es "no depositado".
-  - Un chulito marca factor LEÍDO; su ausencia marca factor NO depositado.
-  - Espacio abierto: todo campo legible del ciclo se expone en el reporte.
+  - Si hay N sujetos en el material y el ciclo depositó totales por sujeto,
+    Omega lista S_1…S_N automáticamente. Si no depositó, marca no depositado.
+  - Catálogos TT / CC: solo referencia de ids si vienen en el ciclo.
 
 Autor: Ilver Villasmil
 ORCID: 0009-0009-3413-4270
@@ -28,7 +30,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 CURRENT_FILE = Path(__file__).resolve()
 DIAGNOSTICS_DIR = CURRENT_FILE.parent
@@ -46,11 +48,12 @@ ICON_DOT = "·"
 ICON_MOD = "📦"
 ICON_REJ = "🚫"
 ICON_CIT = "📎"
-ICON_CLK = "📐"
 ICON_READ = "📖"
+ICON_SUB = "👤"
+ICON_REPO = "🗂"
 
 STRICT = os.getenv("OMEGA_STRICT", "0") == "1"
-VERSION = "10.0"
+VERSION = "10.1"
 
 CAMPOS_OBLIGATORIOS = (
     "estado_engine",
@@ -58,7 +61,6 @@ CAMPOS_OBLIGATORIOS = (
     "informe_axiomas",
 )
 
-# Petición canónica de auto-auditoría del repositorio (O real)
 PETICION_AUDITORIA_VPSI = {
     "contexto": (
         "Auditoría estructural del repositorio VPSI-TRUTH: "
@@ -71,7 +73,6 @@ PETICION_AUDITORIA_VPSI = {
         "Estado observable del repositorio VPSI-TRUTH "
         "(axiomas, contratos, módulos, generatividad) en el run actual."
     ),
-    # texto = material de conteo para CA cuando no hay mensaje suelto
     "texto": (
         "Estado observable del repositorio VPSI-TRUTH "
         "(axiomas, contratos, módulos, generatividad) en el run actual."
@@ -82,6 +83,8 @@ PETICION_AUDITORIA_VPSI = {
         "dame_normas",
         "auto_auditoria",
     ],
+    # señal de catálogo TT (Engine puede usarla; Omega solo reporta si calculó)
+    "categoria_tru": "tru_repositorio",
 }
 
 
@@ -115,7 +118,6 @@ def validar_entrada(datos: Dict[str, Any]) -> List[str]:
 # LECTURA FIEL — sin inventar, sin calcular
 # =============================================================================
 def _es_undefined(v: Any) -> bool:
-    """True si el ciclo depositó UNDEFINED (base nula / ancla)."""
     if v is None:
         return False
     if type(v).__name__ in ("_Undefined", "Undefined"):
@@ -125,7 +127,6 @@ def _es_undefined(v: Any) -> bool:
 
 
 def _depositado(v: Any) -> bool:
-    """True si el ciclo dejó un valor (incluye 0 y UNDEFINED)."""
     if v is None:
         return False
     if isinstance(v, str) and not v.strip():
@@ -134,12 +135,6 @@ def _depositado(v: Any) -> bool:
 
 
 def _fmt(v: Any) -> str:
-    """
-    Presentación exacta de lo leído.
-      None / vacío  →  no depositado
-      UNDEFINED      →  UNDEFINED
-      0 / Fraction  →  tal cual (0 es 0)
-    """
     if v is None:
         return "no depositado"
     if _es_undefined(v):
@@ -147,18 +142,16 @@ def _fmt(v: Any) -> str:
     s = str(v).strip()
     if not s:
         return "no depositado"
-    # normalizar representaciones raras de cero
     if s in ("0", "0/1", "0.0"):
         return "0"
     return s
 
 
 def _marca_lectura(v: Any) -> str:
-    """Chulito si el factor fue leído del ciclo; pendiente si no."""
     if not _depositado(v):
         return ICON_PEND
     if _es_undefined(v):
-        return ICON_WARN  # leído, pero base nula
+        return ICON_WARN
     return ICON_OK
 
 
@@ -168,7 +161,7 @@ def _pick(d: Dict[str, Any], *keys: str) -> Any:
     for k in keys:
         if k in d and d[k] is not None:
             return d[k]
-    for nest in ("resultado", "truth", "valores", "salida", "factores"):
+    for nest in ("resultado", "truth", "valores", "salida", "factores", "valuacion"):
         sub = d.get(nest)
         if isinstance(sub, dict):
             for k in keys:
@@ -188,19 +181,14 @@ def _cuerpo_resultado(r: Dict[str, Any]) -> Dict[str, Any]:
         or "Tru_total" in inner
         or "citacion" in inner
         or "C" in inner
-        or "L" in inner
-        or "K" in inner
+        or "sujetos" in inner
+        or "por_sujeto" in inner
     ):
         return inner
     return r
 
 
 def _factores_de(r: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Lee C, L, K del ciclo.
-    Prioridad: resultado.factores → cuerpo plano → fila superior.
-    No convierte, no rellena.
-    """
     body = _cuerpo_resultado(r)
     fac = body.get("factores") if isinstance(body.get("factores"), dict) else {}
 
@@ -224,28 +212,105 @@ def _factores_de(r: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _extraer_sujetos(r: Any) -> List[Dict[str, Any]]:
+    """
+    Lee sujetos depositados por el ciclo (S_1…S_N).
+    Formas admitidas (solo lectura; no inventa N):
+      resultado.sujetos = [ {indice|id|nombre, Tru_total, Tru_Ri, C, L, K, ...}, ... ]
+      resultado.por_sujeto = { "1": {...}, "Maria": {...}, ... }
+      resultado.valuacion.sujetos = ...
+    Si no hay nada → lista vacía (Omega no inventa sujetos).
+    """
+    if not isinstance(r, dict):
+        return []
+    body = _cuerpo_resultado(r)
+    candidatos: List[Any] = []
+
+    for src in (
+        body.get("sujetos"),
+        body.get("por_sujeto"),
+        (body.get("valuacion") or {}).get("sujetos") if isinstance(body.get("valuacion"), dict) else None,
+        r.get("sujetos"),
+        r.get("por_sujeto"),
+    ):
+        if src is None:
+            continue
+        if isinstance(src, list) and src:
+            candidatos = src
+            break
+        if isinstance(src, dict) and src:
+            # dict → lista ordenada
+            items = []
+            for k, v in src.items():
+                if isinstance(v, dict):
+                    item = dict(v)
+                    item.setdefault("id", k)
+                    item.setdefault("indice", k)
+                    items.append(item)
+                else:
+                    items.append({"id": k, "Tru_total": v})
+            candidatos = items
+            break
+
+    out: List[Dict[str, Any]] = []
+    for i, raw in enumerate(candidatos, 1):
+        if not isinstance(raw, dict):
+            out.append({
+                "indice": i,
+                "etiqueta": "S_{0}".format(i),
+                "C": None, "L": None, "K": None,
+                "tru_ri": None, "tru_total": raw if raw is not None else None,
+                "lectura": {
+                    "C": False, "L": False, "K": False,
+                    "tru_ri": False,
+                    "tru_total": _depositado(raw),
+                },
+            })
+            continue
+        fac = raw.get("factores") if isinstance(raw.get("factores"), dict) else {}
+        C = fac.get("C", raw.get("C", raw.get("c")))
+        L = fac.get("L", raw.get("L", raw.get("l")))
+        K = fac.get("K", raw.get("K", raw.get("k")))
+        tru_ri = raw.get("Tru_Ri", raw.get("tru_ri"))
+        tru_total = raw.get("Tru_total", raw.get("tru_total"))
+        indice = raw.get("indice", raw.get("i", i))
+        etiqueta = (
+            raw.get("nombre")
+            or raw.get("etiqueta")
+            or raw.get("id")
+            or raw.get("sujeto")
+            or "S_{0}".format(indice)
+        )
+        out.append({
+            "indice": indice,
+            "etiqueta": str(etiqueta),
+            "C": C, "L": L, "K": K,
+            "tru_ri": tru_ri,
+            "tru_total": tru_total,
+            "estado": raw.get("estado"),
+            "lectura": {
+                "C": _depositado(C),
+                "L": _depositado(L),
+                "K": _depositado(K),
+                "tru_ri": _depositado(tru_ri),
+                "tru_total": _depositado(tru_total),
+            },
+        })
+    return out
+
+
 def _extraer_valuacion(r: Any) -> Dict[str, Any]:
-    """Normaliza un ciclo Engine → bloque de valuación (solo lectura)."""
     vacio = {
         "estado": None,
-        "C": None,
-        "L": None,
-        "K": None,
-        "tru_ri": None,
-        "tru_total": None,
-        "alpha": None,
-        "beta": None,
-        "taxonomia": None,
-        "citas": [],
-        "razon": None,
-        "permite_k": None,
-        "origen": None,
+        "C": None, "L": None, "K": None,
+        "tru_ri": None, "tru_total": None,
+        "alpha": None, "beta": None,
+        "taxonomia": None, "citas": [],
+        "razon": None, "permite_k": None, "origen": None,
+        "sujetos": [],
         "lectura": {
-            "C": False,
-            "L": False,
-            "K": False,
-            "tru_ri": False,
-            "tru_total": False,
+            "C": False, "L": False, "K": False,
+            "tru_ri": False, "tru_total": False,
         },
     }
     if not isinstance(r, dict):
@@ -277,22 +342,26 @@ def _extraer_valuacion(r: Any) -> Dict[str, Any]:
         body.get("taxonomia")
         or body.get("tx")
         or val.get("taxonomia")
-        or (
-            (cit.get("meta") or {}).get("taxonomia")
-            if isinstance(cit.get("meta"), dict)
-            else None
-        )
     )
 
     C = fac.get("C")
     L = fac.get("L")
     K = fac.get("K")
     tru_ri = _pick(body, "tru_ri", "Tru_Ri")
-    if tru_ri is None and isinstance(r, dict):
+    if tru_ri is None:
         tru_ri = r.get("tru_ri") or r.get("Tru_Ri")
     tru_total = _pick(body, "tru_total", "Tru_total")
-    if tru_total is None and isinstance(r, dict):
+    if tru_total is None:
         tru_total = r.get("tru_total") or r.get("Tru_total")
+
+    # Tru de repositorio si el ciclo lo etiquetó aparte
+    tru_repo_ri = _pick(body, "tru_ri_repositorio", "Tru_Ri_repositorio", "tru_repo_ri")
+    tru_repo_total = _pick(
+        body, "tru_total_repositorio", "Tru_total_repositorio", "tru_repo_total"
+    )
+    if tru_repo_ri is None and body.get("categoria_tru") in ("tru_repositorio", "repo"):
+        tru_repo_ri = tru_ri
+        tru_repo_total = tru_total
 
     fuentes = body.get("fuentes_usadas") or r.get("fuentes_usadas") or []
     if not isinstance(fuentes, list):
@@ -301,13 +370,15 @@ def _extraer_valuacion(r: Any) -> Dict[str, Any]:
     if not isinstance(fallos, list):
         fallos = [fallos] if fallos else []
 
+    sujetos = _extraer_sujetos(r)
+
     return {
         "estado": _pick(body, "estado") or _pick(r, "estado"),
-        "C": C,
-        "L": L,
-        "K": K,
+        "C": C, "L": L, "K": K,
         "tru_ri": tru_ri,
         "tru_total": tru_total,
+        "tru_ri_repositorio": tru_repo_ri,
+        "tru_total_repositorio": tru_repo_total,
         "alpha": body.get("alpha") if body.get("alpha") is not None else r.get("alpha"),
         "beta": body.get("beta") if body.get("beta") is not None else r.get("beta"),
         "taxonomia": tax,
@@ -325,6 +396,9 @@ def _extraer_valuacion(r: Any) -> Dict[str, Any]:
         "ids_cx": list(cx.get("ids_cx_relevantes") or []),
         "coherente_cx": cx.get("coherente"),
         "contexto_texto": body.get("contexto") or r.get("contexto"),
+        "categoria_tru": body.get("categoria_tru") or r.get("categoria_tru"),
+        "sujetos": sujetos,
+        "n_sujetos": len(sujetos),
         "lectura": {
             "C": _depositado(C),
             "L": _depositado(L),
@@ -342,16 +416,6 @@ def _caja_valuacion(
     *,
     ancho: int = 78,
 ) -> List[str]:
-    """
-    Recuadro de LECTURA (no de cálculo):
-
-        LECTURA DEL CICLO
-          ✅ C (coherencia)   = valor exacto
-          ✅ L (lógica)      = valor exacto
-          ✅ K (correlación) = valor exacto
-          …
-        0 es 0. UNDEFINED es UNDEFINED. no depositado = no vino del ciclo.
-    """
     lineas: List[str] = []
     borde = "═" * ancho
     lineas.append(borde)
@@ -375,6 +439,8 @@ def _caja_valuacion(
         lineas.append("  Razón      : {0}".format(str(v.get("razon"))[:70]))
     if v.get("permite_k") is not None:
         lineas.append("  permite_k  : {0}".format(_fmt(v.get("permite_k"))))
+    if v.get("categoria_tru"):
+        lineas.append("  categoría TT: {0}".format(_fmt(v.get("categoria_tru"))))
     lineas.append("")
 
     lec = v.get("lectura") or {}
@@ -409,25 +475,39 @@ def _caja_valuacion(
     lineas.append(
         "  │  {0} Tru_Ri     =  {1}".format(
             m_ri, _fmt(v.get("tru_ri")).ljust(40)
-        )
-        + "│"
+        ) + "│"
     )
     lineas.append(
         "  │  {0} Tru_total  =  {1}".format(
             m_tt, _fmt(v.get("tru_total")).ljust(40)
-        )
-        + "│"
+        ) + "│"
     )
+
+    # Repo explícito si vino etiquetado
+    if v.get("tru_ri_repositorio") is not None or v.get("tru_total_repositorio") is not None:
+        lineas.append("  │─────────────────────────────────────────────────────────│")
+        lineas.append(
+            "  │  {0} Tru_Ri  repo =  {1}".format(
+                _marca_lectura(v.get("tru_ri_repositorio")),
+                _fmt(v.get("tru_ri_repositorio")).ljust(36),
+            ) + "│"
+        )
+        lineas.append(
+            "  │  {0} Tru_total repo = {1}".format(
+                _marca_lectura(v.get("tru_total_repositorio")),
+                _fmt(v.get("tru_total_repositorio")).ljust(35),
+            ) + "│"
+        )
+
     if v.get("alpha") is not None or v.get("beta") is not None:
         lineas.append(
             "  │  ancla      α={0}  β={1}".format(
                 _fmt(v.get("alpha")), _fmt(v.get("beta"))
-            ).ljust(58)
-            + "│"
+            ).ljust(58) + "│"
         )
     lineas.append("  └─────────────────────────────────────────────────────────┘")
     lineas.append(
-        "  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED (base nula) · ⚪ no depositado"
+        "  Nota: ✅ leído del ciclo · ⚠️ UNDEFINED · ⚪ no depositado"
     )
     lineas.append("        0 es valor real. Omega no rellena ni recalcula.")
     lineas.append("")
@@ -487,10 +567,77 @@ def _caja_valuacion(
     return lineas
 
 
+def _caja_sujetos(sujetos: List[Dict[str, Any]], *, ancho: int = 78) -> List[str]:
+    """
+    Lista automática S_1…S_N según lo depositado.
+    Omega no descubre hablantes: solo reporta la lista que trajo el ciclo.
+    """
+    lineas: List[str] = []
+    borde = "═" * ancho
+    lineas.append(borde)
+    lineas.append(
+        "  {0}  SUJETOS (S_1…S_N)  ·  Tru total por sujeto".format(ICON_SUB)
+    )
+    lineas.append(
+        "  Solo lectura · N = {0} depositado(s) por el ciclo · Omega no calcula".format(
+            len(sujetos)
+        )
+    )
+    lineas.append(borde)
+
+    if not sujetos:
+        lineas.append(
+            "  {0} Ningún sujeto depositado en el ciclo.".format(ICON_PEND)
+        )
+        lineas.append(
+            "  Cuando Engine deposite resultado.sujetos / por_sujeto,"
+        )
+        lineas.append(
+            "  aquí aparecerán automáticamente Tru_total de S_1…S_N."
+        )
+        lineas.append(borde)
+        lineas.append("")
+        return lineas
+
+    for s in sujetos:
+        idx = s.get("indice", "?")
+        etiq = s.get("etiqueta", "S_{0}".format(idx))
+        lineas.append(
+            "  ── Sujeto {0} · {1} ──────────────────────────────".format(idx, etiq)
+        )
+        lineas.append(
+            "     {0} C={1}  {2} L={3}  {4} K={5}".format(
+                _marca_lectura(s.get("C")), _fmt(s.get("C")),
+                _marca_lectura(s.get("L")), _fmt(s.get("L")),
+                _marca_lectura(s.get("K")), _fmt(s.get("K")),
+            )
+        )
+        lineas.append(
+            "     {0} Tru_Ri    = {1}".format(
+                _marca_lectura(s.get("tru_ri")), _fmt(s.get("tru_ri"))
+            )
+        )
+        lineas.append(
+            "     {0} Tru_total = {1}".format(
+                _marca_lectura(s.get("tru_total")), _fmt(s.get("tru_total"))
+            )
+        )
+        if s.get("estado") is not None:
+            lineas.append("     estado    = {0}".format(_fmt(s.get("estado"))))
+        lineas.append("")
+
+    lineas.append(
+        "  Total sujetos reportados: {0}".format(len(sujetos))
+    )
+    lineas.append(borde)
+    lineas.append("")
+    return lineas
+
+
 def _tabla(
     headers: List[str],
     rows: List[List[str]],
-    anchos: List[int] | None = None,
+    anchos: Optional[List[int]] = None,
 ) -> List[str]:
     if anchos is None:
         anchos = [
@@ -513,7 +660,7 @@ def _tabla(
     return out
 
 
-def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
+def _lineas_generatividad(g: Optional[Dict[str, Any]]) -> List[str]:
     out: List[str] = [
         "=" * 80,
         "{0}  GENERATIVIDAD (TR1 / U1)".format(ICON_INFO),
@@ -538,7 +685,7 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
     out.append("  pares novedosos    : {0}".format(g.get("pares_novedosos", "—")))
     out.append("  |Im(⊕)| ? |Θ|      : {0} {1}".format(marca_im, im))
     out.append("  dominios           : {0}".format(g.get("dominios", [])))
-    out.append("  U1                 : {0}".format(g.get("u1_estado", "—")))
+    out.append("  U1                 : {0}".format(g.get("u1_estado", g.get("u1_proxy", "—"))))
     can = g.get("canonica") or {}
     if can:
         out.append("  --- capa canónica ---")
@@ -549,9 +696,6 @@ def _lineas_generatividad(g: Dict[str, Any] | None) -> List[str]:
     return out
 
 
-# =============================================================================
-# MAPA DE INTERVENCIÓN
-# =============================================================================
 def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
     acciones: List[Dict[str, Any]] = []
     reg = datos.get("registro_modulos") or {}
@@ -624,14 +768,32 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     av = datos.get("auditoria_vpsi") or {}
     lec = av.get("lectura") or {}
-    if not av or not (lec.get("C") or lec.get("L") or lec.get("K") or av.get("tru_total") is not None):
+    if not av or not (
+        lec.get("C") or lec.get("L") or lec.get("K") or av.get("tru_total") is not None
+    ):
         acciones.append({
             "prioridad": 4,
             "tipo": "DATOS",
             "item": "auditoria_vpsi",
             "detalle": "Ciclo de auto-auditoría sin factores depositados legibles",
-            "impacto": "La caja 1 no muestra C/L/K leídos",
+            "impacto": "La caja repo no muestra C/L/K / Tru leídos",
             "accion": "Engine.evaluar(PETICION_AUDITORIA_VPSI) debe depositar resultado",
+            "errores": [],
+        })
+
+    # Sujetos: informativo si el último test no trajo lista
+    ut = datos.get("ultimo_test") or {}
+    if ut and not (ut.get("sujetos") or []):
+        acciones.append({
+            "prioridad": 5,
+            "tipo": "DATOS",
+            "item": "sujetos",
+            "detalle": "ciclo sin resultado.sujetos / por_sujeto",
+            "impacto": "No se listan Tru_total de S_1…S_N",
+            "accion": (
+                "Engine debe depositar totales por sujeto cuando el material "
+                "tenga varios hablantes (catálogo TT tru_sujeto)"
+            ),
             "errores": [],
         })
 
@@ -683,9 +845,6 @@ def construir_acciones(datos: Dict[str, Any]) -> List[Dict[str, Any]]:
     return acciones
 
 
-# =============================================================================
-# PRESENTACIÓN
-# =============================================================================
 def presentar(datos: Dict[str, Any]) -> str:
     faltas = validar_entrada(datos)
     lineas: List[str] = []
@@ -697,8 +856,8 @@ def presentar(datos: Dict[str, Any]) -> str:
         "{0}  OMEGA REPORT — MAPA DE TRABAJO".format(ICON_INFO),
         "VPSI-TRUTH (Versión {0})".format(VERSION),
         "Generado: {0}    Commit: {1}".format(ahora, sha),
-        "Orden: (1) Auditoría VPSI  (2) Último test  (3) Mapa / capas",
-        "Contrato: Omega SOLO LEE lo depositado · no calcula · no rellena · reporta todo",
+        "Orden: (1) Repo Tru  (2) Sujetos 1…N  (3) Último test  (4) Mapa",
+        "Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo",
         "=" * 80,
         "",
     ]
@@ -728,29 +887,33 @@ def presentar(datos: Dict[str, Any]) -> str:
     else:
         salud, icon_salud = "DEGRADADO — hay bloqueos", ICON_FAIL
 
-    # =========================================================================
-    # (1) AUDITORÍA DEL VPSI
-    # =========================================================================
+    # (1) REPOSITORIO — Tru_Ri / Tru_total del repo
     av = datos.get("auditoria_vpsi") or {}
     lineas.extend(
         _caja_valuacion(
-            "AUDITORÍA DEL VPSI  ·  el repositorio como objeto",
-            "Auto-auditoría del sistema (contexto O_VPSI_REPO) · valores LEÍDOS del ciclo",
+            "{0}  AUDITORÍA DEL VPSI  ·  Tru del repositorio".format(ICON_REPO),
+            "Tru_Ri y Tru_total del sistema (O_VPSI_REPO) · valores LEÍDOS del ciclo",
             av if av else {
                 "estado": None,
                 "C": None, "L": None, "K": None,
                 "tru_ri": None, "tru_total": None,
                 "taxonomia": None, "citas": [],
                 "razon": "sin ciclo de auto-auditoría depositado",
-                "lectura": {"C": False, "L": False, "K": False,
-                            "tru_ri": False, "tru_total": False},
+                "lectura": {
+                    "C": False, "L": False, "K": False,
+                    "tru_ri": False, "tru_total": False,
+                },
             },
         )
     )
 
-    # =========================================================================
-    # (2) ÚLTIMO TEST
-    # =========================================================================
+    # (2) SUJETOS — del último test o de auditoría si trae sujetos
+    sujetos = list((datos.get("ultimo_test") or {}).get("sujetos") or [])
+    if not sujetos:
+        sujetos = list((datos.get("auditoria_vpsi") or {}).get("sujetos") or [])
+    lineas.extend(_caja_sujetos(sujetos))
+
+    # (3) ÚLTIMO TEST
     ut = datos.get("ultimo_test") or {}
     lineas.extend(
         _caja_valuacion(
@@ -762,15 +925,15 @@ def presentar(datos: Dict[str, Any]) -> str:
                 "tru_ri": None, "tru_total": None,
                 "taxonomia": None, "citas": [],
                 "razon": "sin evaluaciones.json o lista vacía",
-                "lectura": {"C": False, "L": False, "K": False,
-                            "tru_ri": False, "tru_total": False},
+                "lectura": {
+                    "C": False, "L": False, "K": False,
+                    "tru_ri": False, "tru_total": False,
+                },
             },
         )
     )
 
-    # =========================================================================
     # ESTADO GLOBAL
-    # =========================================================================
     lineas += [
         "ESTADO GLOBAL",
         "  {0} Engine       : {1}".format(
@@ -787,20 +950,23 @@ def presentar(datos: Dict[str, Any]) -> str:
         "  {0} Rechazados   : {1}".format(
             ICON_OK if not rechazados else ICON_FAIL, len(rechazados)
         ),
+        "  {0} Sujetos (N)  : {1}".format(
+            ICON_SUB if sujetos else ICON_PEND, len(sujetos)
+        ),
         "  {0} Salud        : {1}".format(icon_salud, salud),
         "",
     ]
 
-    # =========================================================================
     # MÓDULOS
-    # =========================================================================
     roles = reg.get("roles") or {}
     todos = sorted(set(list(roles.keys()) + list(vacios)))
     rows_m = []
     for rol in todos:
         mods = roles.get(rol) or []
         if mods:
-            rows_m.append([str(rol), "CARGADO", str(len(mods)), ", ".join(str(m) for m in mods)])
+            rows_m.append(
+                [str(rol), "CARGADO", str(len(mods)), ", ".join(str(m) for m in mods)]
+            )
         else:
             rows_m.append([str(rol), "VACÍO", "0", "(sin módulo)"])
     lineas.append("{0}  MÓDULOS Y ROLES".format(ICON_MOD))
@@ -811,9 +977,7 @@ def presentar(datos: Dict[str, Any]) -> str:
         )
     lineas.append("")
 
-    # =========================================================================
     # INTERVENCIÓN
-    # =========================================================================
     lineas.append("=" * 80)
     lineas.append("{0}  MAPA DE INTERVENCIÓN".format(ICON_WARN))
     lineas.append("=" * 80)
@@ -835,9 +999,7 @@ def presentar(datos: Dict[str, Any]) -> str:
             lineas.append("     Acción    : {0}".format(a["accion"]))
             lineas.append("")
 
-    # =========================================================================
     # SALUD POR CAPA
-    # =========================================================================
     lineas.append("=" * 80)
     lineas.append("{0}  SALUD POR CAPA".format(ICON_INFO))
     lineas.append("=" * 80)
@@ -976,8 +1138,9 @@ def presentar(datos: Dict[str, Any]) -> str:
         "  Salud              : {0} {1}".format(icon_salud, salud),
         "  Acciones abiertas  : {0}".format(len(acciones)),
         "  Bloqueantes        : {0}".format(n_bloqueantes),
-        "  Sección 1          : Auditoría del VPSI (sistema) — LECTURA ABIERTA",
-        "  Sección 2          : Último test evaluado — LECTURA ABIERTA",
+        "  Sección 1          : Tru_Ri / Tru_total del repositorio — LECTURA",
+        "  Sección 2          : Sujetos S_1…S_N (N={0}) — LECTURA".format(len(sujetos)),
+        "  Sección 3          : Último test — LECTURA",
         "  Omega no inventa C/L/K/Tru; lee lo que el ciclo depositó.",
         "  0 = cero real · UNDEFINED = base nula · no depositado = no vino",
         "=" * 80,
@@ -985,9 +1148,6 @@ def presentar(datos: Dict[str, Any]) -> str:
     return "\n".join(lineas)
 
 
-# =============================================================================
-# CARGA — orquesta lectura + un ciclo real de auto-auditoría del repo
-# =============================================================================
 def _leer_json(path: Path) -> Any:
     if not path.exists():
         return None
@@ -1076,7 +1236,6 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
         except Exception:  # noqa: BLE001
             pass
 
-        # ----- (1) Auto-auditoría del VPSI: un ciclo REAL del Engine -----
         if getattr(eng, "estado", None) == "OPERATIVO" and hasattr(eng, "evaluar"):
             try:
                 r_sys = eng.evaluar(dict(PETICION_AUDITORIA_VPSI))
@@ -1105,14 +1264,13 @@ def cargar_datos_desde_engine() -> Dict[str, Any]:
                     "razon": "auto-auditoría: {0}: {1}".format(type(e).__name__, e),
                     "C": None, "L": None, "K": None,
                     "tru_ri": None, "tru_total": None,
-                    "taxonomia": None, "citas": [],
+                    "taxonomia": None, "citas": [], "sujetos": [],
                     "lectura": {
                         "C": False, "L": False, "K": False,
                         "tru_ri": False, "tru_total": False,
                     },
                 }
 
-        # ----- (2) Último test: evaluations.json (pytest / CI) -----
         eval_path = DIAGNOSTICS_DIR / "evaluaciones.json"
         datos["resultados_evaluacion"] = []
         if eval_path.exists():
