@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
-Version 12.2 — orquestador por contrato; CE = extension del Engine.
+Version 12.3 — Orquestador puro y ciego.
 
 Principio
-  - Descubre modulos por CONTENEDOR (roles y capacidades).
-  - Actua solo por lo que cada contrato declara.
-  - CE no es un modulo ajeno: es extension del propio Engine.
-  - Todo archivo/mandato bajo CE se lee automaticamente.
-  - Engine deposita explicitamente las salidas exigidas por los mandatos
-    (sujetos, recortes, etc.) para que Omega los consuma sin fallos de N=0.
-  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru. CX: marco. CIT: anuncio.
+  - Descubre módulos por CONTENEDOR (roles y capacidades).
+  - Actúa solo por lo que cada contrato declara.
+  - CE es extensión del Engine: lee mandatos y asegura la salida_esperada.
+  - Engine captura toda la delegación (ej. recortes de CA) sin mutilar diccionarios.
+  - Engine no recorta texto ni hardcodea "sujetos"; eso pertenece a escalas_ids/CA.
+  - CT: ALPHA/BETA. CA: C/L/K y escalas. FO: Tru. CX: marco. CIT: anuncio.
   - Sin O usable → UNDEFINED. Nunca bool(UNDEFINED). No fabrica K/O.
 """
 
@@ -19,7 +18,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import re
 import sys
 import traceback
 from fractions import Fraction
@@ -232,45 +230,8 @@ class Registro:
 
 
 # ===============================================================
-# Material / recortes
+# Utilería de llaves
 # ===============================================================
-_RE_HABLANTE = re.compile(
-    r"(?m)^\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_\-]{0,40})\s*:\s*(.+)$"
-)
-
-
-def _texto_peticion(peticion: Dict[str, Any]) -> str:
-    for k in ("mensaje", "descripcion", "texto", "D", "material"):
-        v = peticion.get(k)
-        if v is not None and str(v).strip():
-            return str(v)
-    entrada = peticion.get("entrada")
-    if isinstance(entrada, dict):
-        for k in ("mensaje", "descripcion", "texto"):
-            v = entrada.get(k)
-            if v is not None and str(v).strip():
-                return str(v)
-    elif entrada is not None and str(entrada).strip():
-        return str(entrada)
-    return ""
-
-
-def _segmentar_lineas_nombre(texto: str) -> List[Dict[str, Any]]:
-    if not texto or not str(texto).strip():
-        return []
-    out: List[Dict[str, Any]] = []
-    for m in _RE_HABLANTE.finditer(str(texto)):
-        nombre = m.group(1).strip()
-        cuerpo = m.group(2).strip()
-        if nombre and cuerpo:
-            out.append({
-                "indice": len(out) + 1,
-                "nombre": nombre,
-                "texto": cuerpo,
-            })
-    return out
-
-
 def _default_para_clave(clave: str) -> Any:
     k = str(clave).strip().lower()
     if k.startswith("n_") or k.endswith("_n") or k in ("n", "count"):
@@ -289,11 +250,11 @@ def _default_para_clave(clave: str) -> Any:
 # ===============================================================
 class Engine:
     """
-    Orquestador v12.2
-    Depositos directos garantizados para Omega
+    Orquestador v12.3
+    Delegación total. Captura arrays íntegros de CA y los inyecta para Omega.
     """
 
-    VERSION = "12.2"
+    VERSION = "12.3"
 
     def __init__(
         self,
@@ -652,162 +613,16 @@ class Engine:
     def _depositar_segun_mandatos(
         self,
         body: Dict[str, Any],
-        mandatos: List[Dict[str, Any]],
-        relleno: Optional[Dict[str, Any]] = None,
+        mandatos: List[Dict[str, Any]]
     ) -> None:
-        """Garantiza depósito explícito de las llaves que exige Omega."""
-        relleno = relleno or {}
-        
-        # 1. Inyección explícita y directa para evitar fallo N=0
-        if "sujetos" not in body:
-            body["sujetos"] = relleno.get("sujetos", [])
-        if "n_sujetos" not in body:
-            body["n_sujetos"] = relleno.get("n_sujetos", len(body["sujetos"]))
-        if "por_sujeto" not in body:
-            body["por_sujeto"] = relleno.get("por_sujeto", {})
-            
-        # 2. Inyección del resto de dinámicos del contrato
-        for k, v in relleno.items():
-            if k not in body:
-                body[k] = v
-
+        """Llena ciegamente las claves vacías que exija el mandato si CA no las produjo."""
         for m in mandatos:
             for clave in m.get("salida_esperada") or []:
                 key = str(clave).strip()
                 if not key:
                     continue
-                if key in body and body[key] not in (None,):
-                    continue
-                if key in relleno:
-                    body[key] = relleno[key]
-                else:
+                if key not in body:
                     body[key] = _default_para_clave(key)
-            sal = [str(x).strip().lower() for x in (m.get("salida_esperada") or [])]
-            for cand in list(sal):
-                if cand.startswith("n_"):
-                    base = cand[2:]
-                    if base and base not in body:
-                        body[base] = relleno.get(base, [])
-                    if cand not in body or body[cand] is None:
-                        base_val = body.get(base)
-                        body[cand] = len(base_val) if isinstance(base_val, list) else (
-                            relleno.get(cand, 0)
-                        )
-                if cand.startswith("por_") and cand not in body:
-                    body[cand] = relleno.get(cand, {})
-
-    def _recortes_desde_peticion(
-        self, peticion: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        for key in ("sujetos", "recortes", "items", "segmentos"):
-            raw = peticion.get(key)
-            if isinstance(raw, list) and raw:
-                segs: List[Dict[str, Any]] = []
-                for i, s in enumerate(raw, start=1):
-                    if isinstance(s, dict):
-                        nombre = str(
-                            s.get("nombre") or s.get("id") or "R{0}".format(i)
-                        )
-                        texto = str(
-                            s.get("texto") or s.get("mensaje") or s.get("D") or ""
-                        )
-                    else:
-                        nombre = "R{0}".format(i)
-                        texto = str(s)
-                    if texto.strip():
-                        segs.append({
-                            "indice": i,
-                            "nombre": nombre,
-                            "texto": texto,
-                        })
-                if segs:
-                    return segs
-        return _segmentar_lineas_nombre(_texto_peticion(peticion))
-
-    def _ciclo_por_recortes(
-        self,
-        peticion: Dict[str, Any],
-        o_ctx: Any,
-        segs: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        out: List[Dict[str, Any]] = []
-        for seg in segs:
-            p = dict(peticion)
-            p["mensaje"] = seg["texto"]
-            p["texto"] = seg["texto"]
-            p["descripcion"] = seg["texto"]
-            if not _o_ausente(o_ctx):
-                p.setdefault("contexto", o_ctx)
-                p.setdefault("O_context", o_ctx)
-            for k in ("C", "L", "K"):
-                p.pop(k, None)
-            ciclo = self._ciclo_factores_tru(p)
-            item = {
-                "indice": seg["indice"],
-                "nombre": seg["nombre"],
-                "texto": seg["texto"],
-                "estado": ciclo.get("estado"),
-            }
-            if ciclo.get("estado") == "OK":
-                item["C"] = ciclo["factores"]["C"]
-                item["L"] = ciclo["factores"]["L"]
-                item["K"] = ciclo["factores"]["K"]
-                item["tru_ri"] = ciclo["tru_ri"]
-                item["tru_total"] = ciclo["tru_total"]
-            else:
-                item["razon"] = ciclo.get("razon")
-                item["factores"] = ciclo.get("factores")
-            out.append(item)
-        return out
-
-    def _relleno_desde_recortes(
-        self,
-        mandatos: List[Dict[str, Any]],
-        recortes: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Alineación explícita para el reporte de Omega."""
-        relleno: Dict[str, Any] = {}
-        
-        # 1. Llenado base para sujetos explícitos
-        por = {
-            (r.get("nombre") or "R{0}".format(r.get("indice"))): r
-            for r in recortes
-        }
-        
-        relleno["sujetos"] = list(recortes)
-        relleno["n_sujetos"] = len(recortes)
-        relleno["por_sujeto"] = dict(por)
-        
-        # 2. Heurística original de mandatos de CE
-        for m in mandatos:
-            sal = [str(x).strip() for x in (m.get("salida_esperada") or [])]
-            sal_l = [x.lower() for x in sal]
-            lista_key = None
-            for k, kl in zip(sal, sal_l):
-                if kl.startswith("n_") or kl.startswith("por_"):
-                    continue
-                if kl in ("tru_ri", "tru_total", "c", "l", "k", "resultado_ciclo", "categoria_tru", "escala_id", "citacion"):
-                    continue
-                lista_key = k
-                break
-            if lista_key is None:
-                for k, kl in zip(sal, sal_l):
-                    if not kl.startswith("n_") and not kl.startswith("por_"):
-                        lista_key = k
-                        break
-            if lista_key and lista_key not in relleno:
-                relleno[lista_key] = list(recortes)
-                relleno["n_" + str(lista_key)] = len(recortes)
-                
-                singular = lista_key[:-1] if lista_key.endswith('s') else lista_key
-                relleno["por_" + str(singular)] = dict(por)
-
-                for k, kl in zip(sal, sal_l):
-                    if kl.startswith("n_"):
-                        relleno[k] = len(recortes)
-                    if kl.startswith("por_"):
-                        relleno[k] = dict(por)
-        return relleno
 
     def ejecutar_capacidad(
         self, rol: str, capacidad: str, *args: Any, **kwargs: Any
@@ -920,24 +735,27 @@ class Engine:
         return None
 
     def _factores_ca(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
-        C = L = K = None
+        out = {}
         ca = self.registro.primero("CA")
+        
+        # 1. Absorber TODA la inteligencia de CA (factores, sujetos, sub-ciclos, recortes)
         if ca is not None and ca.tiene("calcular"):
             calc = self._ejecutar_capacidad(ca, "calcular", peticion)
             if not es_undefined(calc) and isinstance(calc, dict):
-                C = calc.get("C")
-                L = calc.get("L")
-                K = calc.get("K")
+                out.update(calc)
+        
+        # 2. Respetar overrides numéricos de la petición si los hay
         try:
             if "C" in peticion and peticion["C"] is not None:
-                C = Fraction(str(peticion["C"]))
+                out["C"] = Fraction(str(peticion["C"]))
             if "L" in peticion and peticion["L"] is not None:
-                L = Fraction(str(peticion["L"]))
+                out["L"] = Fraction(str(peticion["L"]))
             if "K" in peticion and peticion["K"] is not None:
-                K = Fraction(str(peticion["K"]))
+                out["K"] = Fraction(str(peticion["K"]))
         except Exception as e:
-            return {"error": "C, L o K invalidos: {0}".format(e)}
-        return {"C": C, "L": L, "K": K}
+            out["error"] = "C, L o K invalidos: {0}".format(e)
+            
+        return out
 
     def _tru_fo(self, C: Any, L: Any, K: Any) -> Dict[str, Any]:
         try:
@@ -954,11 +772,14 @@ class Engine:
 
     def _ciclo_factores_tru(self, peticion: Dict[str, Any]) -> Dict[str, Any]:
         fac = self._factores_ca(peticion)
+        
         if fac.get("error"):
             return {"estado": "ERROR", "razon": fac["error"]}
+            
         C, L, K = fac.get("C"), fac.get("L"), fac.get("K")
+        
         if C is None or L is None or K is None:
-            return {
+            res = {
                 "estado": "PARCIAL",
                 "razon": (
                     "Faltan factores C/L/K "
@@ -970,10 +791,21 @@ class Engine:
                     "K": str(K) if K is not None else None,
                 },
             }
+            for k, v in fac.items():
+                if k not in ("C", "L", "K", "error"):
+                    res[k] = v
+            return res
+
         tru = self._tru_fo(C, L, K)
+        
         if tru.get("error"):
-            return {"estado": "ERROR", "razon": tru["error"]}
-        return {
+            res = {"estado": "ERROR", "razon": tru["error"]}
+            for k, v in fac.items():
+                if k not in ("C", "L", "K", "error"):
+                    res[k] = v
+            return res
+            
+        res = {
             "estado": "OK",
             "factores": {"C": str(C), "L": str(L), "K": str(K)},
             "tru_ri": str(tru["tru_ri"]),
@@ -981,6 +813,13 @@ class Engine:
             "alpha": str(tru["alpha"]),
             "beta": str(tru["beta"]),
         }
+        
+        # Propagar arreglos e inteligencia residual de CA a la salida final
+        for k, v in fac.items():
+            if k not in ("C", "L", "K", "error"):
+                res[k] = v
+                
+        return res
 
     def _cierre_cit(
         self,
@@ -1055,12 +894,6 @@ class Engine:
         cx = self._marco_cx(peticion)
         o_ctx = self._o_usable(peticion, cx)
 
-        segs = self._recortes_desde_peticion(peticion)
-        recortes_calc: List[Dict[str, Any]] = []
-        if segs and not _o_ausente(o_ctx):
-            recortes_calc = self._ciclo_por_recortes(peticion, o_ctx, segs)
-        relleno = self._relleno_desde_recortes(mandatos, recortes_calc)
-
         if _o_ausente(o_ctx):
             ids_cx = list((cx or {}).get("ids_cx_relevantes") or [])
             body: Dict[str, Any] = {
@@ -1090,7 +923,7 @@ class Engine:
                 "fallos": list(self.fallos),
                 "engine_version": self.VERSION,
             }
-            self._depositar_segun_mandatos(body, mandatos, relleno)
+            self._depositar_segun_mandatos(body, mandatos)
             if cx is not None:
                 body["contexto_cx"] = {
                     "permite_k": cx.get("permite_k"),
@@ -1107,63 +940,39 @@ class Engine:
 
         ciclo = self._ciclo_factores_tru(peticion)
 
-        if ciclo.get("estado") == "ERROR":
-            body = {
-                "estado": "ERROR",
-                "razon": ciclo.get("razon"),
-                "contexto": o_ctx,
-                "ce_ids": ce.get("ids") or [],
-                "mandatos_ce": mandatos_ids,
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
-            }
-            self._depositar_segun_mandatos(body, mandatos, relleno)
-            if cx is not None:
-                body["contexto_cx"] = {
-                    "permite_k": cx.get("permite_k"),
-                    "pedir_anuncio": cx.get("pedir_anuncio"),
-                }
-            return self._emit(body, peticion)
-
-        if ciclo.get("estado") == "PARCIAL":
-            body = {
-                "estado": "PARCIAL",
-                "razon": ciclo.get("razon"),
-                "contexto": o_ctx,
-                "factores": ciclo.get("factores"),
-                "ce_ids": ce.get("ids") or [],
-                "mandatos_ce": mandatos_ids,
-                "fallos": list(self.fallos),
-                "engine_version": self.VERSION,
-            }
-            self._depositar_segun_mandatos(body, mandatos, relleno)
-            if cx is not None:
-                body["contexto_cx"] = {
-                    "permite_k": cx.get("permite_k"),
-                    "pedir_anuncio": cx.get("pedir_anuncio"),
-                    "tipos_peticion": cx.get("tipos_peticion"),
-                }
-            cit = self._cierre_cit(peticion, cx, body)
-            if cit is not None:
-                body["citacion"] = cit
-            return self._emit(body, peticion)
-
+        # Construir body dinámicamente desde el resultado de CA + FO
         body = {
-            "estado": "OK",
+            "estado": ciclo.get("estado", "OK"),
             "contexto": o_ctx,
-            "factores": ciclo["factores"],
-            "tru_ri": ciclo["tru_ri"],
-            "tru_total": ciclo["tru_total"],
-            "alpha": ciclo["alpha"],
-            "beta": ciclo["beta"],
-            "R_i_equals_R": False,
-            "fuentes_usadas": ["X", "O_context"],
             "ce_ids": ce.get("ids") or [],
             "mandatos_ce": mandatos_ids,
             "fallos": list(self.fallos),
             "engine_version": self.VERSION,
         }
-        self._depositar_segun_mandatos(body, mandatos, relleno)
+
+        if ciclo.get("estado") in ("ERROR", "PARCIAL"):
+            body["razon"] = ciclo.get("razon")
+            if "factores" in ciclo:
+                body["factores"] = ciclo["factores"]
+        else:
+            body.update({
+                "factores": ciclo["factores"],
+                "tru_ri": ciclo["tru_ri"],
+                "tru_total": ciclo["tru_total"],
+                "alpha": ciclo["alpha"],
+                "beta": ciclo["beta"],
+                "R_i_equals_R": False,
+                "fuentes_usadas": ["X", "O_context"],
+            })
+
+        # Inyectar delegación profunda (Ej. CA depositó sujetos, por_sujeto, n_sujetos)
+        for k, v in ciclo.items():
+            if k not in body and k not in ("estado", "razon"):
+                body[k] = v
+
+        # Rellenar con claves nulas lo que CA o los subciclos hayan omitido y CE requiera
+        self._depositar_segun_mandatos(body, mandatos)
+
         if cx is not None:
             body["contexto_cx"] = {
                 "permite_k": cx.get("permite_k"),
@@ -1173,10 +982,12 @@ class Engine:
                 "ids_cx_relevantes": cx.get("ids_cx_relevantes"),
                 "coherente": cx.get("coherente"),
             }
+            
         cit = self._cierre_cit(peticion, cx, body)
         if cit is not None:
             body["citacion"] = cit
             body["fallos"] = list(self.fallos)
+            
         return self._emit(body, peticion)
 
     def censar(self) -> Dict[str, Any]:
