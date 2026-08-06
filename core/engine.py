@@ -1,95 +1,234 @@
-# ==============================================================
-# INICIO: core/engine.py — versión corregida (separación arranque / ejecución)
-# ==============================================================
+# ===============================================================
+# VPSI-TRUTH — core/engine.py
+# ===============================================================
+#
+# ENGINE
+# Versión:            18.3
+# Esquema contrato:   VPSI-CONTRACT-1.0
+# API Engine:         1.0
+#
+# Función:
+#   Agente ejecutor del sistema.
+#   Descubre, valida contrato (completo), registra, resuelve
+#   dependencias, ejecuta capacidades autorizadas, consolida
+#   reportes y entrega paquete_omega().
+#
+# Qué NO hace:
+#   No inventa capacidades. No adivina campos.
+#   No calcula Tru. No explora código fuente.
+#   No interpreta reportes (eso es Omega).
+#
+# Principio:
+#   Agencia limitada por la unión coherente de los contratos.
+#
+# ===============================================================
 
-# ilver
-"""
-VPSI-TRUTH --- core/engine.py
 
-Kernel estructural.
-Fase de arranque: solo descubre y valida.
-Fase de ejecución: se realiza bajo demanda.
-"""
+# ===============================================================
+# IMPORTACIONES
+# ===============================================================
 
 from __future__ import annotations
 
-import ast
 import importlib.util
+import re
 import sys
 import time
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+# ===============================================================
+# FIN IMPORTACIONES
+# ===============================================================
 
 
 # ===============================================================
-# SECCIÓN 1: EXCEPCIONES Y ESTRUCTURAS BASE
+# CONSTANTES
 # ===============================================================
+
+VERSION_ENGINE = "18.3"
+ESQUEMA_CONTRATO_REQUERIDO = "VPSI-CONTRACT-1.0"
+VERSION_CONTRATO_REQUERIDA = "1.0"
+API_ENGINE_ACTUAL = "1.0"
+
+ESTADO_NO_INICIADO = "NO_INICIADO"
+ESTADO_OPERATIVO = "OPERATIVO"
+ESTADO_DEGRADADO = "DEGRADADO"
+ESTADO_RECHAZADO = "RECHAZADO"
+ESTADOS_CANONICOS = (
+    ESTADO_NO_INICIADO,
+    ESTADO_OPERATIVO,
+    ESTADO_DEGRADADO,
+    ESTADO_RECHAZADO,
+)
+
+CLAVES_OBLIGATORIAS_CONTRATO = (
+    "esquema",
+    "version_contrato",
+    "version_modulo",
+    "id",
+    "nombre",
+    "rol",
+    "descripcion",
+    "funcion",
+    "no_hace",
+    "autoridad",
+    "conocimiento_exportable",
+    "requiere",
+    "autoriza_engine",
+    "consultas_soportadas",
+    "capacidades",
+    "capacidades_meta",
+    "reporting",
+    "estados_validos",
+    "invariantes",
+    "estabilidad",
+    "compatible_desde",
+    "api_engine",
+)
+
+PERMISOS_AUTORIZA_ENGINE = (
+    "leer",
+    "ejecutar",
+    "consultar",
+    "recombinar",
+    "reportar",
+    "auditar",
+    "inventariar",
+    "modificar",
+    "alterar",
+    "reescribir",
+)
+
+BANDERAS_REPORTING = (
+    "estado",
+    "salud",
+    "inventario",
+    "capacidades",
+    "errores",
+    "advertencias",
+    "dependencias",
+    "version",
+    "contrato",
+    "conocimiento",
+    "metricas",
+    "diagnostico",
+)
+
+CLAVES_META_CAPACIDAD = ("descripcion", "entrada", "salida")
+
+LISTAS_STR_OBLIGATORIAS = (
+    "no_hace",
+    "autoridad",
+    "conocimiento_exportable",
+    "consultas_soportadas",
+    "invariantes",
+)
+
+# ===============================================================
+# FIN CONSTANTES
+# ===============================================================
+
+
+# ===============================================================
+# DEFINICIONES
+# ===============================================================
+
 class ArranqueError(Exception):
+    """Fallo estructural durante el arranque del Engine."""
     pass
 
 
 class Contenedor:
-    def __init__(
-        self,
-        nombre: str,
-        rol: str,
-        version: str,
-        modulo: Any,
-        ruta: Path,
-        meta: Dict[str, Any],
-    ) -> None:
-        self.nombre = nombre
-        self.rol = rol
-        self.version = version
+    """Materialización de un CONTENEDOR. Engine no completa campos."""
+
+    def __init__(self, meta: Dict[str, Any], modulo: Any, ruta: Path) -> None:
+        self.meta = meta
         self.modulo = modulo
         self.ruta = ruta
-        self.meta = meta
-        self.capacidades = meta.get("capacidades", {})
-        self.requiere = list(meta.get("requiere", []))
-        self._fn_custom = meta.get("fn") if callable(meta.get("fn")) else None
+
+        self.id: str = str(meta.get("id", ""))
+        self.nombre: str = str(meta.get("nombre", ""))
+        self.rol: str = str(meta.get("rol", ""))
+        self.version: str = str(meta.get("version_modulo", meta.get("version", "")))
+        self.version_contrato: str = str(meta.get("version_contrato", ""))
+        self.esquema: str = str(meta.get("esquema", ""))
+        self.estabilidad: str = str(meta.get("estabilidad", ""))
+        self.descripcion: str = str(meta.get("descripcion", ""))
+        self.compatible_desde: str = str(meta.get("compatible_desde", ""))
+        self.api_engine: str = str(meta.get("api_engine", ""))
+
+        self.funcion = meta.get("funcion")
+        self.no_hace = list(meta.get("no_hace") or [])
+        self.autoridad = list(meta.get("autoridad") or [])
+        self.conocimiento_exportable = list(meta.get("conocimiento_exportable") or [])
+        self.consultas_soportadas = list(meta.get("consultas_soportadas") or [])
+        self.invariantes = list(meta.get("invariantes") or [])
+
+        self.requiere: List[str] = list(meta.get("requiere") or [])
+        self.autoriza_engine: Dict[str, Any] = dict(meta.get("autoriza_engine") or {})
+        self.capacidades: Dict[str, Any] = dict(meta.get("capacidades") or {})
+        self.capacidades_meta: Dict[str, Any] = dict(meta.get("capacidades_meta") or {})
+        self.reporting: Dict[str, Any] = dict(meta.get("reporting") or {})
+        self.estados_validos = list(meta.get("estados_validos") or [])
 
     def fn(self, clave: str) -> Any:
-        if self._fn_custom is not None:
-            try:
-                res = self._fn_custom(clave)
-                if res is not None:
-                    return res
-            except Exception:
-                pass
         ref = self.capacidades.get(clave)
-        if callable(ref):
-            return ref
-        if isinstance(ref, str) and self.modulo is not None:
-            return getattr(self.modulo, ref, None)
-        return None
+        return ref if callable(ref) else None
 
 
 class RegistroModulos:
     def __init__(self) -> None:
         self.contenedores: Dict[str, Contenedor] = {}
+        self.por_id: Dict[str, Contenedor] = {}
         self.por_rol: Dict[str, List[Contenedor]] = {}
 
-    def registrar(self, cont: Contenedor) -> None:
+    def registrar(self, cont: Contenedor) -> List[str]:
+        errores = []
+        if cont.nombre in self.contenedores:
+            errores.append(f"duplicado de nombre: '{cont.nombre}' ya registrado")
+        if cont.id and cont.id in self.por_id:
+            errores.append(
+                f"duplicado de id: '{cont.id}' ya registrado "
+                f"(módulo {self.por_id[cont.id].nombre})"
+            )
+        if cont.rol in self.por_rol and self.por_rol[cont.rol]:
+            existente = self.por_rol[cont.rol][0].nombre
+            errores.append(
+                f"duplicado de rol: '{cont.rol}' ya ocupado por '{existente}'"
+            )
+        if errores:
+            return errores
         self.contenedores[cont.nombre] = cont
+        if cont.id:
+            self.por_id[cont.id] = cont
         self.por_rol.setdefault(cont.rol, []).append(cont)
+        return []
 
     def primero(self, clave: str) -> Optional[Contenedor]:
         if clave in self.contenedores:
             return self.contenedores[clave]
+        if clave in self.por_id:
+            return self.por_id[clave]
         lista = self.por_rol.get(clave)
         return lista[0] if lista else None
 
     def total(self) -> int:
         return len(self.contenedores)
 
+# ===============================================================
+# FIN DEFINICIONES
+# ===============================================================
+
 
 # ===============================================================
-# SECCIÓN 2: ENGINE
+# ENGINE
 # ===============================================================
+
 class Engine:
-    VERSION = "17.2-separacion-fases"
+    VERSION = VERSION_ENGINE
 
     def __init__(
         self,
@@ -97,105 +236,55 @@ class Engine:
         invocador_id: str = "core",
         strict: bool = True,
     ) -> None:
-        # 2.1 Parámetros
         self.raiz = Path(raiz_modulos).resolve()
         self.invocador_id = invocador_id
         self.strict = strict
 
-        # 2.2 Estado
-        self.estado = "NO_INICIADO"
-
-        # 2.3 Atributos exigidos por auditoría
+        self.estado = ESTADO_NO_INICIADO
         self.registro = RegistroModulos()
-        self.resultados_evaluacion: List[Any] = []
         self.errores_arranque: List[str] = []
-        self.fallos: List[Dict[str, Any]] = []
         self.advertencias: List[str] = []
+        self.fallos: List[Dict[str, Any]] = []
+        self.resultados_evaluacion: List[Any] = []
+        self._trazas: List[Dict[str, Any]] = []
+        self._traza_seq: int = 0
 
-        # 2.4 Evidencia
         self._modulos_descubiertos: List[Path] = []
-        self._exploracion: Dict[str, Any] = {}
-        self._inspeccion: Dict[str, Any] = {}
-        self._resolucion: Dict[str, Any] = {}
-        self._ejecucion: Dict[str, Any] = {}
-        self._auditoria: Dict[str, Any] = {}
-        self._grafo: Dict[str, Any] = {}
+        self._reportes_modulos: Dict[str, Any] = {}
+        self._diagnosticos: Dict[str, Any] = {}
+        self._inventarios: Dict[str, Any] = {}
         self._dependencias: Dict[str, Any] = {}
-        self._indice_simbolos: Dict[str, Dict[str, Any]] = {}
-        self._diagnosticos_causales: List[Dict[str, Any]] = []
+        self._grafo: Dict[str, Any] = {}
 
-        # 2.5 Flujo de ARRANQUE (solo validación estructural)
         self._modulos_descubiertos = self._descubrir_modulos()
         self._cargar_y_validar()
         self._resolver_dependencias()
-        self._construir_indice_simbolos()
         self._construir_grafo()
 
-        # 2.6 Cierre
         if self.errores_arranque:
-            self.estado = "RECHAZADO"
+            self.estado = ESTADO_RECHAZADO
             if self.strict:
                 raise ArranqueError(
                     "Engine no pudo arrancar:\n  - "
                     + "\n  - ".join(self.errores_arranque)
                 )
         else:
-            self.estado = "OPERATIVO"
+            self.estado = ESTADO_OPERATIVO
 
-    # ===========================================================
-    # SECCIÓN 3: DESCUBRIDOR
-    # ===========================================================
+    # ----------------------------------------------------------
+    # DESCUBRIMIENTO
+    # ----------------------------------------------------------
     def _descubrir_modulos(self) -> List[Path]:
-        encontrados: List[Path] = []
         if not self.raiz.is_dir():
-            return encontrados
-        for path_dir in sorted(self.raiz.iterdir()):
-            if path_dir.is_dir() and (path_dir / "__init__.py").is_file():
-                encontrados.append(path_dir)
-        return encontrados
+            return []
+        return [
+            p for p in sorted(self.raiz.iterdir())
+            if p.is_dir() and (p / "__init__.py").is_file()
+        ]
 
-    # ===========================================================
-    # SECCIÓN 4: DIAGNÓSTICO CAUSAL
-    # ===========================================================
-    def _diagnosticar_import_error(self, path_dir: Path, error: Exception) -> Dict[str, Any]:
-        mensaje = str(error)
-        diag: Dict[str, Any] = {
-            "modulo": path_dir.name,
-            "fase": "Carga del contrato",
-            "tipo_error": type(error).__name__,
-            "mensaje": mensaje,
-            "dependencia": None,
-            "simbolo": None,
-            "exportaciones_disponibles": [],
-            "causa_raiz": None,
-        }
-        if isinstance(error, ImportError) and "cannot import name" in mensaje and " from " in mensaje:
-            try:
-                parte = mensaje.split("cannot import name ")[1]
-                simbolo = parte.split("'")[1]
-                modulo_origen = parte.split(" from '")[1].split("'")[0]
-                diag["simbolo"] = simbolo
-                diag["dependencia"] = modulo_origen
-                try:
-                    mod_destino = sys.modules.get(modulo_origen)
-                    if mod_destino is None:
-                        import importlib
-                        mod_destino = importlib.import_module(modulo_origen)
-                    diag["exportaciones_disponibles"] = [
-                        n for n in dir(mod_destino) if not n.startswith("_")
-                    ][:50]
-                except Exception:
-                    pass
-                diag["causa_raiz"] = f"Símbolo '{simbolo}' no encontrado en '{modulo_origen}'."
-            except Exception:
-                diag["causa_raiz"] = "ImportError no parseable"
-        else:
-            diag["causa_raiz"] = f"{type(error).__name__}: {mensaje}"
-        return diag
-
-    # ===========================================================
-    # SECCIÓN 5: LECTOR DE CONTRATO
-    # ===========================================================
+    # ----------------------------------------------------------
+    # LECTURA
+    # ----------------------------------------------------------
     def _leer_contrato(self, path_dir: Path) -> Optional[Dict[str, Any]]:
         init_path = path_dir / "__init__.py"
         nombre_mod = f"vpsi_dinamico_{path_dir.name}"
@@ -210,6 +299,9 @@ class Engine:
             spec.loader.exec_module(mod)
             meta = getattr(mod, "CONTENEDOR", None)
             if not isinstance(meta, dict):
+                self.errores_arranque.append(
+                    f"{path_dir.name}: CONTENEDOR ausente o no es dict"
+                )
                 return None
             return {
                 "meta": meta,
@@ -218,172 +310,297 @@ class Engine:
                 "nombre_carpeta": path_dir.name,
             }
         except Exception as e:
-            diag = self._diagnosticar_import_error(path_dir, e)
-            self._diagnosticos_causales.append(diag)
             self.errores_arranque.append(
-                f"{path_dir.name}: [{diag['tipo_error']}] "
-                f"dep={diag.get('dependencia')} símbolo={diag.get('simbolo')} "
-                f"→ {diag.get('causa_raiz')}"
+                f"{path_dir.name}: error al cargar → {type(e).__name__}: {e}"
             )
             return None
 
-    # ===========================================================
-    # SECCIÓN 6: VALIDADOR DE CONTRATO
-    # ===========================================================
-    def _validar_contrato(self, meta: Dict[str, Any], nombre_carpeta: str) -> List[str]:
-        errores = []
-        if not isinstance(meta.get("nombre"), str) or not meta["nombre"]:
-            errores.append(f"{nombre_carpeta}: 'nombre' debe ser str no vacío")
-        if not isinstance(meta.get("rol"), str) or not meta["rol"]:
-            errores.append(f"{nombre_carpeta}: 'rol' debe ser str no vacío")
-        if not isinstance(meta.get("version"), str):
-            errores.append(f"{nombre_carpeta}: 'version' debe ser str")
-        if not isinstance(meta.get("requiere"), list):
-            errores.append(f"{nombre_carpeta}: 'requiere' debe ser list")
-        caps = meta.get("capacidades")
-        if not isinstance(caps, dict):
-            errores.append(f"{nombre_carpeta}: 'capacidades' debe ser dict")
+    # ----------------------------------------------------------
+    # VERSIONES
+    # ----------------------------------------------------------
+    @staticmethod
+    def _parse_version(s: str) -> Optional[Tuple[int, ...]]:
+        m = re.match(r"^(\d+(?:\.\d+)*)", str(s).strip())
+        if not m:
+            return None
+        try:
+            return tuple(int(x) for x in m.group(1).split("."))
+        except ValueError:
+            return None
+
+    def _comparar_api(self, declarado: str) -> Optional[str]:
+        """
+        ">=X.Y" → Engine API debe ser >= X.Y
+        "X.Y"   → Engine API debe ser exactamente X.Y
+        """
+        raw = str(declarado).strip()
+        if not raw:
+            return "api_engine vacío"
+
+        exacto = False
+        if raw.startswith(">="):
+            ver_str = raw[2:].strip()
         else:
-            for k in caps:
-                if not isinstance(k, str):
-                    errores.append(f"{nombre_carpeta}: clave de capacidad no es str: {k}")
+            exacto = True
+            ver_str = raw
+
+        requerida = self._parse_version(ver_str)
+        if requerida is None:
+            return f"api_engine no parseable: '{declarado}'"
+
+        actual = self._parse_version(API_ENGINE_ACTUAL)
+        if actual is None:
+            return f"API_ENGINE_ACTUAL inválida: '{API_ENGINE_ACTUAL}'"
+
+        n = max(len(requerida), len(actual))
+        requerida = requerida + (0,) * (n - len(requerida))
+        actual = actual + (0,) * (n - len(actual))
+
+        if exacto:
+            if actual != requerida:
+                return (
+                    f"api_engine exige exactamente {ver_str}, "
+                    f"Engine es {API_ENGINE_ACTUAL}"
+                )
+        else:
+            if actual < requerida:
+                return (
+                    f"api_engine exige >={ver_str}, "
+                    f"Engine es {API_ENGINE_ACTUAL}"
+                )
+        return None
+
+    def _comparar_compatible_desde(self, declarado: str, nombre: str) -> Optional[str]:
+        raw = str(declarado).strip()
+        if not raw:
+            return f"{nombre}: compatible_desde vacío"
+        requerida = self._parse_version(raw)
+        if requerida is None:
+            return f"{nombre}: compatible_desde no parseable: '{declarado}'"
+        actual = self._parse_version(VERSION_ENGINE)
+        if actual is None:
+            return None
+        n = max(len(requerida), len(actual))
+        requerida = requerida + (0,) * (n - len(requerida))
+        actual = actual + (0,) * (n - len(actual))
+        if actual < requerida:
+            return (
+                f"{nombre}: compatible_desde={raw} pero Engine es {VERSION_ENGINE}"
+            )
+        return None
+
+    # ----------------------------------------------------------
+    # VALIDACIÓN COMPLETA DEL CONTRATO
+    # ----------------------------------------------------------
+    def _validar_lista_str(self, meta: Dict[str, Any], clave: str, nombre: str) -> List[str]:
+        errores = []
+        val = meta.get(clave)
+        if not isinstance(val, list):
+            errores.append(f"{nombre}: '{clave}' debe ser list")
+            return errores
+        for i, item in enumerate(val):
+            if not isinstance(item, str):
+                errores.append(
+                    f"{nombre}: '{clave}[{i}]' debe ser str, "
+                    f"es {type(item).__name__}"
+                )
         return errores
 
-    # ===========================================================
-    # SECCIÓN 7: EXPLORADOR
-    # ===========================================================
-    def _explorar_modulo(self, path_dir: Path) -> Dict[str, Any]:
-        archivos, subcarpetas = [], []
-        for p in path_dir.rglob("*"):
-            if p.is_file():
-                archivos.append(str(p.relative_to(self.raiz)))
-            elif p.is_dir() and p != path_dir:
-                subcarpetas.append(str(p.relative_to(self.raiz)))
-        return {
-            "archivos": sorted(archivos),
-            "subcarpetas": sorted(subcarpetas),
-            "total_archivos": len(archivos),
-            "total_subcarpetas": len(subcarpetas),
-        }
+    def _validar_esquema(self, meta: Dict[str, Any], nombre: str) -> List[str]:
+        errores: List[str] = []
 
-    # ===========================================================
-    # SECCIÓN 8: INSPECTOR AST
-    # ===========================================================
-    def _inspeccionar_archivo(self, archivo: Path) -> Dict[str, Any]:
-        info: Dict[str, Any] = {
-            "funciones": [], "clases": [], "constantes": [],
-            "imports": [], "doc": None
-        }
-        try:
-            fuente = archivo.read_text(encoding="utf-8")
-            tree = ast.parse(fuente, filename=str(archivo))
-            info["doc"] = ast.get_docstring(tree)
-            for node in tree.body:
-                if isinstance(node, ast.FunctionDef):
-                    info["funciones"].append(node.name)
-                elif isinstance(node, ast.ClassDef):
-                    info["clases"].append(node.name)
-                elif isinstance(node, ast.Assign):
-                    for t in node.targets:
-                        if isinstance(t, ast.Name) and t.id.isupper():
-                            info["constantes"].append(t.id)
-                elif isinstance(node, (ast.Import, ast.ImportFrom)):
-                    info["imports"].append(ast.dump(node))
-        except Exception:
-            pass
-        return info
+        # Esquema
+        if meta.get("esquema") != ESQUEMA_CONTRATO_REQUERIDO:
+            errores.append(
+                f"{nombre}: esquema '{meta.get('esquema')}' "
+                f"!= '{ESQUEMA_CONTRATO_REQUERIDO}'"
+            )
 
-    def _inspeccionar_modulo(self, path_dir: Path) -> Dict[str, Any]:
-        resultado = {}
-        for py in path_dir.rglob("*.py"):
-            rel = str(py.relative_to(self.raiz))
-            resultado[rel] = self._inspeccionar_archivo(py)
-        return resultado
+        # version_contrato exacta
+        vc = meta.get("version_contrato")
+        if str(vc) != VERSION_CONTRATO_REQUERIDA:
+            errores.append(
+                f"{nombre}: version_contrato '{vc}' "
+                f"!= '{VERSION_CONTRATO_REQUERIDA}'"
+            )
 
-    # ===========================================================
-    # SECCIÓN 9: RESOLVER CAPACIDADES
-    # ===========================================================
-    def _resolver_capacidades(self, cont: Contenedor) -> Dict[str, Any]:
-        resultado = {"resolubles": [], "no_resolubles": [], "total": 0}
-        for clave in cont.capacidades:
-            resultado["total"] += 1
-            if callable(cont.fn(clave)):
-                resultado["resolubles"].append(clave)
-            else:
-                resultado["no_resolubles"].append(clave)
-        return resultado
+        # version_modulo: str no vacío
+        vm = meta.get("version_modulo")
+        if not isinstance(vm, str) or not vm.strip():
+            errores.append(
+                f"{nombre}: version_modulo debe ser str no vacío, "
+                f"es {type(vm).__name__}"
+            )
 
-    # ===========================================================
-    # SECCIÓN 10: EJECUCIÓN DEL CONTRATO (bajo demanda)
-    # ===========================================================
-    def _ejecutar_contrato(self, cont: Contenedor) -> Dict[str, Any]:
-        """
-        Ejecuta las capacidades del contrato.
-        Esta función NO se llama durante el arranque.
-        Se usa solo cuando se solicita explícitamente.
-        """
-        resultados = {}
-        for clave in cont.capacidades:
-            fn = cont.fn(clave)
-            if not callable(fn):
-                resultados[clave] = {
-                    "estado": "NO_CALLABLE",
-                    "error": "La capacidad declarada no es ejecutable",
-                }
+        # Claves obligatorias
+        for clave in CLAVES_OBLIGATORIAS_CONTRATO:
+            if clave not in meta:
+                errores.append(f"{nombre}: falta clave obligatoria '{clave}'")
+
+        # Listas de str
+        for clave in LISTAS_STR_OBLIGATORIAS:
+            if clave in meta:
+                errores.extend(self._validar_lista_str(meta, clave, nombre))
+
+        # requiere: list (elementos str preferible)
+        requiere = meta.get("requiere")
+        if not isinstance(requiere, list):
+            errores.append(f"{nombre}: 'requiere' debe ser list")
+        else:
+            for i, item in enumerate(requiere):
+                if not isinstance(item, str):
+                    errores.append(
+                        f"{nombre}: 'requiere[{i}]' debe ser str, "
+                        f"es {type(item).__name__}"
+                    )
+
+        # Capacidades callables
+        caps = meta.get("capacidades")
+        if not isinstance(caps, dict):
+            errores.append(f"{nombre}: 'capacidades' debe ser dict")
+            caps = {}
+        else:
+            for k, v in caps.items():
+                if not callable(v):
+                    errores.append(
+                        f"{nombre}: capacidad '{k}' no es callable "
+                        f"(tipo={type(v).__name__})"
+                    )
+
+        # capacidades_meta: cada capacidad → dict con descripcion, entrada, salida
+        meta_caps = meta.get("capacidades_meta")
+        if not isinstance(meta_caps, dict):
+            errores.append(f"{nombre}: 'capacidades_meta' debe ser dict")
+        else:
+            for k in caps:
+                if k not in meta_caps:
+                    errores.append(
+                        f"{nombre}: capacidad '{k}' sin entrada en capacidades_meta"
+                    )
+                    continue
+                entrada_meta = meta_caps[k]
+                if not isinstance(entrada_meta, dict):
+                    errores.append(
+                        f"{nombre}: capacidades_meta['{k}'] debe ser dict, "
+                        f"es {type(entrada_meta).__name__}"
+                    )
+                    continue
+                for campo in CLAVES_META_CAPACIDAD:
+                    if campo not in entrada_meta:
+                        errores.append(
+                            f"{nombre}: capacidades_meta['{k}'] falta '{campo}'"
+                        )
+                    elif not isinstance(entrada_meta[campo], str):
+                        errores.append(
+                            f"{nombre}: capacidades_meta['{k}']['{campo}'] "
+                            f"debe ser str"
+                        )
+
+        # autoriza_engine: claves exactas + bool
+        auth = meta.get("autoriza_engine")
+        if not isinstance(auth, dict):
+            errores.append(f"{nombre}: 'autoriza_engine' debe ser dict")
+        else:
+            for permiso in PERMISOS_AUTORIZA_ENGINE:
+                if permiso not in auth:
+                    errores.append(
+                        f"{nombre}: autoriza_engine falta permiso '{permiso}'"
+                    )
+                elif not isinstance(auth[permiso], bool):
+                    errores.append(
+                        f"{nombre}: autoriza_engine['{permiso}'] debe ser bool, "
+                        f"es {type(auth[permiso]).__name__}"
+                    )
+            extras = set(auth.keys()) - set(PERMISOS_AUTORIZA_ENGINE)
+            if extras:
+                errores.append(
+                    f"{nombre}: autoriza_engine permisos desconocidos: {sorted(extras)}"
+                )
+
+        # reporting: banderas + bool
+        reporting = meta.get("reporting")
+        if not isinstance(reporting, dict):
+            errores.append(f"{nombre}: 'reporting' debe ser dict")
+        else:
+            for bandera in BANDERAS_REPORTING:
+                if bandera not in reporting:
+                    errores.append(
+                        f"{nombre}: reporting falta bandera '{bandera}'"
+                    )
+                elif not isinstance(reporting[bandera], bool):
+                    errores.append(
+                        f"{nombre}: reporting['{bandera}'] debe ser bool, "
+                        f"es {type(reporting[bandera]).__name__}"
+                    )
+
+        # estados_validos: list no vacía, solo canónicos
+        ev = meta.get("estados_validos")
+        if not isinstance(ev, list):
+            errores.append(f"{nombre}: 'estados_validos' debe ser list")
+        elif not ev:
+            errores.append(f"{nombre}: 'estados_validos' no puede estar vacío")
+        else:
+            for i, est in enumerate(ev):
+                if not isinstance(est, str):
+                    errores.append(
+                        f"{nombre}: estados_validos[{i}] debe ser str"
+                    )
+                elif est not in ESTADOS_CANONICOS:
+                    errores.append(
+                        f"{nombre}: estados_validos[{i}]='{est}' no es canónico. "
+                        f"Admitidos: {ESTADOS_CANONICOS}"
+                    )
+
+        # api_engine
+        err_api = self._comparar_api(str(meta.get("api_engine", "")))
+        if err_api:
+            errores.append(f"{nombre}: {err_api}")
+
+        # compatible_desde
+        err_cd = self._comparar_compatible_desde(
+            str(meta.get("compatible_desde", "")), nombre
+        )
+        if err_cd:
+            errores.append(err_cd)
+
+        return errores
+
+    def _cargar_y_validar(self) -> None:
+        for path_dir in self._modulos_descubiertos:
+            leido = self._leer_contrato(path_dir)
+            if leido is None:
                 continue
 
-            inicio = time.perf_counter()
-            try:
-                salida = fn()
-                duracion = time.perf_counter() - inicio
-                resultados[clave] = {
-                    "estado": "EXITO",
-                    "resultado": salida,
-                    "duracion_s": round(duracion, 6),
-                }
-            except Exception as e:
-                duracion = time.perf_counter() - inicio
-                resultados[clave] = {
-                    "estado": "ERROR_EJECUCION",
-                    "error": f"{type(e).__name__}: {e}",
-                    "duracion_s": round(duracion, 6),
-                }
-        return resultados
+            meta = leido["meta"]
+            nombre = meta.get("nombre") or leido["nombre_carpeta"]
 
-    def ejecutar_contrato(self, nombre_o_rol: str) -> Dict[str, Any]:
-        """API pública: ejecuta el contrato de un módulo bajo demanda."""
-        cont = self.registro.primero(nombre_o_rol)
-        if cont is None:
-            return {"error": f"No se encontró módulo o rol: {nombre_o_rol}"}
-        resultado = self._ejecutar_contrato(cont)
-        self._ejecucion[cont.nombre] = resultado
-        return resultado
+            errores = self._validar_esquema(meta, nombre)
+            if errores:
+                self.errores_arranque.extend(errores)
+                continue
 
-    # ===========================================================
-    # SECCIÓN 11: AUDITOR (solo validación estructural)
-    # ===========================================================
-    def _auditar(self, cont: Contenedor, resolucion: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            "nombre": cont.nombre,
-            "rol": cont.rol,
-            "version": cont.version,
-            "requiere": list(cont.requiere),
-            "resolucion": resolucion,
-            "coherente": len(resolucion.get("no_resolubles", [])) == 0,
-        }
+            cont = Contenedor(meta=meta, modulo=leido["modulo"], ruta=leido["ruta"])
+            errores_dup = self.registro.registrar(cont)
+            if errores_dup:
+                for e in errores_dup:
+                    self.errores_arranque.append(f"{nombre}: {e}")
 
-    # ===========================================================
-    # SECCIÓN 12: RESOLUCIÓN DE DEPENDENCIAS
-    # ===========================================================
+    # ----------------------------------------------------------
+    # DEPENDENCIAS
+    # ----------------------------------------------------------
     def _resolver_dependencias(self) -> None:
-        roles_presentes = set(self.registro.por_rol.keys())
+        presentes = (
+            set(self.registro.por_rol.keys())
+            | set(self.registro.por_id.keys())
+            | set(self.registro.contenedores.keys())
+        )
         faltantes: Dict[str, List[str]] = defaultdict(list)
         grafo_dep: Dict[str, List[str]] = defaultdict(list)
 
         for nombre, cont in self.registro.contenedores.items():
             for dep in cont.requiere:
                 grafo_dep[nombre].append(dep)
-                if dep not in roles_presentes and dep not in self.registro.contenedores:
+                if dep not in presentes:
                     faltantes[nombre].append(dep)
                     self.errores_arranque.append(
                         f"{cont.rol}/{nombre}: dependencia inexistente → '{dep}'"
@@ -396,7 +613,7 @@ class Engine:
                     in_degree[d] += 1
 
         cola = deque([n for n, deg in in_degree.items() if deg == 0])
-        orden = []
+        orden: List[str] = []
         while cola:
             n = cola.popleft()
             orden.append(n)
@@ -417,639 +634,303 @@ class Engine:
             "ciclos": ciclos,
         }
 
-    # ===========================================================
-    # SECCIÓN 13: ÍNDICE DE SÍMBOLOS
-    # ===========================================================
-    def _construir_indice_simbolos(self) -> None:
-        for nombre, cont in self.registro.contenedores.items():
-            inspeccion = self._inspeccion.get(nombre, {})
-            simbolos = {
-                "clases": [],
-                "funciones": [],
-                "constantes": [],
-                "capacidades": list(cont.capacidades.keys()),
-            }
-            for info in inspeccion.values():
-                simbolos["clases"].extend(info.get("clases", []))
-                simbolos["funciones"].extend(info.get("funciones", []))
-                simbolos["constantes"].extend(info.get("constantes", []))
-            for k in ("clases", "funciones", "constantes"):
-                simbolos[k] = sorted(set(simbolos[k]))
-            self._indice_simbolos[nombre] = simbolos
-
-    # ===========================================================
-    # SECCIÓN 14: GRAFO
-    # ===========================================================
+    # ----------------------------------------------------------
+    # GRAFO
+    # ----------------------------------------------------------
     def _construir_grafo(self) -> None:
         nodos, aristas = [], []
         for nombre, cont in self.registro.contenedores.items():
-            nodos.append({"id": nombre, "tipo": "modulo", "rol": cont.rol})
-            aristas.append({"from": nombre, "to": cont.rol, "tipo": "tiene_rol"})
-            for cap in cont.capacidades:
-                aristas.append({"from": nombre, "to": f"{nombre}.{cap}", "tipo": "declara_capacidad"})
+            nodos.append({
+                "id": cont.id or nombre,
+                "nombre": nombre,
+                "rol": cont.rol,
+                "tipo": "modulo",
+            })
             for dep in cont.requiere:
                 aristas.append({"from": nombre, "to": dep, "tipo": "requiere"})
-            for archivo in self._exploracion.get(nombre, {}).get("archivos", []):
-                aristas.append({"from": nombre, "to": archivo, "tipo": "contiene_archivo"})
+            for cap in cont.capacidades:
+                cap_id = f"{nombre}.{cap}"
+                nodos.append({
+                    "id": cap_id,
+                    "nombre": cap,
+                    "tipo": "capacidad",
+                    "modulo": nombre,
+                })
+                aristas.append({
+                    "from": nombre,
+                    "to": cap_id,
+                    "tipo": "declara_capacidad",
+                })
         self._grafo = {"nodos": nodos, "aristas": aristas}
 
-    # ===========================================================
-    # SECCIÓN 15: ORQUESTACIÓN DE ARRANQUE (solo validación)
-    # ===========================================================
-    def _cargar_y_validar(self) -> None:
-        for path_dir in self._modulos_descubiertos:
-            leido = self._leer_contrato(path_dir)
-            if leido is None:
-                continue
-
-            meta = leido["meta"]
-            nombre_carpeta = leido["nombre_carpeta"]
-
-            errores = self._validar_contrato(meta, nombre_carpeta)
-            if errores:
-                self.errores_arranque.extend(errores)
-                continue
-
-            nombre = meta["nombre"]
-            rol = meta["rol"]
-            version = str(meta.get("version", "1.0"))
-
-            cont = Contenedor(
-                nombre=nombre,
-                rol=rol,
-                version=version,
-                modulo=leido["modulo"],
-                ruta=leido["ruta"],
-                meta=meta,
-            )
-            self.registro.registrar(cont)
-
-            self._exploracion[nombre] = self._explorar_modulo(path_dir)
-            self._inspeccion[nombre] = self._inspeccionar_modulo(path_dir)
-
-            # Solo resolución (no ejecución)
-            resolucion = self._resolver_capacidades(cont)
-            self._resolucion[nombre] = resolucion
-
-            # Ejecución queda pendiente
-            self._ejecucion[nombre] = {"estado": "PENDIENTE"}
-
-            # Auditoría estructural
-            auditoria = self._auditar(cont, resolucion)
-            self._auditoria[nombre] = auditoria
-
-            if not auditoria["coherente"]:
-                self.errores_arranque.append(
-                    f"{rol}/{nombre}: capacidades no resolubles: "
-                    f"{resolucion.get('no_resolubles')}"
-                )
-
-    # ===========================================================
-    # SECCIÓN 16: ESTADO GLOBAL
-    # ===========================================================
-    def estado_global(self) -> Dict[str, Any]:
-        return {
-            "tipo": "estado_global",
-            "version_engine": self.VERSION,
-            "estado": self.estado,
+    # ----------------------------------------------------------
+    # TRAZA
+    # ----------------------------------------------------------
+    def _registrar_traza(
+        self,
+        modulo: str,
+        capacidad: str,
+        estado: str,
+        duracion_s: float,
+        error: Optional[str] = None,
+    ) -> None:
+        self._traza_seq += 1
+        entrada: Dict[str, Any] = {
+            "id_traza": self._traza_seq,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "total_contenedores": self.registro.total(),
+            "modulo": modulo,
+            "capacidad": capacidad,
+            "estado": estado,
+            "duracion_s": duracion_s,
+        }
+        if error:
+            entrada["error"] = error
+        self._trazas.append(entrada)
+
+    # ----------------------------------------------------------
+    # EJECUCIÓN
+    # ----------------------------------------------------------
+    def ejecutar_capacidad(
+        self, modulo_o_rol: str, capacidad: str, *args, **kwargs
+    ) -> Dict[str, Any]:
+        cont = self.registro.primero(modulo_o_rol)
+        if cont is None:
+            return {"error": f"Módulo/rol no encontrado: {modulo_o_rol}"}
+
+        if cont.autoriza_engine.get("ejecutar") is False:
+            return {"error": f"{cont.nombre}: contrato no autoriza ejecutar"}
+
+        fn = cont.fn(capacidad)
+        if not callable(fn):
+            return {
+                "error": f"Capacidad '{capacidad}' no es ejecutable en {cont.nombre}"
+            }
+
+        inicio = time.perf_counter()
+        try:
+            resultado = fn(*args, **kwargs)
+            duracion = round(time.perf_counter() - inicio, 6)
+            self._registrar_traza(cont.nombre, capacidad, "EXITO", duracion)
+            salida = {
+                "estado": "EXITO",
+                "modulo": cont.nombre,
+                "capacidad": capacidad,
+                "resultado": resultado,
+                "duracion_s": duracion,
+            }
+            self.resultados_evaluacion.append(salida)
+            return salida
+        except Exception as e:
+            duracion = round(time.perf_counter() - inicio, 6)
+            err = f"{type(e).__name__}: {e}"
+            self._registrar_traza(
+                cont.nombre, capacidad, "ERROR_EJECUCION", duracion, err
+            )
+            salida = {
+                "estado": "ERROR_EJECUCION",
+                "modulo": cont.nombre,
+                "capacidad": capacidad,
+                "error": err,
+                "duracion_s": duracion,
+            }
+            self.resultados_evaluacion.append(salida)
+            return salida
+
+    def ejecutar_reporte(self, modulo_o_rol: str) -> Dict[str, Any]:
+        return self.ejecutar_capacidad(modulo_o_rol, "reporte")
+
+    def ejecutar_diagnostico(self, modulo_o_rol: str) -> Dict[str, Any]:
+        return self.ejecutar_capacidad(modulo_o_rol, "diagnostico")
+
+    def ejecutar_inventario(self, modulo_o_rol: str) -> Dict[str, Any]:
+        return self.ejecutar_capacidad(modulo_o_rol, "inventario")
+
+    # ----------------------------------------------------------
+    # CONSOLIDACIÓN
+    # ----------------------------------------------------------
+    def consolidar_reportes(self) -> Dict[str, Any]:
+        for nombre, cont in self.registro.contenedores.items():
+            if "reporte" in cont.capacidades:
+                r = self.ejecutar_capacidad(nombre, "reporte")
+                self._reportes_modulos[nombre] = (
+                    r.get("resultado")
+                    if r.get("estado") == "EXITO"
+                    else {"error": r.get("error"), "estado": "NO ENTREGADO POR MODULO"}
+                )
+            if "diagnostico" in cont.capacidades:
+                d = self.ejecutar_capacidad(nombre, "diagnostico")
+                if d.get("estado") == "EXITO":
+                    self._diagnosticos[nombre] = d.get("resultado")
+            if "inventario" in cont.capacidades:
+                inv = self.ejecutar_capacidad(nombre, "inventario")
+                if inv.get("estado") == "EXITO":
+                    self._inventarios[nombre] = inv.get("resultado")
+        return {
+            "reportes": self._reportes_modulos,
+            "diagnosticos": self._diagnosticos,
+            "inventarios": self._inventarios,
+        }
+
+    # ----------------------------------------------------------
+    # PAQUETE OMEGA
+    # ----------------------------------------------------------
+    def paquete_omega(self) -> Dict[str, Any]:
+        if not self._reportes_modulos:
+            self.consolidar_reportes()
+
+        reportes_lista: List[Dict[str, Any]] = []
+
+        reportes_lista.append({
+            "id": "metadata",
+            "titulo": "INFORMACIÓN DEL RUN",
+            "orden": 0,
+            "contenido": {
+                "version_engine": self.VERSION,
+                "esquema_contrato": ESQUEMA_CONTRATO_REQUERIDO,
+                "version_contrato_requerida": VERSION_CONTRATO_REQUERIDA,
+                "api_engine": API_ENGINE_ACTUAL,
+                "estado_engine": self.estado,
+                "invocador_id": self.invocador_id,
+                "total_modulos": self.registro.total(),
+                "errores_arranque": list(self.errores_arranque),
+                "advertencias": list(self.advertencias),
+                "trazas_n": len(self._trazas),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        })
+
+        orden = 1
+        for nombre in sorted(self.registro.contenedores.keys()):
+            cont = self.registro.contenedores[nombre]
+            reportes_lista.append({
+                "id": cont.id or nombre,
+                "titulo": f"MÓDULO {cont.rol}/{nombre}",
+                "orden": orden,
+                "contenido": {
+                    "id": cont.id,
+                    "nombre": cont.nombre,
+                    "rol": cont.rol,
+                    "version": cont.version,
+                    "version_contrato": cont.version_contrato,
+                    "esquema": cont.esquema,
+                    "estabilidad": cont.estabilidad,
+                    "compatible_desde": cont.compatible_desde,
+                    "api_engine": cont.api_engine,
+                    "descripcion": cont.descripcion,
+                    "funcion": cont.funcion,
+                    "no_hace": cont.no_hace,
+                    "autoridad": cont.autoridad,
+                    "conocimiento_exportable": cont.conocimiento_exportable,
+                    "consultas_soportadas": cont.consultas_soportadas,
+                    "requiere": cont.requiere,
+                    "autoriza_engine": cont.autoriza_engine,
+                    "capacidades": list(cont.capacidades.keys()),
+                    "capacidades_meta": cont.capacidades_meta,
+                    "estados_validos": cont.estados_validos,
+                    "invariantes": cont.invariantes,
+                    "reporte": self._reportes_modulos.get(nombre),
+                    "diagnostico": self._diagnosticos.get(nombre),
+                    "inventario": self._inventarios.get(nombre),
+                },
+            })
+            orden += 1
+
+        reportes_lista.append({
+            "id": "dependencias",
+            "titulo": "DEPENDENCIAS",
+            "orden": orden,
+            "contenido": self._dependencias,
+        })
+        orden += 1
+        reportes_lista.append({
+            "id": "grafo",
+            "titulo": "GRAFO ESTRUCTURAL",
+            "orden": orden,
+            "contenido": self._grafo,
+        })
+        orden += 1
+        reportes_lista.append({
+            "id": "trazas",
+            "titulo": "TRAZAS DE EJECUCIÓN",
+            "orden": orden,
+            "contenido": list(self._trazas),
+        })
+
+        return {
+            "metadata": {
+                "version_engine": self.VERSION,
+                "estado_engine": self.estado,
+                "esquema_contrato": ESQUEMA_CONTRATO_REQUERIDO,
+                "total_modulos": self.registro.total(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            "reportes": reportes_lista,
+        }
+
+    # ----------------------------------------------------------
+    # CONSULTA
+    # ----------------------------------------------------------
+    def censar(self) -> dict:
+        return {
+            "total": self.registro.total(),
             "roles": {
                 rol: [c.nombre for c in lista]
                 for rol, lista in self.registro.por_rol.items()
             },
+            "roles_vacios": [],
+            "rechazados": list(self.errores_arranque),
             "cargados": [
                 {
+                    "id": c.id,
                     "nombre": c.nombre,
                     "rol": c.rol,
                     "version": c.version,
-                    "requiere": list(c.requiere),
-                    "capacidades_declaradas": list(c.capacidades.keys()),
+                    "esquema": c.esquema,
+                    "estabilidad": c.estabilidad,
+                    "capacidades": list(c.capacidades.keys()),
                 }
                 for c in self.registro.contenedores.values()
             ],
-            "exploracion": self._exploracion,
-            "inspeccion": self._inspeccion,
-            "resolucion": self._resolucion,
-            "ejecucion": self._ejecucion,
-            "auditoria": self._auditoria,
-            "grafo": self._grafo,
-            "dependencias": self._dependencias,
-            "indice_simbolos": self._indice_simbolos,
-            "diagnosticos_causales": self._diagnosticos_causales,
+        }
+
+    def estado_global(self) -> Dict[str, Any]:
+        return {
+            "tipo": "estado_global",
+            "version_engine": self.VERSION,
+            "esquema_contrato": ESQUEMA_CONTRATO_REQUERIDO,
+            "estado": self.estado,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "total_contenedores": self.registro.total(),
             "errores_arranque": list(self.errores_arranque),
             "advertencias": list(self.advertencias),
-            "nota": (
-                "Estado global. "
-                "Arranque = solo validación estructural. "
-                "Ejecución de contratos se realiza bajo demanda."
-            ),
+            "trazas_n": len(self._trazas),
+            "dependencias": self._dependencias,
+            "grafo": self._grafo,
         }
 
-    # ===========================================================
-    # SECCIÓN 17: COMPATIBILIDAD
-    # ===========================================================
-    def censar(self) -> dict:
-        eg = self.estado_global()
-        return {
-            "total": eg["total_contenedores"],
-            "roles": eg["roles"],
-            "roles_vacios": [],
-            "rechazados": eg["errores_arranque"],
-            "cargados": eg["cargados"],
-        }
-
-    def ejecutar_contratos_y_explorar(self) -> Dict[str, Any]:
-        return self._ejecucion
-
-# ===========================================================
-# SECCIÓN 18: LOCALIZADOR UNIVERSAL DE IDs (corregido)
-# ===========================================================
-def localizar_id(self, identificador: str) -> Dict[str, Any]:
-    resultado = {
-        "id": identificador,
-        "encontrado": False,
-        "tipo": None,
-        "modulo": None,
-        "rol": None,
-        "detalle": None,
-    }
-
-    # Rol
-    if identificador in self.registro.por_rol:
-        resultado.update({
-            "encontrado": True,
-            "tipo": "rol",
-            "rol": identificador,
-            "detalle": [c.nombre for c in self.registro.por_rol[identificador]],
-        })
-        return resultado
-
-    # Módulo
-    if identificador in self.registro.contenedores:
-        cont = self.registro.contenedores[identificador]
-        resultado.update({
-            "encontrado": True,
-            "tipo": "modulo",
-            "modulo": cont.nombre,
-            "rol": cont.rol,
-            "detalle": {
-                "version": cont.version,
-                "capacidades": list(cont.capacidades.keys()),
-                "ruta": str(cont.ruta),
-            },
-        })
-        return resultado
-
-    # Capacidad
-    for nombre, cont in self.registro.contenedores.items():
-        if identificador in cont.capacidades:
-            resultado.update({
-                "encontrado": True,
-                "tipo": "capacidad",
-                "modulo": cont.nombre,
-                "rol": cont.rol,
-                "detalle": {"capacidad": identificador},
-            })
-            return resultado
-
-    # Símbolo
-    for nombre, simbolos in self._indice_simbolos.items():
-        for tipo_sim in ("clases", "funciones", "constantes"):
-            if identificador in simbolos.get(tipo_sim, []):
-                resultado.update({
-                    "encontrado": True,
-                    "tipo": tipo_sim[:-1],
-                    "modulo": nombre,
-                    "detalle": {"simbolo": identificador},
-                })
-                return resultado
-
-    # Archivo (usa índice de rutas si existe)
-    if hasattr(self, "_indice_rutas") and identificador in self._indice_rutas:
-        info = self._indice_rutas[identificador]
-        resultado.update({
-            "encontrado": True,
-            "tipo": "archivo",
-            "modulo": info.get("modulo"),
-            "detalle": info,
-        })
-        return resultado
-
-    # Fallback: búsqueda lineal en exploración
-    for nombre, data in self._exploracion.items():
-        if identificador in data.get("archivos", []):
-            resultado.update({
-                "encontrado": True,
-                "tipo": "archivo",
-                "modulo": nombre,
-                "detalle": {"ruta": identificador},
-            })
-            return resultado
-
-    return resultado
-
-
-def buscar_simbolo(self, nombre: str) -> Dict[str, Any]:
-    return self.localizar_id(nombre)
-
-def buscar_rol(self, rol: str) -> Dict[str, Any]:
-    return self.localizar_id(rol)
-
-def buscar_capacidad(self, nombre: str) -> Dict[str, Any]:
-    return self.localizar_id(nombre)
-
-def buscar_modulo(self, nombre: str) -> Dict[str, Any]:
-    return self.localizar_id(nombre)
-
-def buscar_archivo(self, ruta: str) -> Dict[str, Any]:
-    return self.localizar_id(ruta)
-
-
-# ===========================================================
-# SECCIÓN 19: RESOLVEDOR UNIVERSAL (corregido)
-# ===========================================================
-def _invocar_capacidad(self, fn, cont: Contenedor) -> Any:
-    """
-    Invoca la función de forma determinista inspeccionando la firma.
-    No usa TypeError para adivinar.
-    """
-    import inspect
-    try:
-        sig = inspect.signature(fn)
-        params = list(sig.parameters.values())
-        # Si acepta al menos un parámetro posicional o keyword, intentamos pasar contexto
-        if params and (
-            params[0].kind in (inspect.Parameter.POSITIONAL_ONLY,
-                               inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params)
-        ):
-            ctx = self._preparar_contexto(cont)
-            return fn(ctx)
-        return fn()
-    except Exception:
-        # Si la inspección falla, se intenta sin argumentos
-        return fn()
-
-
-def ejecutar_capacidad(self, modulo_o_rol: str, capacidad: str) -> Dict[str, Any]:
-    cont = self.registro.primero(modulo_o_rol)
-    if cont is None:
-        return {"error": f"Módulo/rol no encontrado: {modulo_o_rol}"}
-
-    fn = cont.fn(capacidad)
-    if not callable(fn):
-        return {"error": f"Capacidad '{capacidad}' no es ejecutable"}
-
-    inicio = time.perf_counter()
-    try:
-        resultado = self._invocar_capacidad(fn, cont)
-        duracion = time.perf_counter() - inicio
-        validacion = self._validar_resultado(capacidad, resultado)
-        salida = {
-            "estado": "EXITO",
-            "resultado": resultado,
-            "duracion_s": round(duracion, 6),
-            "validacion": validacion,
-        }
-        self._registrar_traza("ejecutar_capacidad", {
-            "modulo": cont.nombre,
-            "capacidad": capacidad,
-            "estado": "EXITO",
-        })
-        return salida
-    except Exception as e:
-        duracion = time.perf_counter() - inicio
-        self._registrar_traza("ejecutar_capacidad", {
-            "modulo": cont.nombre,
-            "capacidad": capacidad,
-            "estado": "ERROR",
-            "error": str(e),
-        })
-        return {
-            "estado": "ERROR_EJECUCION",
-            "error": f"{type(e).__name__}: {e}",
-            "duracion_s": round(duracion, 6),
-        }
-
-
-def ejecutar_contrato(self, nombre_o_rol: str) -> Dict[str, Any]:
-    cont = self.registro.primero(nombre_o_rol)
-    if cont is None:
-        return {"error": f"No se encontró módulo o rol: {nombre_o_rol}"}
-
-    resultados = {}
-    for clave in cont.capacidades:
-        resultados[clave] = self.ejecutar_capacidad(cont.nombre, clave)
-
-    self._ejecucion[cont.nombre] = resultados
-    self._registrar_traza("ejecutar_contrato", {
-        "modulo": cont.nombre,
-        "capacidades": list(resultados.keys()),
-    })
-    return resultados
-
-
-def ejecutar_modulo(self, nombre_o_rol: str) -> Dict[str, Any]:
-    return self.ejecutar_contrato(nombre_o_rol)
-
-
-def ejecutar_rol(self, rol: str) -> Dict[str, Any]:
-    resultados = {}
-    for cont in self.registro.por_rol.get(rol, []):
-        resultados[cont.nombre] = self.ejecutar_contrato(cont.nombre)
-    return resultados
-
-
-def ejecutar_todo(self) -> Dict[str, Any]:
-    resultados = {}
-    for nombre in list(self.registro.contenedores.keys()):
-        resultados[nombre] = self.ejecutar_contrato(nombre)
-    return resultados
-
-
-# ===========================================================
-# SECCIÓN 20: CONTEXTO DE EJECUCIÓN
-# ===========================================================
-def _preparar_contexto(self, cont: Contenedor) -> Dict[str, Any]:
-    return {
-        "engine": self,
-        "contenedor": cont,
-        "nombre": cont.nombre,
-        "rol": cont.rol,
-        "registro": self.registro,
-    }
-
-
-# ===========================================================
-# SECCIÓN 21: VALIDADOR DEL RESULTADO
-# ===========================================================
-def _validar_resultado(self, capacidad: str, resultado: Any) -> Dict[str, Any]:
-    informe = {
-        "capacidad": capacidad,
-        "valido": True,
-        "problemas": [],
-    }
-    if resultado is None:
-        informe["valido"] = False
-        informe["problemas"].append("resultado es None")
-    return informe
-
-
-# ===========================================================
-# SECCIÓN 22: DETECTOR DE CONTRADICCIONES
-# ===========================================================
-def detectar_contradicciones(self) -> List[Dict[str, Any]]:
-    contradicciones = []
-    for nombre, resol in self._resolucion.items():
-        for cap in resol.get("no_resolubles", []):
-            contradicciones.append({
-                "tipo": "capacidad_no_resoluble",
-                "modulo": nombre,
-                "capacidad": cap,
-            })
-    for nombre, deps in self._dependencias.get("faltantes", {}).items():
-        for dep in deps:
-            contradicciones.append({
-                "tipo": "dependencia_inexistente",
-                "modulo": nombre,
-                "dependencia": dep,
-            })
-    for ciclo in self._dependencias.get("ciclos", []):
-        contradicciones.append({
-            "tipo": "ciclo_dependencia",
-            "modulo": ciclo,
-        })
-    return contradicciones
-
-
-# ===========================================================
-# SECCIÓN 23: INVENTARIO GLOBAL
-# ===========================================================
-def inventario_global(self) -> Dict[str, Any]:
-    return {
-        "modulos": list(self.registro.contenedores.keys()),
-        "roles": list(self.registro.por_rol.keys()),
-        "total_modulos": self.registro.total(),
-        "total_roles": len(self.registro.por_rol),
-        "capacidades": {
-            nombre: list(cont.capacidades.keys())
-            for nombre, cont in self.registro.contenedores.items()
-        },
-        "simbolos": self._indice_simbolos,
-        "archivos": {
-            nombre: data.get("archivos", [])
-            for nombre, data in self._exploracion.items()
-        },
-        "dependencias": self._dependencias,
-        "grafo": self._grafo,
-        "contradicciones": self.detectar_contradicciones(),
-    }
-
-
-# ===========================================================
-# SECCIÓN 24: ÍNDICE GLOBAL + ÍNDICE DE RUTAS
-# ===========================================================
-def _construir_indice_rutas(self) -> None:
-    """Construye índice de rutas durante el arranque (O(1) después)."""
-    self._indice_rutas: Dict[str, Dict[str, Any]] = {}
-    for nombre, data in self._exploracion.items():
-        for ruta in data.get("archivos", []):
-            self._indice_rutas[ruta] = {
-                "modulo": nombre,
-                "ruta": ruta,
-            }
-
-
-def indice_global(self) -> Dict[str, Any]:
-    indice: Dict[str, List[Dict[str, Any]]] = {}
-    for rol in self.registro.por_rol:
-        indice.setdefault(rol, []).append({"tipo": "rol"})
-    for nombre, cont in self.registro.contenedores.items():
-        indice.setdefault(nombre, []).append({"tipo": "modulo", "rol": cont.rol})
-        for cap in cont.capacidades:
-            indice.setdefault(cap, []).append({"tipo": "capacidad", "modulo": nombre})
-    for nombre, simbolos in self._indice_simbolos.items():
-        for tipo_sim, lista in simbolos.items():
-            if tipo_sim == "capacidades":
-                continue
-            for sim in lista:
-                indice.setdefault(sim, []).append({"tipo": tipo_sim[:-1], "modulo": nombre})
-    return indice
-
-
-# ===========================================================
-# SECCIÓN 25: TRAZABILIDAD
-# ===========================================================
-def _registrar_traza(self, evento: str, detalle: Dict[str, Any]) -> None:
-    if not hasattr(self, "_trazas"):
-        self._trazas: List[Dict[str, Any]] = []
-    self._trazas.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "evento": evento,
-        "detalle": detalle,
-    })
-
-
-def obtener_trazas(self) -> List[Dict[str, Any]]:
-    return list(getattr(self, "_trazas", []))
-
-
-# ===========================================================
-# SECCIÓN 26: API UNIVERSAL + LECTOR DE ARCHIVOS
-# ===========================================================
-def leer_archivo(self, ruta_relativa: str, modo: str = "texto") -> Any:
-    """
-    Lector universal de archivos del repositorio.
-    modo: "texto" | "bytes" | "json"
-    """
-    # Buscar la ruta absoluta a partir del índice o de la exploración
-    ruta_abs = None
-    if hasattr(self, "_indice_rutas") and ruta_relativa in self._indice_rutas:
-        # Reconstruir ruta absoluta
-        for nombre, data in self._exploracion.items():
-            if ruta_relativa in data.get("archivos", []):
-                # La ruta relativa es respecto a self.raiz
-                ruta_abs = self.raiz / ruta_relativa
-                break
-    else:
-        ruta_abs = self.raiz / ruta_relativa
-
-    if ruta_abs is None or not ruta_abs.is_file():
-        return {"error": f"Archivo no encontrado: {ruta_relativa}"}
-
-    try:
-        if modo == "bytes":
-            return ruta_abs.read_bytes()
-        if modo == "json":
-            import json
-            return json.loads(ruta_abs.read_text(encoding="utf-8"))
-        # por defecto texto
-        return ruta_abs.read_text(encoding="utf-8")
-    except Exception as e:
-        return {"error": f"{type(e).__name__}: {e}"}
-
-
-def grafo_global(self) -> Dict[str, Any]:
-    return self._grafo
-
-def dependencias_globales(self) -> Dict[str, Any]:
-    return self._dependencias
-
-def auditoria_global(self) -> Dict[str, Any]:
-    return self._auditoria
-
-def indice_simbolos(self) -> Dict[str, Any]:
-    return self._indice_simbolos
-
-# ===========================================================
-# SECCIÓN 27: ÍNDICE DE RUTAS + LECTOR UNIVERSAL (corregida)
-# ===========================================================
-
-def _construir_indice_rutas(self) -> None:
-    """
-    Construye el índice de rutas y el índice inverso por nombre de archivo.
-    Debe llamarse una vez durante el arranque.
-    """
-    self._indice_rutas = {}
-    self._indice_nombre_archivo = {}
-
-    for nombre_modulo, data in self._exploracion.items():
-        for ruta_rel in data.get("archivos", []):
-            ruta_abs = str((self.raiz / ruta_rel).resolve())
-            self._indice_rutas[ruta_rel] = {
-                "modulo": nombre_modulo,
-                "ruta_relativa": ruta_rel,
-                "ruta_absoluta": ruta_abs,
-            }
-            nombre = Path(ruta_rel).name
-            self._indice_nombre_archivo.setdefault(nombre, []).append(ruta_rel)
-
-
-def leer_archivo(self, identificador: str, modo: str = "texto") -> Any:
-    """
-    Lector universal de archivos del repositorio.
-
-    identificador: ruta relativa o nombre de archivo.
-    modo: "texto" | "bytes" | "json" | "lineas"
-    """
-    info = self._indice_rutas.get(identificador)
-
-    # Si no se encontró por ruta exacta, intentar por nombre de archivo
-    if info is None:
-        rutas = self._indice_nombre_archivo.get(identificador, [])
-        if len(rutas) == 1:
-            info = self._indice_rutas.get(rutas[0])
-        elif len(rutas) > 1:
-            return {
-                "encontrado": False,
-                "error": f"Nombre ambiguo '{identificador}'. Rutas posibles: {rutas}",
-            }
-
-    if info is None:
-        return {
-            "encontrado": False,
-            "error": f"Archivo no encontrado: {identificador}",
-        }
-
-    ruta_abs = Path(info["ruta_absoluta"])
-    if not ruta_abs.is_file():
-        return {
-            "encontrado": False,
-            "error": f"Ruta indexada pero archivo inexistente en disco: {ruta_abs}",
-        }
-
-    try:
-        if modo == "bytes":
-            contenido = ruta_abs.read_bytes()
-        elif modo == "json":
-            import json
-            contenido = json.loads(ruta_abs.read_text(encoding="utf-8"))
-        elif modo == "lineas":
-            contenido = ruta_abs.read_text(encoding="utf-8").splitlines()
-        else:
-            contenido = ruta_abs.read_text(encoding="utf-8")
-
-        return {
-            "encontrado": True,
-            "ruta_relativa": info["ruta_relativa"],
-            "ruta_absoluta": info["ruta_absoluta"],
-            "modulo": info["modulo"],
-            "modo": modo,
-            "contenido": contenido,
-        }
-    except Exception as e:
-        return {
-            "encontrado": True,
-            "error": f"{type(e).__name__}: {e}",
-            "ruta_relativa": info["ruta_relativa"],
-            "modulo": info["modulo"],
-        }
-
-
-def leer_texto(self, identificador: str) -> Any:
-    return self.leer_archivo(identificador, modo="texto")
-
-
-def leer_bytes(self, identificador: str) -> Any:
-    return self.leer_archivo(identificador, modo="bytes")
-
-
-def leer_json(self, identificador: str) -> Any:
-    return self.leer_archivo(identificador, modo="json")
-
-
-def leer_lineas(self, identificador: str) -> Any:
-    return self.leer_archivo(identificador, modo="lineas")
-
-
-def listar_archivos(self, modulo: str = None) -> List[str]:
-    if modulo is None:
-        return sorted(self._indice_rutas.keys())
-    return sorted(
-        ruta for ruta, info in self._indice_rutas.items()
-        if info.get("modulo") == modulo
-    )
-# ==============================================================
-# FIN: core/engine.py — versión corregida (separación arranque / ejecución)
-# ==============================================================
+    def obtener_trazas(self) -> Tuple[Dict[str, Any], ...]:
+        """Copia inmutable de la evidencia de ejecución."""
+        return tuple(dict(t) for t in self._trazas)
+
+# ===============================================================
+# FIN ENGINE
+# ===============================================================
+
+
+# ===============================================================
+# EXPORTACIONES
+# ===============================================================
+
+__all__ = [
+    "Engine",
+    "ArranqueError",
+    "Contenedor",
+    "RegistroModulos",
+    "VERSION_ENGINE",
+    "ESQUEMA_CONTRATO_REQUERIDO",
+    "VERSION_CONTRATO_REQUERIDA",
+]
+
+# ===============================================================
+# FIN DEL MÓDULO ENGINE
+# ===============================================================
