@@ -1,4 +1,235 @@
+# -*- coding: utf-8 -*-
+"""
+VPSI-TRUTH --- core/engine.py
+Version 12.0 — orquestador por contrato.
 
+Principio
+  - Conoce la arquitectura solo por CONTENEDOR (roles, capacidades).
+  - Actua solo por lo que cada contrato declara.
+  - No inventa operaciones ni interpreta resultados de oficio ajeno.
+  - No sustituye la logica interna de un modulo.
+  - Todos los modulos importan: el calculo nace del conjunto de contratos.
+  - El Engine lee todos los init, todos los archivos de cada modulo
+    y enlaza cada capacidad declarada. El unico limite es el contrato.
+  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
+  - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
+  - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
+  - CE: extension del Engine (mandatos). CE no calcula.
+  - TT / CC / DI / GL / RE / VX / TX / CH / UI / DG / SF / MC / AX:
+    se usan cuando el contrato y el ciclo lo requieren.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import re
+import sys
+import traceback
+from fractions import Fraction
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+
+# ===============================================================
+# HELPERS DE ENTRADA
+# ===============================================================
+def _o_ausente(o: Any) -> bool:
+    """True si no hay O usable como dominio de contenido."""
+    if o is None:
+        return True
+    if isinstance(o, str):
+        s = o.strip()
+        if not s:
+            return True
+        if s.lower() in ("none", "null", "indefinido"):
+            return True
+    return False
+
+
+def _truthy_pedido(v: Any) -> bool:
+    """Pedido de anuncio."""
+    if v is None:
+        return False
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    if isinstance(v, str):
+        return v.strip().lower() in ("1", "true", "si", "yes", "on")
+    return bool(v)
+
+
+# ===============================================================
+# EXCEPCIONES
+# ===============================================================
+class ArranqueError(Exception):
+    """Incoherencia axiomatica, mecanica o dependencias faltantes."""
+
+
+class EvaluacionError(Exception):
+    """Error en el camino de evaluacion."""
+
+
+class DominioError(Exception):
+    """Error de dominio / O_context."""
+
+
+class ContratoError(Exception):
+    """Contrato CONTENEDOR invalido o capacidad no resoluble."""
+
+
+# ===============================================================
+# ROLES — ABSOLUTAMENTE TODOS
+# ===============================================================
+ROLES: Tuple[str, ...] = (
+    "CT",   # constantes ALPHA/BETA
+    "AX",   # axiomas
+    "FO",   # formulas Tru_Ri / Tru_total
+    "MC",   # mecanica de correlacion
+    "SF",   # self
+    "DG",   # diagnostico
+    "CA",   # calculator C/L/K
+    "CX",   # contexto O / permite_k
+    "DI",   # diccionario
+    "RE",   # realidad
+    "VX",   # verificacion
+    "TX",   # taxonomia
+    "CH",   # cache
+    "CIT",  # citacion / anuncio
+    "UI",   # interfaz
+    "GL",   # glosario
+    "TT",   # tru totales (catalogo de escalas)
+    "CC",   # catalogo de citaciones
+    "CE",   # capacidades engine (mandatos / extension)
+)
+
+OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
+
+
+ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
+    "barrer": ("barrer", "verificar", "evaluar"),
+    "verificar": ("verificar", "barrer", "evaluar"),
+    "evaluar": ("evaluar", "verificar", "barrer", "resolver"),
+    "resolver": ("resolver", "evaluar", "verificar"),
+    "componer": ("componer", "verificar"),
+    "inventario": ("inventario",),
+    "calcular": ("calcular",),
+    "generatividad": ("generatividad",),
+    "censo": ("censo", "verificar", "barrer"),
+    "reportar": ("reportar",),
+    "anunciar": ("anunciar", "registrar", "evaluar", "verificar"),
+    "registrar": ("registrar", "anunciar", "evaluar"),
+    "ids": ("ids",),
+    "skills": ("skills",),
+    "por_id": ("por_id",),
+}
+
+
+# ===============================================================
+# CONTENEDOR / REGISTRO
+# ===============================================================
+class Contenedor:
+    __slots__ = (
+        "nombre", "rol", "version", "modulo", "ruta",
+        "requiere", "descripcion", "capacidades",
+    )
+
+    def __init__(
+        self,
+        nombre: str,
+        rol: str,
+        version: str,
+        modulo: Any,
+        ruta: Path,
+        meta: Dict,
+    ) -> None:
+        self.nombre = nombre
+        self.rol = rol
+        self.version = version
+        self.modulo = modulo
+        self.ruta = ruta
+        self.requiere: List[str] = list(meta.get("requiere") or [])
+        self.descripcion: str = str(meta.get("descripcion") or "")
+        raw = meta.get("capacidades") or {}
+        self.capacidades: Dict[str, Any] = (
+            dict(raw) if isinstance(raw, dict) else {}
+        )
+
+    def fn(self, nombre: str) -> Any:
+        ref = self.capacidades.get(nombre)
+        if ref is None:
+            return None
+        if callable(ref):
+            return ref
+        if isinstance(ref, str):
+            return getattr(self.modulo, ref, None)
+        return None
+
+    def tiene(self, nombre: str) -> bool:
+        return callable(self.fn(nombre))
+
+    def fn_oficio(self, nombre: str) -> Any:
+        for clave in ALIAS_CAPACIDAD.get(nombre, (nombre,)):
+            f = self.fn(clave)
+            if callable(f):
+                return f
+        return None
+
+    def tiene_oficio(self, nombre: str) -> bool:
+        return callable(self.fn_oficio(nombre))
+
+    def como_dict(self) -> Dict[str, Any]:
+        caps: Dict[str, str] = {}
+        for k, v in self.capacidades.items():
+            if callable(v):
+                caps[k] = getattr(v, "__name__", "callable")
+            else:
+                caps[k] = str(v)
+        return {
+            "nombre": self.nombre,
+            "rol": self.rol,
+            "version": self.version,
+            "requiere": list(self.requiere),
+            "ruta": str(self.ruta),
+            "descripcion": self.descripcion,
+            "capacidades": caps,
+        }
+
+
+class Registro:
+    def __init__(self) -> None:
+        self.contenedores: Dict[str, Contenedor] = {}
+        self.por_rol: Dict[str, List[Contenedor]] = {r: [] for r in ROLES}
+        self.rechazados: List[Dict[str, Any]] = []
+
+    def registrar(self, cont: Contenedor) -> None:
+        if cont.nombre in self.contenedores:
+            self.rechazados.append({
+                "ruta": str(cont.ruta),
+                "razon": "nombre duplicado: {0}".format(cont.nombre),
+            })
+            return
+        self.contenedores[cont.nombre] = cont
+        if cont.rol in self.por_rol:
+            self.por_rol[cont.rol].append(cont)
+
+    def primero(self, rol: str) -> Optional[Contenedor]:
+        lista = self.por_rol.get(rol) or []
+        return lista[0] if lista else None
+
+    def total(self) -> int:
+        return len(self.contenedores)
+
+    def resumen(self) -> Dict[str, Any]:
+        return {
+            "roles": {
+                r: [c.nombre for c in self.por_rol[r]] for r in ROLES
+            },
+            "roles_vacios": [r for r in ROLES if not self.por_rol[r]],
+            "rechazados": list(self.rechazados),
+            "cargados": [c.como_dict() for c in self.contenedores.values()],
+            "total": len(self.contenedores),
+        }
 
 # ===============================================================
 # SEGMENTACION DETERMINISTA DE SUJETOS (recorte de material)
