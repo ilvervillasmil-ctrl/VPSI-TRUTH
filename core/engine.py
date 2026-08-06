@@ -1,3 +1,7 @@
+# ==============================================================
+# INICIO: core/engine.py — versión completa y limpia
+# ==============================================================
+
 # -*- coding: utf-8 -*-
 """
 VPSI-TRUTH --- core/engine.py
@@ -13,6 +17,7 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
 
 # ===============================================================
 # EXCEPCIONES Y REGISTRO
@@ -215,10 +220,10 @@ class Engine:
             "rechazados": [],
             "cargados": cargados,
         }
-        
     # ==========================================================
     # FIN: Método censar() para la clase Engine
     # ==========================================================
+
     # ===============================================================
     # EJECUCIÓN DINÁMICA DE CONTRATOS Y EXPLORACIÓN DE CARPETAS
     # ===============================================================
@@ -274,37 +279,7 @@ class Engine:
             resultados_ejecucion[nombre_mod] = resultados_modulo
 
         return resultados_ejecucion
-# ==============================================================
-# INICIO: Eliminación del patrón buzón (recibir_reporte) en DiagnosticoGlobal
-# ==============================================================
 
-    # --- Se elimina por completo el atributo de clase ---
-    # _reportes: List[Dict[str, Any]] = []          ← BORRAR
-
-    # --- Se elimina por completo el método de clase ---
-    # @classmethod
-    # def recibir_reporte(...): ...                 ← BORRAR
-
-    # Dentro del método censo(), eliminar estas líneas:
-    #
-    # reportes_buf = list(getattr(DiagnosticoGlobal, "_reportes", None) or [])
-    # reportes_n = len(reportes_buf)
-    # reportes_cola = reportes_buf[-20:]
-    #
-    # y en el dict "informe" eliminar las claves:
-    # "reportes_modulos_n": reportes_n,
-    # "reportes_modulos": reportes_cola,
-
-    # Actualizar la nota final del informe:
-    "nota": (
-        "Solo lectura. Cero actuación. "
-        "El diagnóstico se deriva exclusivamente del estado del Engine "
-        "y de la estructura de contratos. Ningún módulo envía reportes manuales."
-    ),
-
-# ==============================================================
-# FIN: Eliminación del patrón buzón (recibir_reporte) en DiagnosticoGlobal
-# ==============================================================        
 
 # ===============================================================
 # LISTA MAESTRA UNIVERSAL DE CAPACIDADES PARA TODOS LOS INI
@@ -329,5 +304,12 @@ UNIVERSAL_CAPACIDADES_MAP = {
     "inyectar_en_peticion": "inyectar_en_peticion",
 }
 
+
 def obtener_funcion_universal(capacidad_clave: str) -> str:
     return UNIVERSAL_CAPACIDADES_MAP.get(capacidad_clave, capacidad_clave)
+
+
+# ==============================================================
+# FIN: core/engine.py — versión completa y limpia
+# (Pegue aquí cualquier código nuevo que se agregue en el futuro)
+# ==============================================================
