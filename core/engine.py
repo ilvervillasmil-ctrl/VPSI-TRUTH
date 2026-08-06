@@ -2027,6 +2027,145 @@ class Engine:
             ),
         }
       
+    # ===========================================================
+    # PERSISTENCIA ESTRUCTURAL (OMEGA)
+    #
+    # Escritor unico: diagnostics.evidencia.depositar
+    # Engine no hace write_text de evaluaciones.json.
+    #
+    # Invariante:
+    #   self.resultados_evaluacion (este origen)
+    #            ==
+    #   evidencia persistida (mismo origen)
+    # ===========================================================
+
+    # -----------------------------------------------------------
+    # origen estable para el depositario
+    # -----------------------------------------------------------
+    def _origen_evidencia(self) -> str:
+        """
+        Identificador simple (contrato diagnostics.evidencia).
+        Un origen por invocador: re-depositar reemplaza solo este origen.
+        """
+        inv = str(self.invocador_id or "engine").strip() or "engine"
+        limpio = "".join(
+            ch if (ch.isalnum() or ch in "_.-") else "_"
+            for ch in inv
+        )[:64]
+        return limpio or "engine"
+
+    # -----------------------------------------------------------
+    # forma minima pre-deposito
+    # -----------------------------------------------------------
+    def _filtrar_registros_depositables(
+        self, regs: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        limpios: List[Dict[str, Any]] = []
+        for reg in regs:
+            if not isinstance(reg, dict):
+                self.fallos.append({
+                    "rol": "EN",
+                    "seccion": "persistencia_omega",
+                    "razon": "registro no dict; omitido del deposito",
+                })
+                continue
+            if "resultado" not in reg:
+                self.fallos.append({
+                    "rol": "EN",
+                    "seccion": "persistencia_omega",
+                    "razon": "registro sin clave 'resultado'; omitido",
+                })
+                continue
+            limpios.append(reg)
+        return limpios
+
+    # -----------------------------------------------------------
+    # snapshot memoria → depositario
+    # -----------------------------------------------------------
+    def _persistir_evaluaciones(self) -> None:
+        """
+        Deposita self.resultados_evaluacion via diagnostics.evidencia.
+        No write_text propio. No modifica el body.
+        """
+        from copy import deepcopy
+
+        try:
+            from diagnostics.evidencia import depositar
+        except (ImportError, ModuleNotFoundError):
+            try:
+                import importlib
+                depositar = importlib.import_module(
+                    "diagnostics.evidencia"
+                ).depositar
+            except (ImportError, ModuleNotFoundError) as e:
+                self.fallos.append({
+                    "rol": "EN",
+                    "seccion": "persistencia_omega",
+                    "razon": "depositario evidencia no importable: {0}: {1}".format(
+                        type(e).__name__, e
+                    ),
+                })
+                return
+
+        try:
+            mios: List[Dict[str, Any]] = []
+            for reg in self.resultados_evaluacion:
+                if isinstance(reg, dict):
+                    mios.append(deepcopy(reg))
+            mios = self._filtrar_registros_depositables(mios)
+            depositar(
+                mios,
+                origen=self._origen_evidencia(),
+                invocador_id=self.invocador_id,
+                estado_engine=self.estado,
+            )
+        except Exception as e:
+            self.fallos.append({
+                "rol": "EN",
+                "seccion": "persistencia_omega",
+                "razon": "depositar evidencia: {0}: {1}".format(
+                    type(e).__name__, e
+                ),
+            })
+
+    # -----------------------------------------------------------
+    # emit: memoria + deposito
+    # -----------------------------------------------------------
+    def _emit(
+        self,
+        resultado: Dict[str, Any],
+        peticion: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Cierra el ciclo en memoria y deposita en el depositario unico.
+        No altera resultado.
+        """
+        from copy import deepcopy
+
+        cx = resultado.get("contexto_cx") or {}
+        registro = {
+            "secuencia": len(self.resultados_evaluacion) + 1,
+            "engine_version": self.VERSION,
+            "invocador_id": self.invocador_id,
+            "entrada": {
+                "contexto": (
+                    peticion.get("contexto")
+                    or peticion.get("O_context")
+                    or peticion.get("Octx")
+                ),
+                "tiene_C": "C" in peticion and peticion.get("C") is not None,
+                "tiene_L": "L" in peticion and peticion.get("L") is not None,
+                "tiene_K": "K" in peticion and peticion.get("K") is not None,
+                "pedir_anuncio": _truthy_pedido(
+                    peticion.get("pedir_anuncio")
+                ) or _truthy_pedido(cx.get("pedir_anuncio")),
+            },
+            "resultado": deepcopy(resultado),
+        }
+        self.resultados_evaluacion.append(registro)
+        self._persistir_evaluaciones()
+        return resultado
+      
 # ===========================================================
 # EXPORTS
 # ===========================================================
