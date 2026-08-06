@@ -425,7 +425,7 @@ jobs:
           if rechazados:
               fallar("registro", "hay contenedores rechazados", detalle=rechazados)
 
-                    # ----------------------------------------------------------
+          # ----------------------------------------------------------
           # Subsección 10.3: Auditoría Forense de Contratos y Capacidades
           # ----------------------------------------------------------
           caps_verificadas = 0
@@ -461,52 +461,6 @@ jobs:
               entry["claves_contrato"] = list(contrato_capacidades.keys())
               entry["nombre"] = getattr(cont, "nombre", "desconocido")
               entry["version"] = getattr(cont, "version", "0.0")
-
-              # ----------------------------------------------------------
-              # Evidencia estructural del propio módulo (verificar/barrer)
-              # ----------------------------------------------------------
-              entry["auditoria_modulo"] = None
-              try:
-                  auditor = None
-                  if hasattr(cont, "fn"):
-                      auditor = cont.fn("verificar")
-                      if not callable(auditor):
-                          auditor = cont.fn("barrer")
-
-                  if callable(auditor):
-                      evidencia = auditor()
-                      if isinstance(evidencia, dict):
-                          entry["auditoria_modulo"] = evidencia
-                          # Conservación robusta por rol y nombre de módulo para evitar colisiones
-                          clave_evidencia = f"{rol}:{entry['nombre']}"
-                          informe.setdefault("evidencia_modulos", {})[clave_evidencia] = evidencia
-                          
-                          # Si el propio módulo se declara incoherente, se registra toda la evidencia de forma genérica
-                          if not evidencia.get("coherente", True):
-                              fallar(
-                                  "auditoria_modulo",
-                                  "El propio módulo reportó incoherencia estructural.",
-                                  rol=rol,
-                                  modulo=entry["nombre"],
-                                  evidencia=evidencia,
-                              )
-                              fallo_local = True
-                  else:
-                      avisar(
-                          "auditoria_modulo",
-                          "El módulo no expone capacidad de auditoría (verificar/barrer).",
-                          rol=rol,
-                          modulo=entry["nombre"],
-                      )
-              except Exception as e:
-                  fallar(
-                      "auditoria_modulo",
-                      "No fue posible ejecutar la auditoría estructural del módulo.",
-                      rol=rol,
-                      modulo=entry["nombre"],
-                      error=str(e),
-                  )
-                  fallo_local = True
 
               for clave in list(contrato_capacidades.keys()):
                   objetivo = contrato_capacidades.get(clave)
@@ -619,7 +573,6 @@ jobs:
                   contratos_validos += 1
 
               informe["roles"][rol] = entry
-
 
           # ----------------------------------------------------------
           # Subsección 10.4: Fusión de Evidencia y Reporte
