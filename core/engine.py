@@ -1,215 +1,94 @@
-# -*- coding: utf-8 -*-
-"""
-VPSI-TRUTH --- core/engine.py
-Version 12.0 — orquestador por contrato + extension CE.
-
-Principio
-  - Conoce la arquitectura solo por CONTENEDOR (roles, capacidades).
-  - Actua solo por lo que cada contrato declara.
-  - No inventa operaciones ni interpreta resultados de oficio ajeno.
-  - No sustituye la logica interna de un modulo.
-  - CT: ALPHA/BETA. CA: C/L/K. FO: Tru_Ri / Tru_total.
-  - CX: clasifica O / permite_k / pedir_anuncio (no calcula Tru).
-  - CIT: anuncia cadena si el marco lo pide (no calcula Tru).
-  - CE: extension del Engine (mandatos). CE no calcula.
-  - TT / CC / demas: se usan si el contrato y el mandato lo permiten.
-
-12.0
-  - Lee CE (ids/skills) en el ciclo.
-  - Recombina ciclos de oficio ya permitido (p. ej. por sujeto).
-  - Deposita resultado.sujetos / n_sujetos cuando aplica.
-  - Nuevos modulos/roles con CONTENEDOR valido se descubren al arrancar.
-  - La secuencia no es una jaula: el esqueleto seguro se mantiene;
-    los mandatos CE abren recortes adicionales dentro del contrato.
-"""
-
-from __future__ import annotations
-
-import importlib.util
-import re
-import sys
-import traceback
-from fractions import Fraction
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-
-# ===============================================================
-# UNDEFINED
-# ===============================================================
-class _Undefined:
-    __slots__ = ()
-
-    def __repr__(self) -> str:
-        return "UNDEFINED"
-
-    def __bool__(self):
-        raise TypeError("UNDEFINED no admite conversion a booleano")
-
-    def __eq__(self, other):
-        return isinstance(other, _Undefined)
-
-    def __hash__(self):
-        return hash("VPSI_UNDEFINED")
-
-
-UNDEFINED = _Undefined()
-
-
-def es_undefined(v: Any) -> bool:
-    return v is UNDEFINED or isinstance(v, _Undefined)
-
-
-def _o_ausente(o: Any) -> bool:
-    if o is None:
-        return True
-    if es_undefined(o):
-        return True
-    if isinstance(o, str):
-        s = o.strip()
-        if not s:
-            return True
-        if s.lower() in ("undefined", "indefinido", "none", "null"):
-            return True
-    return False
-
-
-def _truthy_pedido(v: Any) -> bool:
-    if v is None or es_undefined(v):
-        return False
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, (int, float)):
-        return v != 0
-    if isinstance(v, str):
-        return v.strip().lower() in ("1", "true", "si", "yes", "on")
-    return bool(v)
-
-
-# ===============================================================
-# EXCEPCIONES
-# ===============================================================
-class ArranqueError(Exception):
-    """Incoherencia axiomatica, mecanica o dependencias faltantes."""
-
-
-class EvaluacionError(Exception):
-    """Error en el camino de evaluacion."""
-
-
-class DominioError(Exception):
-    """Error de dominio / O_context."""
-
-
-class ContratoError(Exception):
-    """Contrato CONTENEDOR invalido o capacidad no resoluble."""
-
-
     # ===========================================================
-    # SECCIÓN: CONEXIÓN AUTOMÁTICA Y CÁLCULO DE TODOS LOS ROLES
+    # CONEXIÓN AUTOMÁTICA DE TODOS LOS ROLES
     #
-    # Autoridad total del Engine:
-    #   Lee todos los __init__ (CONTENEDOR).
-    #   Lee absolutamente todos los archivos de cada módulo.
-    #   Actúa según los contratos declarados.
-    #   Enlaza cada capacidad resoluble al ciclo de cálculo.
+    # Prioridad:
+    #   1. ROLES (orden canónico del Engine)
+    #   2. Contenedores de cada rol (CONTENEDOR / __init__)
+    #   3. Todos los archivos del directorio del módulo
+    #   4. Cada capacidad declarada en el contrato
+    #   5. Resolución a función ejecutable (fn → fn_oficio)
+    #
+    # Autoridad:
+    #   Lee todos los init. Lee todos los archivos de cada módulo.
+    #   Enlaza todo lo que el contrato declara y resuelve.
+    #   No inventa capacidades. No sustituye la lógica del módulo.
+    #   El único límite es el contrato CONTENEDOR.
     # ===========================================================
-    roles_conectados: Dict[str, Dict[str, Any]] = {}
-    inventario_archivos: Dict[str, List[str]] = {}
+    def _conectar_roles(self) -> Dict[str, Dict[str, Any]]:
+        roles_conectados: Dict[str, Dict[str, Any]] = {}
+        inventario_archivos: Dict[str, List[str]] = {}
 
-    for rol in ROLES:
-        contenedores_rol = list(self.registro.por_rol.get(rol) or [])
-
-        if not contenedores_rol:
-            retenido(
-                "ROL",
-                "{0} sin contenedor para conexión de cálculo".format(rol),
-            )
-            continue
-
-        for cont in contenedores_rol:
-            # ----- todos los archivos del módulo -----
-            dir_mod = Path(cont.ruta).resolve().parent
-            archivos = sorted(
-                str(p.relative_to(dir_mod))
-                for p in dir_mod.rglob("*")
-                if p.is_file()
-            )
-            inventario_archivos[cont.nombre] = archivos
-            ok(
-                "CONTENEDOR",
-                "{0}/{1} archivos leídos n={2}".format(
-                    rol, cont.nombre, len(archivos)
-                ),
-            )
-
-            # ----- contrato: capacidades del CONTENEDOR -----
-            caps = cont.capacidades
-            if not isinstance(caps, dict) or not caps:
-                retenido(
-                    "CAPACIDAD",
-                    "{0}/{1} sin capacidades para enlazar contratos".format(
-                        rol, cont.nombre
-                    ),
-                )
+        # ----- 1) cada rol, en el orden de ROLES -----
+        for rol in ROLES:
+            contenedores_rol = list(self.registro.por_rol.get(rol) or [])
+            if not contenedores_rol:
+                self.fallos.append({
+                    "rol": rol,
+                    "seccion": "conexion",
+                    "razon": "sin contenedor para conexion de calculo",
+                })
                 continue
 
-            for cap in caps:
-                cap_s = str(cap)
-                fn_ejecutable = cont.fn(cap_s)
-                if not callable(fn_ejecutable):
-                    fn_ejecutable = cont.fn_oficio(cap_s)
+            # ----- 2) cada contenedor del rol -----
+            for cont in contenedores_rol:
+                # ----- 3) todos los archivos del modulo -----
+                dir_mod = Path(cont.ruta).resolve().parent
+                archivos = sorted(
+                    str(p.relative_to(dir_mod))
+                    for p in dir_mod.rglob("*")
+                    if p.is_file()
+                )
+                inventario_archivos[cont.nombre] = archivos
 
-                if callable(fn_ejecutable):
-                    clave_conexion = "{0}_{1}".format(rol, cap_s)
-                    roles_conectados[clave_conexion] = {
+                # ----- 4) capacidades del contrato -----
+                caps = cont.capacidades
+                if not isinstance(caps, dict) or not caps:
+                    self.fallos.append({
                         "rol": rol,
-                        "contenedor": cont,
-                        "capacidad": cap_s,
-                        "funcion": fn_ejecutable,
-                        "archivos": archivos,
-                        "ine": getattr(cont, "descripcion", None)
-                        or getattr(cont, "meta", {}),
-                    }
-                    ok(
-                        "ROL",
-                        "{0} conectado automáticamente para cálculo "
-                        "(capacidad: {1})".format(rol, cap_s),
-                    )
-                else:
-                    retenido(
-                        "CAPACIDAD",
-                        "{0} contrato no conectado: {1}.{2} "
-                        "sin función ejecutable".format(
-                            rol, cont.nombre, cap_s
-                        ),
-                    )
+                        "contenedor": cont.nombre,
+                        "seccion": "conexion",
+                        "razon": "CONTENEDOR sin capacidades dict",
+                    })
+                    continue
 
-    ok(
-        "ROL",
-        "conexión total: {0} capacidades | {1} módulos inventariados".format(
-            len(roles_conectados), len(inventario_archivos)
-        ),
-    )
-  
-ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
-    "barrer": ("barrer", "verificar", "evaluar"),
-    "verificar": ("verificar", "barrer", "evaluar"),
-    "evaluar": ("evaluar", "verificar", "barrer", "resolver"),
-    "resolver": ("resolver", "evaluar", "verificar"),
-    "componer": ("componer", "verificar"),
-    "inventario": ("inventario",),
-    "calcular": ("calcular",),
-    "generatividad": ("generatividad",),
-    "censo": ("censo", "verificar", "barrer"),
-    "reportar": ("reportar",),
-    "anunciar": ("anunciar", "registrar", "evaluar", "verificar"),
-    "registrar": ("registrar", "anunciar", "evaluar"),
-    "ids": ("ids",),
-    "skills": ("skills",),
-    "por_id": ("por_id",),
-}
+                for cap in caps:
+                    cap_s = str(cap)
 
+                    # ----- 5) resolucion contractual -----
+                    fn_ejecutable = cont.fn(cap_s)
+                    if not callable(fn_ejecutable):
+                        fn_ejecutable = cont.fn_oficio(cap_s)
+
+                    if callable(fn_ejecutable):
+                        clave = "{0}_{1}".format(rol, cap_s)
+                        roles_conectados[clave] = {
+                            "rol": rol,
+                            "contenedor": cont,
+                            "capacidad": cap_s,
+                            "funcion": fn_ejecutable,
+                            "archivos": archivos,
+                            "version": cont.version,
+                            "ruta": str(cont.ruta),
+                            "requiere": list(cont.requiere or []),
+                            "descripcion": str(cont.descripcion or ""),
+                        }
+                    else:
+                        self.fallos.append({
+                            "rol": rol,
+                            "contenedor": cont.nombre,
+                            "capacidad": cap_s,
+                            "seccion": "conexion",
+                            "razon": (
+                                "contrato no conectado: {0}.{1} "
+                                "sin funcion ejecutable".format(
+                                    cont.nombre, cap_s
+                                )
+                            ),
+                        })
+
+        self.roles_conectados = roles_conectados
+        self.inventario_archivos = inventario_archivos
+        return roles_conectados
 
 # ===============================================================
 # CONTENEDOR / REGISTRO
