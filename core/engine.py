@@ -106,62 +106,92 @@ class ContratoError(Exception):
 
 
     # ===========================================================
-    # X) SECCIÓN: CONEXIÓN AUTOMÁTICA Y CÁLCULO DE TODOS LOS ROLES
+    # SECCIÓN: CONEXIÓN AUTOMÁTICA Y CÁLCULO DE TODOS LOS ROLES
+    #
+    # Autoridad total del Engine:
+    #   Lee todos los __init__ (CONTENEDOR).
+    #   Lee absolutamente todos los archivos de cada módulo.
+    #   Actúa según los contratos declarados.
+    #   Enlaza cada capacidad resoluble al ciclo de cálculo.
     # ===========================================================
-    roles_conectados = {}
-    
+    roles_conectados: Dict[str, Dict[str, Any]] = {}
+    inventario_archivos: Dict[str, List[str]] = {}
+
     for rol in ROLES:
-        contenedores_rol = []
-        if hasattr(self, "registro") and self.registro and hasattr(self.registro, "por_rol"):
-            contenedores_rol = self.registro.por_rol.get(rol, [])
+        contenedores_rol = list(self.registro.por_rol.get(rol) or [])
 
         if not contenedores_rol:
-            retenido("ROL", f"{rol:<3} ✗ sin contenedor para conexión de cálculo")
+            retenido(
+                "ROL",
+                "{0} sin contenedor para conexión de cálculo".format(rol),
+            )
             continue
 
         for cont in contenedores_rol:
-            if not hasattr(cont, "capacidades") or not isinstance(cont.capacidades, (list, set)):
-                retenido("CAPACIDAD", f"{rol:<3} ✗ contenedor sin capacidades para enlazar contratos")
+            # ----- todos los archivos del módulo -----
+            dir_mod = Path(cont.ruta).resolve().parent
+            archivos = sorted(
+                str(p.relative_to(dir_mod))
+                for p in dir_mod.rglob("*")
+                if p.is_file()
+            )
+            inventario_archivos[cont.nombre] = archivos
+            ok(
+                "CONTENEDOR",
+                "{0}/{1} archivos leídos n={2}".format(
+                    rol, cont.nombre, len(archivos)
+                ),
+            )
+
+            # ----- contrato: capacidades del CONTENEDOR -----
+            caps = cont.capacidades
+            if not isinstance(caps, dict) or not caps:
+                retenido(
+                    "CAPACIDAD",
+                    "{0}/{1} sin capacidades para enlazar contratos".format(
+                        rol, cont.nombre
+                    ),
+                )
                 continue
 
-            for cap in cont.capacidades:
-                resuelve_fn = False
-                fn_ejecutable = None
-                try:
-                    fn_candidata = cont.fn(cap)
-                    if callable(fn_candidata):
-                        resuelve_fn = True
-                        fn_ejecutable = fn_candidata
-                except Exception as e:
-                    retenido("EXCEPCION", f"{rol:<3} ✗ excepción resolviendo contrato {cont.nombre}.{cap}: {e}")
+            for cap in caps:
+                cap_s = str(cap)
+                fn_ejecutable = cont.fn(cap_s)
+                if not callable(fn_ejecutable):
+                    fn_ejecutable = cont.fn_oficio(cap_s)
 
-                if not resuelve_fn:
-                    fn_oficio_attr = f"fn_oficio_{cap}"
-                    if hasattr(cont, fn_oficio_attr):
-                        resuelve_fn = True
-                        fn_ejecutable = getattr(cont, fn_oficio_attr)
-                    elif hasattr(cont, "fn_oficio"):
-                        resuelve_fn = True
-                        fn_ejecutable = cont.fn_oficio
-                    elif cap in capacidades_conocidas_engine and hasattr(self, cap):
-                        resuelve_fn = True
-                        fn_ejecutable = getattr(self, cap)
-
-                if resuelve_fn and fn_ejecutable:
-                    clave_conexion = f"{rol}_{cap}"
+                if callable(fn_ejecutable):
+                    clave_conexion = "{0}_{1}".format(rol, cap_s)
                     roles_conectados[clave_conexion] = {
                         "rol": rol,
                         "contenedor": cont,
-                        "capacidad": cap,
+                        "capacidad": cap_s,
                         "funcion": fn_ejecutable,
-                        "ine": getattr(cont, "ine", None) or getattr(cont, "meta", {}),
+                        "archivos": archivos,
+                        "ine": getattr(cont, "descripcion", None)
+                        or getattr(cont, "meta", {}),
                     }
-                    ok("ROL", f"{rol:<3} ✓ conectado automáticamente para cálculo (capacidad: {cap})")
+                    ok(
+                        "ROL",
+                        "{0} conectado automáticamente para cálculo "
+                        "(capacidad: {1})".format(rol, cap_s),
+                    )
                 else:
-                    retenido("CAPACIDAD", f"{rol:<3} ✗ contrato no conectado: {cont.nombre}.{cap} sin función ejecutable válida")
+                    retenido(
+                        "CAPACIDAD",
+                        "{0} contrato no conectado: {1}.{2} "
+                        "sin función ejecutable".format(
+                            rol, cont.nombre, cap_s
+                        ),
+                    )
 
-
-
+    ok(
+        "ROL",
+        "conexión total: {0} capacidades | {1} módulos inventariados".format(
+            len(roles_conectados), len(inventario_archivos)
+        ),
+    )
+  
 ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
     "barrer": ("barrer", "verificar", "evaluar"),
     "verificar": ("verificar", "barrer", "evaluar"),
