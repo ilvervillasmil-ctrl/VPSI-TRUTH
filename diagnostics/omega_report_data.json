@@ -1068,18 +1068,18 @@
     {
       "secuencia": 17,
       "engine_version": "12.0",
-      "invocador_id": "test_verdad_astronomica",
+      "invocador_id": "test_trazabilidad",
       "entrada": {
-        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación.",
         "tiene_C": false,
         "tiene_L": false,
         "tiene_K": false,
-        "pedir_anuncio": false
+        "pedir_anuncio": true
       },
       "resultado": {
         "estado": "PARCIAL",
         "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
-        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación.",
         "factores": {
           "C": null,
           "L": null,
@@ -1097,15 +1097,147 @@
         "fallos": [],
         "engine_version": "12.0",
         "contexto_cx": {
-          "permite_k": true,
+          "permite_k": false,
+          "pedir_anuncio": true,
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_O",
+            "dame_normas",
+            "dame_limites",
+            "dame_evidencia",
+            "por_que_valor"
+          ]
+        },
+        "citacion": {
+          "estado": "OK",
+          "ok": true,
+          "n_citas": 1,
+          "n_anuncios": 1,
+          "anuncios": [
+            {
+              "titulo": "[citacion] CIT-CICLO",
+              "tipo": "citacion",
+              "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_O', 'dame_normas', 'dame_limites', 'dame_evidencia', 'por_que_valor'].",
+              "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
+              "evidencia_ref": "ciclo:test_trazabilidad:v12.0",
+              "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación.",
+              "contexto_ciclo": "PARCIAL"
+            }
+          ],
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_O",
+            "dame_normas",
+            "dame_limites",
+            "dame_evidencia",
+            "por_que_valor"
+          ],
+          "evidencia_ref": "ciclo:test_trazabilidad:v12.0",
+          "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación.",
+          "errores": [],
+          "engine_version": "12.0",
+          "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
+        }
+      },
+      "origen": "test_trazabilidad"
+    },
+    {
+      "secuencia": 18,
+      "engine_version": "12.0",
+      "invocador_id": "test_trazabilidad",
+      "entrada": {
+        "contexto": "Conversacion de evaluacion de veracidad entre hablantes.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Conversacion de evaluacion de veracidad entre hablantes.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_sujetos"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "sujetos": [
+          {
+            "indice": 1,
+            "nombre": "Carlos",
+            "texto": "Yo no tome el dinero.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          },
+          {
+            "indice": 2,
+            "nombre": "Maria",
+            "texto": "Vi a Carlos junto a la caja.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          }
+        ],
+        "n_sujetos": 2,
+        "por_sujeto": {
+          "Carlos": {
+            "indice": 1,
+            "nombre": "Carlos",
+            "texto": "Yo no tome el dinero.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          },
+          "Maria": {
+            "indice": 2,
+            "nombre": "Maria",
+            "texto": "Vi a Carlos junto a la caja.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          }
+        },
+        "contexto_cx": {
+          "permite_k": false,
           "pedir_anuncio": false,
           "tipos_peticion": []
         }
       },
-      "origen": "test_verdad_astronomica"
+      "origen": "test_trazabilidad"
     },
     {
-      "secuencia": 18,
+      "secuencia": 19,
       "engine_version": "12.0",
       "invocador_id": "test_verdad_astronomica",
       "entrada": {
@@ -1144,7 +1276,46 @@
       "origen": "test_verdad_astronomica"
     },
     {
-      "secuencia": 19,
+      "secuencia": 20,
+      "engine_version": "12.0",
+      "invocador_id": "test_verdad_astronomica",
+      "entrada": {
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_verdad_astronomica"
+    },
+    {
+      "secuencia": 21,
       "engine_version": "12.0",
       "invocador_id": "core",
       "entrada": {
@@ -1183,7 +1354,7 @@
       "origen": "core"
     },
     {
-      "secuencia": 20,
+      "secuencia": 22,
       "engine_version": "12.0",
       "invocador_id": "omega_report",
       "entrada": {
@@ -6302,26 +6473,28 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 19,
+      "n": 22,
       "propios": 0,
       "origenes": [
         "adv2",
         "core",
         "desconocido",
         "diag_deposito",
+        "omega_report",
         "test_claude_dentro_del_repo",
         "test_contradiccion_estructural_interna",
         "test_conversacion",
         "test_conversacion_estrellas",
         "test_paradoja_mentiroso",
+        "test_trazabilidad",
         "test_verdad_astronomica"
       ],
       "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": "adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
-    "n": 20,
+    "origen": "adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_trazabilidad, test_verdad_astronomica",
+    "n": 22,
     "path": "evaluaciones.json",
     "invocador_id": "omega_report"
   },
@@ -6381,8 +6554,8 @@
     ],
     "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
     "permite_k": true,
-    "origen": "adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
-    "secuencia": 20,
+    "origen": "adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_trazabilidad, test_verdad_astronomica",
+    "secuencia": 22,
     "n_citas": 1,
     "n_anuncios": 1,
     "fuentes_usadas": [],
@@ -7385,10 +7558,10 @@
     "nota": "conteos.py produce k/m, r/p, f/c para la ruta operacional; ids_escala = sujeto/frase/conversacion/atomo/repo leidos del mapa; CA calcula C/L/K; Tru en FO; archivos_extra = candidatos"
   },
   "tests": {
-    "total": 150,
-    "pasados": 149,
+    "total": 151,
+    "pasados": 150,
     "fallidos": 0,
     "omitidos": 1,
-    "tasa": 99.33
+    "tasa": 99.34
   }
 }

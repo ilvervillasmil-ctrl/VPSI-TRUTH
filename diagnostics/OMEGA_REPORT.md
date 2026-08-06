@@ -1,7 +1,7 @@
 ================================================================================
 ℹ️  OMEGA REPORT — MAPA DE TRABAJO
 VPSI-TRUTH (Versión 10.1)
-Generado: 2026-08-06 00:11:53 UTC    Commit: afa218fb144a
+Generado: 2026-08-06 00:30:52 UTC    Commit: f021849ad53f
 Orden: (1) Repo Tru  (2) Sujetos 1…N  (3) Último test  (4) Mapa
 Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
 ================================================================================
@@ -71,8 +71,8 @@ Contrato: Omega SOLO LEE · no calcula · no rellena · reporta todo
   📎 Citas (teoremas / axiomas / normas):
        1. [citacion] CIT-CICLO
   CIT resumen: n_citas=1  n_anuncios=1
-  Origen     : adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica
-  Secuencia  : 20
+  Origen     : adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_trazabilidad, test_verdad_astronomica
+  Secuencia  : 22
   Engine     : 12.0
   Contexto   : Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación ...
 ══════════════════════════════════════════════════════════════════════════════
@@ -151,7 +151,7 @@ ESTADO GLOBAL
       coherente=True  validos=19  caps_ok=111  caps_fallo=0
 
   ✅ Tests (pytest — forma)
-      total=150  pasados=149  fallidos=0  tasa=99.33%
+      total=151  pasados=150  fallidos=0  tasa=99.34%
 
 ================================================================================
 ℹ️  GENERATIVIDAD (TR1 / U1)
