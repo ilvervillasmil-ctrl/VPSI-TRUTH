@@ -990,6 +990,8 @@ jobs:
               print("OK  cobertura estructural perfecta")
           EOF
 
+          
+
       # ==========================================================
       # 13. SUBIDA DE ARTEFACTOS DE DIAGNÓSTICO
       # ==========================================================
@@ -1042,3 +1044,204 @@ jobs:
           git commit -m "ci: historia de coherencia y auditorías estructurales [skip ci]"
           git pull --rebase -X ours origin main || true
           git push origin HEAD:main
+
+            # ==========================================================
+      # 19. AUDITORÍA DE INTEGRIDAD DE API PÚBLICA (FORENSE)
+      # ==========================================================
+      - name: Auditoría de Integridad de API Pública
+        run: |
+          python - <<'EOF'
+          import ast
+          import json
+          import sys
+          import importlib
+          import importlib.util
+          from pathlib import Path
+          from collections import defaultdict
+          from typing import Any, Dict, List, Set, Tuple
+
+          sys.path.insert(0, ".")
+          Path("diagnostics").mkdir(exist_ok=True)
+
+          # -------------------------------------------------------
+          # 1. Recolectar todos los imports del repositorio
+          # -------------------------------------------------------
+          imports_solicitados: List[Dict[str, Any]] = []
+
+          archivos = list(Path("core").rglob("*.py")) + \
+                     list(Path("modules").rglob("*.py")) + \
+                     list(Path("tests").rglob("*.py"))
+
+          for archivo in archivos:
+              try:
+                  fuente = archivo.read_text(encoding="utf-8")
+                  arbol = ast.parse(fuente, filename=str(archivo))
+              except Exception:
+                  continue
+
+              for node in ast.walk(arbol):
+                  if isinstance(node, ast.ImportFrom) and node.module:
+                      for alias in node.names:
+                          imports_solicitados.append({
+                              "archivo": str(archivo),
+                              "linea": node.lineno,
+                              "modulo_origen": node.module,
+                              "simbolo": alias.name,
+                              "asname": alias.asname,
+                          })
+
+          # -------------------------------------------------------
+          # 2. Resolver cada símbolo
+          # -------------------------------------------------------
+          resultados = []
+          faltantes = []
+          encontrados = []
+
+          cache_modulos = {}
+
+          def cargar_modulo(nombre: str):
+              if nombre in cache_modulos:
+                  return cache_modulos[nombre]
+              try:
+                  mod = importlib.import_module(nombre)
+                  cache_modulos[nombre] = mod
+                  return mod
+              except Exception as e:
+                  cache_modulos[nombre] = e
+                  return e
+
+          for item in imports_solicitados:
+              modulo_nombre = item["modulo_origen"]
+              simbolo = item["simbolo"]
+
+              entrada = {
+                  "archivo": item["archivo"],
+                  "linea": item["linea"],
+                  "modulo_origen": modulo_nombre,
+                  "simbolo": simbolo,
+                  "estado": None,
+                  "exportaciones_disponibles": [],
+                  "causa_probable": [],
+                  "severidad": "BAJA",
+              }
+
+              mod = cargar_modulo(modulo_nombre)
+
+              if isinstance(mod, Exception):
+                  entrada["estado"] = "MODULO_NO_IMPORTABLE"
+                  entrada["error_modulo"] = f"{type(mod).__name__}: {mod}"
+                  entrada["severidad"] = "ALTA"
+                  faltantes.append(entrada)
+                  resultados.append(entrada)
+                  continue
+
+              # Listar exportaciones reales
+              exportaciones = [n for n in dir(mod) if not n.startswith("_")]
+              entrada["exportaciones_disponibles"] = exportaciones[:60]
+
+              if hasattr(mod, simbolo):
+                  entrada["estado"] = "ENCONTRADO"
+                  encontrados.append(entrada)
+              else:
+                  entrada["estado"] = "NO_EXPORTADO"
+                  entrada["severidad"] = "ALTA"
+
+                  # Diagnóstico de causa probable
+                  causas = []
+                  if simbolo in getattr(mod, "__all__", []):
+                      causas.append("está en __all__ pero no existe como atributo")
+                  else:
+                      causas.append("nunca fue declarado como símbolo global")
+                      causas.append("fue eliminado")
+                      causas.append("está definido dentro de una función/clase")
+                      causas.append("error tipográfico")
+                      causas.append("__all__ lo oculta")
+
+                  entrada["causa_probable"] = causas
+                  faltantes.append(entrada)
+
+              resultados.append(entrada)
+
+          # -------------------------------------------------------
+          # 3. Resumen por módulo de origen
+          # -------------------------------------------------------
+          por_modulo: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+              "solicitados": 0,
+              "encontrados": 0,
+              "faltantes": 0,
+              "simbolos_faltantes": [],
+          })
+
+          for r in resultados:
+              m = r["modulo_origen"]
+              por_modulo[m]["solicitados"] += 1
+              if r["estado"] == "ENCONTRADO":
+                  por_modulo[m]["encontrados"] += 1
+              else:
+                  por_modulo[m]["faltantes"] += 1
+                  por_modulo[m]["simbolos_faltantes"].append({
+                      "simbolo": r["simbolo"],
+                      "solicitado_desde": f"{r['archivo']}:{r['linea']}",
+                  })
+
+          # -------------------------------------------------------
+          # 4. Informe final
+          # -------------------------------------------------------
+          informe = {
+              "tipo": "auditoria_integridad_api_publica",
+              "version": "1.0-forense",
+              "total_imports_analizados": len(imports_solicitados),
+              "total_encontrados": len(encontrados),
+              "total_faltantes": len(faltantes),
+              "por_modulo": dict(por_modulo),
+              "faltantes_detalle": faltantes,
+              "nota": (
+                  "Auditoría forense de integridad de API pública. "
+                  "Cada símbolo importado se verifica contra el módulo real. "
+                  "No se limita a un ImportError: produce diagnóstico causal."
+              ),
+          }
+
+          Path("diagnostics/api_publica_report.json").write_text(
+              json.dumps(informe, indent=2, ensure_ascii=False, default=str),
+              encoding="utf-8",
+          )
+
+          # -------------------------------------------------------
+          # 5. Salida humana legible
+          # -------------------------------------------------------
+          print("=" * 70)
+          print("AUDITORÍA DE INTEGRIDAD DE API PÚBLICA (FORENSE)")
+          print("=" * 70)
+          print(f"  Imports analizados : {informe['total_imports_analizados']}")
+          print(f"  Encontrados        : {informe['total_encontrados']}")
+          print(f"  Faltantes          : {informe['total_faltantes']}")
+          print()
+
+          if faltantes:
+              print("-" * 70)
+              print("SÍMBOLOS NO EXPORTADOS")
+              print("-" * 70)
+              for f in faltantes:
+                  print(f"  Archivo            : {f['archivo']}")
+                  print(f"  Línea              : {f['linea']}")
+                  print(f"  Módulo origen      : {f['modulo_origen']}")
+                  print(f"  Símbolo solicitado : {f['simbolo']}")
+                  print(f"  Estado             : ✗ {f['estado']}")
+                  print(f"  Severidad          : {f['severidad']}")
+                  if f.get("exportaciones_disponibles"):
+                      print(f"  Exportaciones      : {', '.join(f['exportaciones_disponibles'][:12])}...")
+                  if f.get("causa_probable"):
+                      print("  Causas probables   :")
+                      for c in f["causa_probable"]:
+                          print(f"    [ ] {c}")
+                  print()
+
+          if informe["total_faltantes"] > 0:
+              print("=" * 70)
+              print("FALLO: existen símbolos importados que no se exportan")
+              print("=" * 70)
+              sys.exit(1)
+
+          print("OK  integridad de API pública verificada")
+          EOF
