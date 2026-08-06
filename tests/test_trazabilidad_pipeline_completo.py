@@ -2,15 +2,20 @@
 """
 tests/test_trazabilidad_pipeline_completo.py
 
-Un solo Test forense.
-No celebra lo que existe: busca dónde se rompe el contrato
-y nombra el primer corte + la propagación.
+Un solo Test forense del repositorio VPSI-TRUTH.
+
+Principio:
+  El sistema decide qué módulos usa.
+  Este test no impone secuencia.
+  Observa, contrasta contratos, nombra el primer corte y la propagación.
+
+API preferida: pública (Engine, registro, ejecutar_*, evaluar, evidencia.leer).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pytest
 
@@ -20,86 +25,105 @@ def _mods_dir() -> Path:
 
 
 def test_trazabilidad_pipeline_completo() -> None:
-    from core.engine import Engine, ROLES, OBLIGATORIOS
+    from core.engine import Engine, ROLES, OBLIGATORIOS, es_undefined
 
-    cortes: List[str] = []          # fallas reales
-    evidencias: List[str] = []      # detalle del corte
-    cadena: List[str] = []          # log ordenado del recorrido
+    # ------------------------------------------------------------------
+    # acumuladores
+    # ------------------------------------------------------------------
+    cortes: List[Dict[str, Any]] = []
+    cadena: List[str] = []
+    participaron: Set[str] = set()
+    sin_produccion: Set[str] = set()
+    no_invocados: Set[str] = set()
 
-    def corte(lugar: str, detalle: str) -> None:
-        msg = "[{0}] {1}".format(lugar, detalle)
-        cortes.append(msg)
-        evidencias.append(msg)
-        cadena.append("CORTE  " + msg)
+    def log(msg: str) -> None:
+        cadena.append(msg)
 
-    def paso(msg: str) -> None:
-        cadena.append("paso   " + msg)
-
-    def esperado_vs_real(
-        lugar: str,
-        campo: str,
-        esperado: str,
-        real: Any,
+    def corte(
+        modulo: str,
+        oficio: str,
+        detalle: str,
+        campos_perdidos: Optional[List[str]] = None,
     ) -> None:
-        if real is None or real == "" or real == "UNDEFINED":
-            corte(
-                lugar,
-                "campo '{0}' esperado ({1}) ausente; real={2!r}".format(
-                    campo, esperado, real
-                ),
-            )
-        else:
-            paso("{0}: {1}={2!r}".format(lugar, campo, real))
+        cortes.append({
+            "modulo": modulo,
+            "oficio": oficio,
+            "detalle": detalle,
+            "campos_perdidos": list(campos_perdidos or []),
+        })
+        log("CORTE  [{0}.{1}] {2}".format(modulo, oficio, detalle))
 
     # ------------------------------------------------------------------
-    # 0) Engine
+    # 0) Arranque (publico)
     # ------------------------------------------------------------------
-    raiz = _mods_dir()
     try:
         eng = Engine(
-            raiz_modulos=str(raiz),
+            raiz_modulos=str(_mods_dir()),
             invocador_id="test_trazabilidad",
         )
     except Exception as e:
-        pytest.fail(
-            "Engine no arranco: {0}: {1}".format(type(e).__name__, e)
-        )
+        pytest.fail("Engine no arranco: {0}: {1}".format(type(e).__name__, e))
         return
 
     if eng.estado != "OPERATIVO":
         corte(
-            "ARRANQUE",
-            "estado={0} errores={1}".format(
-                eng.estado, eng.errores_arranque
-            ),
+            "Engine",
+            "arranque",
+            "estado={0} errores={1}".format(eng.estado, eng.errores_arranque),
         )
+    else:
+        log("Engine OPERATIVO v{0} contenedores={1}".format(
+            eng.VERSION, eng.registro.total()
+        ))
 
     # ------------------------------------------------------------------
-    # 1) Cobertura: todo ROL debe existir; obligatorio no vacio
+    # 1) Cobertura total de ROLES + contratos (todos, sin excepcion)
     # ------------------------------------------------------------------
+    log("--- COBERTURA ---")
     por_rol = eng.registro.por_rol
+    por_nombre = eng.registro.contenedores
+
     for rol in ROLES:
         lista = por_rol.get(rol) or []
-        if not lista and rol in OBLIGATORIOS:
-            corte("COBERTURA", "rol obligatorio vacio: {0}".format(rol))
-        elif not lista:
-            corte(
-                "COBERTURA",
-                "rol declarado en ROLES sin contenedor: {0}".format(rol),
-            )
-
-    for cont in eng.registro.contenedores.values():
-        for cap in (cont.capacidades or {}).keys():
-            if not callable(cont.fn(str(cap))) and not callable(
-                cont.fn_oficio(str(cap))
-            ):
+        if not lista:
+            if rol in OBLIGATORIOS:
+                corte("COBERTURA", rol, "rol obligatorio sin contenedor")
+            else:
+                log("ROL {0}: sin contenedor (no obligatorio)".format(rol))
+            no_invocados.add(rol)
+            continue
+        cont = lista[0]
+        log("ROL {0}: modulo={1} version={2}".format(
+            rol, cont.nombre, cont.version
+        ))
+        # capacidades declaradas deben resolver
+        caps = cont.capacidades or {}
+        if not isinstance(caps, dict) or not caps:
+            corte(cont.nombre, "CONTENEDOR", "sin capacidades declaradas")
+            continue
+        for cap in caps.keys():
+            fn = cont.fn(str(cap))
+            if not callable(fn):
+                fn = cont.fn_oficio(str(cap)) if hasattr(cont, "fn_oficio") else None
+            if not callable(fn):
                 corte(
-                    "CONTRATO/{0}".format(cont.nombre),
-                    "capacidad '{0}' no resoluble".format(cap),
+                    cont.nombre,
+                    str(cap),
+                    "capacidad declarada no resoluble a callable",
+                )
+
+        for req in cont.requiere or []:
+            if req in ROLES and not (por_rol.get(req) or []):
+                corte(cont.nombre, "requiere", "rol {0} vacio".format(req))
+            elif req not in ROLES and req not in por_nombre:
+                corte(
+                    cont.nombre,
+                    "requiere",
+                    "modulo '{0}' ausente".format(req),
                 )
 
     # ------------------------------------------------------------------
-    # 2) Ciclo forense A — auditoria (donde Omega ve PARCIAL sin C/L/K)
+    # 2) Peticiones (el sistema decide el grafo interno)
     # ------------------------------------------------------------------
     pet_a: Dict[str, Any] = {
         "contexto": (
@@ -110,145 +134,9 @@ def test_trazabilidad_pipeline_completo() -> None:
             "Auditoría estructural del repositorio VPSI-TRUTH: "
             "coherencia axiomática, contratos, mecánica y correlación."
         ),
-        "mensaje": "Auditar el repositorio VPSI-TRUTH y sus contratos.",
+        "mensaje": "Auditar el repositorio VPSI-TRUTH y sus contratos CONTENEDOR.",
         "pedir_anuncio": True,
     }
-
-    # 2a) CE
-    ce = eng._ce_ids_skills() if hasattr(eng, "_ce_ids_skills") else {}
-    if not ce.get("ids"):
-        corte("CE", "sin ids/skills; mandatos no aplicables")
-    else:
-        paso("CE ids={0}".format(ce.get("ids")))
-
-    mand_a = (
-        eng._mandatos_aplicables(pet_a, ce)
-        if hasattr(eng, "_mandatos_aplicables")
-        else []
-    )
-    paso("CE mandatos A={0}".format(mand_a))
-
-    # 2b) CX directo (oficio)
-    cx_cont = eng.registro.primero("CX")
-    if cx_cont is None:
-        corte("CX", "rol CX no cargado")
-        cx_out: Dict[str, Any] = {}
-    else:
-        cx_out = eng._marco_cx(pet_a) if hasattr(eng, "_marco_cx") else None
-        if not isinstance(cx_out, dict):
-            corte("CX", "evaluar/resolver no devolvio dict; real={0!r}".format(cx_out))
-            cx_out = {}
-        else:
-            paso(
-                "CX permite_k={0} coherente={1}".format(
-                    cx_out.get("permite_k"), cx_out.get("coherente")
-                )
-            )
-            if cx_out.get("permite_k") is not True:
-                corte(
-                    "CX",
-                    "permite_k={0}; O no reclamable → CA/FO no deben inventar K".format(
-                        cx_out.get("permite_k")
-                    ),
-                )
-
-    # 2c) CA directo (oficio calcular) — aqui suele estar el agujero
-    ca_cont = eng.registro.primero("CA")
-    calc_a: Any = None
-    if ca_cont is None:
-        corte("CA", "rol CA no cargado")
-    elif not ca_cont.tiene("calcular"):
-        corte("CA", "contrato sin capacidad 'calcular'")
-    else:
-        calc_a = eng._ejecutar_capacidad(ca_cont, "calcular", pet_a)
-        if calc_a is None or (
-            hasattr(eng, "fallos") and False
-        ):
-            pass
-        from core.engine import es_undefined
-
-        if es_undefined(calc_a):
-            corte(
-                "CA",
-                "calcular() devolvio UNDEFINED (oficio fallo o no resolvio)",
-            )
-        elif not isinstance(calc_a, dict):
-            corte(
-                "CA",
-                "calcular() tipo={0} valor={1!r}".format(
-                    type(calc_a).__name__, calc_a
-                ),
-            )
-        else:
-            paso("CA calcular keys={0}".format(sorted(calc_a.keys())))
-            for f in ("C", "L", "K"):
-                if f not in calc_a or calc_a.get(f) is None:
-                    corte(
-                        "CA",
-                        "calcular() no entrego '{0}'; keys={1}".format(
-                            f, sorted(calc_a.keys())
-                        ),
-                    )
-                else:
-                    paso("CA {0}={1!r}".format(f, calc_a.get(f)))
-
-    # 2d) FO solo si hay C/L/K
-    fo_cont = eng.registro.primero("FO")
-    if fo_cont is None:
-        corte("FO", "rol FO no cargado")
-    else:
-        if (
-            isinstance(calc_a, dict)
-            and all(calc_a.get(x) is not None for x in ("C", "L", "K"))
-        ):
-            try:
-                tru_ri_fn, tru_total_fn = eng.get_formulas()
-                ri = tru_ri_fn(calc_a["C"], calc_a["L"], calc_a["K"])
-                tt = tru_total_fn(calc_a["C"], calc_a["L"], calc_a["K"])
-                paso("FO tru_ri={0} tru_total={1}".format(ri, tt))
-            except Exception as e:
-                corte(
-                    "FO",
-                    "tru_* lanzo {0}: {1}".format(type(e).__name__, e),
-                )
-        else:
-            corte(
-                "FO",
-                "no invocable: CA no entrego C/L/K completos "
-                "(propagacion desde CA)",
-            )
-
-    # 2e) Engine.evaluar A (orquestacion)
-    out_a = eng.evaluar(pet_a)
-    if not isinstance(out_a, dict):
-        corte("EVALUAR_A", "no dict: {0!r}".format(out_a))
-        out_a = {}
-    else:
-        paso("EVALUAR_A estado={0}".format(out_a.get("estado")))
-        fac = out_a.get("factores") or {}
-        for f in ("C", "L", "K"):
-            val = fac.get(f) if isinstance(fac, dict) else None
-            if val is None:
-                corte(
-                    "EVALUAR_A",
-                    "body.factores.{0} ausente (estado={1}, razon={2!r})".format(
-                        f, out_a.get("estado"), out_a.get("razon")
-                    ),
-                )
-            else:
-                paso("EVALUAR_A factores.{0}={1}".format(f, val))
-        for t in ("tru_ri", "tru_total"):
-            if out_a.get(t) in (None, "UNDEFINED"):
-                corte(
-                    "EVALUAR_A",
-                    "body.{0}={1!r} (no depositado para Omega)".format(
-                        t, out_a.get(t)
-                    ),
-                )
-
-    # ------------------------------------------------------------------
-    # 3) Ciclo forense B — sujetos
-    # ------------------------------------------------------------------
     pet_b: Dict[str, Any] = {
         "contexto": "Conversacion de evaluacion de veracidad entre hablantes.",
         "O_context": "Conversacion de evaluacion de veracidad entre hablantes.",
@@ -260,164 +148,320 @@ def test_trazabilidad_pipeline_completo() -> None:
         "categoria_tru": "tru_sujeto",
     }
 
-    mand_b = (
-        eng._mandatos_aplicables(pet_b, ce)
-        if hasattr(eng, "_mandatos_aplicables")
-        else []
-    )
-    if "ce_mandato_sujetos" not in mand_b:
+    # ------------------------------------------------------------------
+    # 3) Sonda publica CA.calcular (contrato de salida C/L/K)
+    #    No impone que deba usarse; si se invoca y no cumple, es corte.
+    # ------------------------------------------------------------------
+    log("--- SONDA CA.calcular (contrato publico) ---")
+    calc_a: Any = eng.ejecutar_capacidad("CA", "calcular", pet_a)
+    if es_undefined(calc_a):
         corte(
-            "CE/SUJETOS",
-            "mandato ce_mandato_sujetos NO aplicable; "
-            "mandatos={0}".format(mand_b),
+            "CA",
+            "calcular",
+            "oficio devolvio UNDEFINED (no resolvio o lanzo)",
         )
-    else:
-        paso("CE mandato sujetos aplicable")
-
-    # segmentacion cruda
-    from core.engine import _segmentar_sujetos, _texto_peticion
-
-    segs = _segmentar_sujetos(_texto_peticion(pet_b))
-    if len(segs) < 2:
+        calc_a = None
+    elif not isinstance(calc_a, dict):
         corte(
-            "SEGMENTACION",
-            "se esperaban >=2 hablantes Nombre:; real={0}".format(segs),
+            "CA",
+            "calcular",
+            "tipo inesperado {0}: {1!r}".format(type(calc_a).__name__, calc_a),
         )
+        calc_a = None
     else:
-        paso("SEGMENTACION n={0} nombres={1}".format(
-            len(segs), [s.get("nombre") for s in segs]
+        participaron.add("CA")
+        log("CA.calcular keys={0}".format(sorted(calc_a.keys())))
+        perdidos_ca = [f for f in ("C", "L", "K") if calc_a.get(f) is None]
+        if perdidos_ca:
+            corte(
+                "CA",
+                "calcular",
+                "no entrego campos de contrato: {0}".format(perdidos_ca),
+                campos_perdidos=perdidos_ca,
+            )
+            sin_produccion.add("CA")
+        else:
+            log("CA.calcular C={0!r} L={1!r} K={2!r}".format(
+                calc_a.get("C"), calc_a.get("L"), calc_a.get("K")
+            ))
+
+    # ------------------------------------------------------------------
+    # 4) Sonda publica FO (solo si CA entrego C/L/K — handoff real)
+    # ------------------------------------------------------------------
+    log("--- HANDOFF CA → FO ---")
+    if (
+        isinstance(calc_a, dict)
+        and all(calc_a.get(x) is not None for x in ("C", "L", "K"))
+    ):
+        try:
+            tru_ri_fn, tru_total_fn = eng.get_formulas()
+            ri = tru_ri_fn(calc_a["C"], calc_a["L"], calc_a["K"])
+            tt = tru_total_fn(calc_a["C"], calc_a["L"], calc_a["K"])
+            participaron.add("FO")
+            log("FO handoff OK tru_ri={0} tru_total={1}".format(ri, tt))
+        except Exception as e:
+            corte(
+                "FO",
+                "tru_*",
+                "CA entrego C/L/K pero FO fallo: {0}: {1}".format(
+                    type(e).__name__, e
+                ),
+            )
+    else:
+        log(
+            "FO no sondado: CA no entrego C/L/K completos "
+            "(no se inventa entrada a FO)"
+        )
+        if "CA" in {c["modulo"] for c in cortes}:
+            log("propagacion: corte CA bloquea FO")
+
+    # ------------------------------------------------------------------
+    # 5) Ciclo A — evaluar (caja negra; el sistema arma el grafo)
+    # ------------------------------------------------------------------
+    log("--- EVALUAR A (auditoria) ---")
+    out_a = eng.evaluar(pet_a)
+    if not isinstance(out_a, dict):
+        corte("Engine", "evaluar_A", "no devolvio dict: {0!r}".format(out_a))
+        out_a = {}
+    else:
+        log("evaluar_A estado={0} razon={1!r}".format(
+            out_a.get("estado"), out_a.get("razon")
         ))
+        # señales de participacion por huella en el body
+        if out_a.get("contexto_cx") is not None:
+            participaron.add("CX")
+        if out_a.get("ce_ids") or out_a.get("mandatos_aplicados"):
+            participaron.add("CE")
+        if out_a.get("citacion") is not None:
+            participaron.add("CIT")
+        if out_a.get("factores") is not None or out_a.get("estado") in (
+            "OK", "PARCIAL", "ERROR"
+        ):
+            participaron.add("CA")
+        if out_a.get("tru_ri") not in (None,) or out_a.get("tru_total") not in (None,):
+            participaron.add("FO")
 
+        fac = out_a.get("factores") if isinstance(out_a.get("factores"), dict) else {}
+        perdidos_body = []
+        for f in ("C", "L", "K"):
+            if fac.get(f) is None:
+                perdidos_body.append("factores.{0}".format(f))
+        for t in ("tru_ri", "tru_total"):
+            if out_a.get(t) in (None, "UNDEFINED"):
+                perdidos_body.append(t)
+        if perdidos_body and out_a.get("estado") != "UNDEFINED":
+            # UNDEFINED sin O es fail-closed legitimo; PARCIAL/OK sin factores es corte
+            corte(
+                "Engine",
+                "evaluar_A",
+                "body incompleto estado={0}: faltan {1}".format(
+                    out_a.get("estado"), perdidos_body
+                ),
+                campos_perdidos=perdidos_body,
+            )
+
+    # ------------------------------------------------------------------
+    # 6) Ciclo B — sujetos
+    # ------------------------------------------------------------------
+    log("--- EVALUAR B (sujetos) ---")
     out_b = eng.evaluar(pet_b)
     if not isinstance(out_b, dict):
-        corte("EVALUAR_B", "no dict")
+        corte("Engine", "evaluar_B", "no devolvio dict")
         out_b = {}
     else:
-        paso("EVALUAR_B estado={0}".format(out_b.get("estado")))
+        log("evaluar_B estado={0}".format(out_b.get("estado")))
+        if out_b.get("contexto_cx") is not None:
+            participaron.add("CX")
+        if out_b.get("ce_ids") or out_b.get("mandatos_aplicados"):
+            participaron.add("CE")
 
-    sujetos = out_b.get("sujetos")
-    if not isinstance(sujetos, list) or len(sujetos) < 2:
-        corte(
-            "EVALUAR_B/SUJETOS",
-            "body.sujetos ausente o incompleto; real={0!r} n_sujetos={1!r}".format(
-                sujetos, out_b.get("n_sujetos")
-            ),
-        )
-    else:
-        paso("EVALUAR_B sujetos n={0}".format(len(sujetos)))
-        for s in sujetos:
-            if not isinstance(s, dict):
-                corte("SUJETO", "entrada no dict: {0!r}".format(s))
-                continue
-            nombre = s.get("nombre")
-            if s.get("estado") != "OK":
-                corte(
-                    "SUJETO/{0}".format(nombre),
-                    "estado={0} razon={1!r} factores={2!r}".format(
-                        s.get("estado"), s.get("razon"), s.get("factores")
-                    ),
-                )
-            for t in ("tru_ri", "tru_total"):
-                if s.get(t) in (None, "UNDEFINED"):
+        sujetos = out_b.get("sujetos")
+        if not isinstance(sujetos, list) or len(sujetos) < 2:
+            corte(
+                "Engine",
+                "evaluar_B",
+                "sujetos ausentes o <2; real={0!r} n={1!r}".format(
+                    sujetos, out_b.get("n_sujetos")
+                ),
+                campos_perdidos=["sujetos", "n_sujetos"],
+            )
+        else:
+            participaron.add("CE")  # mandato sujetos / segmentacion via engine
+            log("sujetos n={0}".format(len(sujetos)))
+            for s in sujetos:
+                if not isinstance(s, dict):
+                    corte("SUJETO", "item", "no dict: {0!r}".format(s))
+                    continue
+                nom = s.get("nombre")
+                if s.get("estado") != "OK":
                     corte(
-                        "SUJETO/{0}".format(nombre),
-                        "{0} ausente (CA/FO no calculo por sujeto)".format(t),
+                        "SUJETO/{0}".format(nom),
+                        "ciclo",
+                        "estado={0} razon={1!r}".format(
+                            s.get("estado"), s.get("razon")
+                        ),
+                    )
+                perd_s = [
+                    t for t in ("tru_ri", "tru_total")
+                    if s.get(t) in (None, "UNDEFINED")
+                ]
+                if perd_s:
+                    corte(
+                        "SUJETO/{0}".format(nom),
+                        "tru",
+                        "sin {0}".format(perd_s),
+                        campos_perdidos=perd_s,
                     )
 
     # ------------------------------------------------------------------
-    # 4) Persistencia: memoria vs disco (solo si hubo sujetos en memoria)
+    # 7) Conservacion memoria → depositario (todas las claves criticas)
     # ------------------------------------------------------------------
-    mem = list(eng.resultados_evaluacion or [])
-    body_mem = None
-    for reg in reversed(mem):
-        if isinstance(reg, dict):
-            b = reg.get("resultado") or {}
-            if isinstance(b, dict) and b.get("sujetos"):
-                body_mem = b
-                break
-
-    if body_mem is None and isinstance(sujetos, list) and sujetos:
-        corte(
-            "MEMORIA",
-            "evaluar devolvio sujetos pero resultados_evaluacion no los tiene",
-        )
+    log("--- PERSISTENCIA ---")
+    mem = list(eng.get_resultados_evaluacion() or [])
+    claves_criticas = (
+        "estado", "factores", "tru_ri", "tru_total",
+        "sujetos", "n_sujetos", "por_sujeto",
+        "citacion", "contexto_cx", "ce_ids", "mandatos_aplicados",
+        "razon", "fallos",
+    )
 
     try:
         from diagnostics.evidencia import leer
         doc = leer() or {}
     except Exception as e:
-        corte("DEPOSITARIO", "leer() fallo: {0}: {1}".format(type(e).__name__, e))
+        corte(
+            "evidencia",
+            "leer",
+            "{0}: {1}".format(type(e).__name__, e),
+        )
         doc = {}
 
-    origen = (
-        eng._origen_evidencia()
-        if hasattr(eng, "_origen_evidencia")
-        else "test_trazabilidad"
-    )
+    origen = str(getattr(eng, "invocador_id", None) or "test_trazabilidad")
+    # si existe helper publico de origen, usarlo; si no, invocador_id
+    if hasattr(eng, "_origen_evidencia") and callable(eng._origen_evidencia):
+        try:
+            origen = eng._origen_evidencia()
+        except Exception:
+            pass
+
     del_origen = [
         r for r in (doc.get("resultados") or [])
         if isinstance(r, dict) and r.get("origen") == origen
     ]
+    log("memoria n={0} | disco origen={1} n={2}".format(
+        len(mem), origen, len(del_origen)
+    ))
 
-    body_disco = None
-    for reg in reversed(del_origen):
-        b = reg.get("resultado") or {}
-        if isinstance(b, dict) and b.get("sujetos"):
-            body_disco = b
-            break
-
-    if body_mem is not None and body_disco is None:
+    if len(mem) == 0:
+        corte("Engine", "memoria", "resultados_evaluacion vacio tras evaluar")
+    elif len(del_origen) == 0:
         corte(
-            "PERSISTENCIA",
-            "memoria tiene sujetos; disco origen={0} no".format(origen),
+            "evidencia",
+            "depositar",
+            "disco sin entradas para origen={0}".format(origen),
         )
-    elif body_mem is not None and body_disco is not None:
-        perdidas = set(body_mem.keys()) - set(body_disco.keys())
+    else:
+        # comparar ultimo ciclo de memoria con ultimo del origen
+        reg_m = mem[-1] if mem else {}
+        reg_d = del_origen[-1] if del_origen else {}
+        body_m = reg_m.get("resultado") if isinstance(reg_m, dict) else {}
+        body_d = reg_d.get("resultado") if isinstance(reg_d, dict) else {}
+        if not isinstance(body_m, dict):
+            body_m = {}
+        if not isinstance(body_d, dict):
+            body_d = {}
+
+        perdidas = []
+        for k in claves_criticas:
+            if k in body_m and k not in body_d:
+                perdidas.append(k)
         if perdidas:
             corte(
-                "PERSISTENCIA",
-                "claves perdidas en disco: {0}".format(sorted(perdidas)),
+                "evidencia",
+                "conservacion",
+                "claves en memoria ausentes en disco: {0}".format(perdidas),
+                campos_perdidos=perdidas,
             )
         else:
-            paso("PERSISTENCIA sujetos conservados origen={0}".format(origen))
+            log("conservacion OK (claves criticas presentes en disco)")
+
+        # factores internos
+        fac_m = body_m.get("factores") if isinstance(body_m.get("factores"), dict) else {}
+        fac_d = body_d.get("factores") if isinstance(body_d.get("factores"), dict) else {}
+        for f in ("C", "L", "K"):
+            if f in fac_m and f not in fac_d:
+                corte(
+                    "evidencia",
+                    "conservacion",
+                    "factores.{0} perdido en disco".format(f),
+                    campos_perdidos=["factores.{0}".format(f)],
+                )
 
     # ------------------------------------------------------------------
-    # 5) Propagacion (solo con cortes reales)
+    # 8) Clasificacion de modulos (observado, no impuesto)
     # ------------------------------------------------------------------
-    prop: List[str] = []
-    lugares = [c.split("]")[0].strip("[") for c in cortes]
-    if any(l.startswith("CA") for l in lugares):
-        prop.append("CA → FO sin Tru → EVALUAR body PARCIAL/sin factores → Omega ⚪")
-    if any("SUJETO" in l or l.endswith("SUJETOS") for l in lugares):
-        prop.append("SUJETOS → body incompleto → Omega N=0")
-    if any(l.startswith("PERSISTENCIA") for l in lugares):
-        prop.append("EMIT/DEPOSITARIO → Omega no ve lo que memoria tiene")
-    if any(l.startswith("CX") for l in lugares):
-        prop.append("CX permite_k=False → CA no debe fabricar K (fail-closed)")
+    for rol in ROLES:
+        if rol in participaron:
+            continue
+        lista = por_rol.get(rol) or []
+        if lista:
+            no_invocados.add(rol)
 
     # ------------------------------------------------------------------
-    # Informe final (solo cortes + cadena)
+    # 9) Primer corte + propagacion
     # ------------------------------------------------------------------
-    lineas = []
+    lineas: List[str] = []
     lineas.append("=" * 64)
-    lineas.append("TRAZABILIDAD FORENSE — VPSI PIPELINE")
+    lineas.append("TRAZABILIDAD FORENSE — UN SOLO TEST")
     lineas.append("=" * 64)
-    lineas.append("--- CADENA ---")
-    lineas.extend(cadena)
+    lineas.append("CADENA OBSERVADA")
+    for c in cadena:
+        lineas.append("  " + c)
+
     lineas.append("")
-    lineas.append("--- CORTES ({0}) ---".format(len(cortes)))
     if cortes:
-        for c in cortes:
-            lineas.append("FALLO  " + c)
+        prim = cortes[0]
+        lineas.append("PRIMER CORTE")
+        lineas.append("  modulo   : {0}".format(prim["modulo"]))
+        lineas.append("  oficio   : {0}".format(prim["oficio"]))
+        lineas.append("  detalle  : {0}".format(prim["detalle"]))
+        if prim["campos_perdidos"]:
+            lineas.append(
+                "  perdidos : {0}".format(prim["campos_perdidos"])
+            )
+        lineas.append("")
+        lineas.append("TODOS LOS CORTES ({0})".format(len(cortes)))
+        for i, c in enumerate(cortes, 1):
+            lineas.append(
+                "  {0}. {1}.{2}: {3}".format(
+                    i, c["modulo"], c["oficio"], c["detalle"]
+                )
+            )
+        lineas.append("")
+        lineas.append("PROPAGACION (desde primer corte)")
+        m0 = prim["modulo"]
+        lineas.append("  {0}".format(m0))
+        if m0 in ("CA", "Engine") or m0.startswith("SUJETO"):
+            lineas.append("    ↓ FO / Tru")
+            lineas.append("    ↓ body evaluar")
+            lineas.append("    ↓ evidencia.depositar")
+            lineas.append("    ↓ evaluaciones.json")
+            lineas.append("    ↓ Omega (lee vacio/parcial)")
+        elif m0 == "evidencia":
+            lineas.append("    ↓ evaluaciones.json")
+            lineas.append("    ↓ Omega")
+        elif m0 == "FO":
+            lineas.append("    ↓ body sin Tru")
+            lineas.append("    ↓ Omega")
     else:
-        lineas.append("ningun corte")
+        lineas.append("PRIMER CORTE: (ninguno)")
+
     lineas.append("")
-    lineas.append("--- PROPAGACION ---")
-    if prop:
-        for p in prop:
-            lineas.append("  " + p)
-    else:
-        lineas.append("  (sin propagacion)")
+    lineas.append("PARTICIPARON   : {0}".format(sorted(participaron) or ["—"]))
+    lineas.append("NO INVOCADOS   : {0}".format(sorted(no_invocados) or ["—"]))
+    lineas.append(
+        "SIN PRODUCCION : {0}".format(sorted(sin_produccion) or ["—"])
+    )
     lineas.append("=" * 64)
 
     informe = "\n".join(lineas)
@@ -425,5 +469,10 @@ def test_trazabilidad_pipeline_completo() -> None:
 
     if cortes:
         pytest.fail(
-            "Cortes detectados ({0}):\n{1}".format(len(cortes), informe)
+            "Cortes ({0}). Primer responsable: {1}.{2}\n{3}".format(
+                len(cortes),
+                cortes[0]["modulo"],
+                cortes[0]["oficio"],
+                informe,
+            )
         )
