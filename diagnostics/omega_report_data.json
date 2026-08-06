@@ -381,13 +381,887 @@
           "engine_version": "12.3",
           "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
         }
-      }
+      },
+      "origen": "desconocido"
+    },
+    {
+      "secuencia": 2,
+      "engine_version": "12.0",
+      "invocador_id": "adv2",
+      "entrada": {
+        "contexto": null,
+        "tiene_C": true,
+        "tiene_L": true,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "UNDEFINED",
+        "razon": "Sin O_context usable: K de contenido no reclamable (contrato CX permite_k / Def-5.3.1 en grafo AX)",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": "UNDEFINED"
+        },
+        "tru_ri": "UNDEFINED",
+        "tru_total": "UNDEFINED",
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "valuacion": {
+          "capa_objeto": "indefinido",
+          "capa_meta": "anuncio_de_indefinido",
+          "es_error_sistema": false,
+          "ids": [
+            "Def-5.3.1",
+            "IND-D1",
+            "IND-A1",
+            "IND-A2",
+            "IND-A4",
+            "IND-A5",
+            "IND-L1",
+            "IND-T1",
+            "IND-C2",
+            "IND-C3",
+            "CX-A14",
+            "CX-A1",
+            "CX-C4",
+            "CX-A10",
+            "CX-T13"
+          ],
+          "nota": "Resultado de ciclo, no rechazo de arranque. Engine permanece OPERATIVO. No se fabrica O ni K=0."
+        },
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": false,
+          "pedir_anuncio": false,
+          "tipos_peticion": [],
+          "modo_entrada": null,
+          "coherente": false,
+          "ids_cx_relevantes": [
+            "CX-A14",
+            "CX-A1",
+            "CX-C4",
+            "CX-A10",
+            "CX-T13"
+          ]
+        }
+      },
+      "origen": "adv2"
+    },
+    {
+      "entrada": {
+        "quien": "Claude",
+        "texto": "Estuve dentro del repositorio. Ejecuté el engine y medí sus factores. Leí conteos punto py línea por línea. No inventé el rol RE, aunque sí lo escribí sin verificarlo. Corrí el barrido axiomático y dio 487 declaraciones sin choques. No leí los 487 axiomas.",
+        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos."
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Ubicación de Claude durante esta conversación: si Claude estuvo o no dentro del repositorio VPSI-TRUTH, entendido como haber ejecutado su código y leído sus archivos.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "estado": "PARCIAL",
+      "tru_ri": null,
+      "tru_total": null,
+      "origen": "test_claude_dentro_del_repo",
+      "invocador_id": "test_claude_dentro_del_repo",
+      "secuencia": 3
+    },
+    {
+      "secuencia": 4,
+      "engine_version": "12.0",
+      "invocador_id": "test_contradiccion_estructural_interna",
+      "entrada": {
+        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_contradiccion_estructural_interna"
+    },
+    {
+      "secuencia": 5,
+      "engine_version": "12.0",
+      "invocador_id": "test_contradiccion_estructural_interna",
+      "entrada": {
+        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Autoevaluación de la coherencia interna del discurso de un único hablante acerca de su propia inteligencia, honestidad, capacidad intelectual y forma de actuar. La evaluación debe hacerse únicamente con base en el contenido del texto presentado y en la consistencia interna de sus afirmaciones.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_contradiccion_estructural_interna"
+    },
+    {
+      "entrada": {
+        "secuencia": [
+          {
+            "hablante": "Carlos",
+            "mensaje": "Las galaxias, las estrellas y los planetas existen.",
+            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
+          },
+          {
+            "hablante": "María",
+            "mensaje": "Sí, es verdad, Carlos, las galaxias y los planetas y las estrellas sí existen.",
+            "enunciado_O": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios."
+          }
+        ]
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Dominio cosmológico y astronómico: verificación de la existencia física de galaxias, sistemas estelares y planetarios.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "estado": "PARCIAL",
+      "origen": "test_conversacion_estrellas",
+      "invocador_id": "test_conversacion_estrellas",
+      "secuencia": 6
+    },
+    {
+      "secuencia": 7,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 8,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 9,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 10,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 11,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 12,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 13,
+      "engine_version": "12.0",
+      "invocador_id": "test_conversacion",
+      "entrada": {
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar, con base solo en lo dicho, la coherencia y la correspondencia de cada afirmación sobre dónde estuvo Carlos anoche.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_conversacion"
+    },
+    {
+      "secuencia": 14,
+      "engine_version": "12.0",
+      "invocador_id": "diag_deposito",
+      "entrada": {
+        "contexto": "Evaluar coherencia de cada hablante bajo el mismo O de conversacion sobre el dinero.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Evaluar coherencia de cada hablante bajo el mismo O de conversacion sobre el dinero.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_sujetos"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "sujetos": [
+          {
+            "indice": 1,
+            "nombre": "Carlos",
+            "texto": "Yo no tome el dinero.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          },
+          {
+            "indice": 2,
+            "nombre": "Maria",
+            "texto": "Yo vi a Carlos cerca de la caja.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          }
+        ],
+        "n_sujetos": 2,
+        "por_sujeto": {
+          "Carlos": {
+            "indice": 1,
+            "nombre": "Carlos",
+            "texto": "Yo no tome el dinero.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          },
+          "Maria": {
+            "indice": 2,
+            "nombre": "Maria",
+            "texto": "Yo vi a Carlos cerca de la caja.",
+            "estado": "PARCIAL",
+            "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+            "factores": {
+              "C": null,
+              "L": null,
+              "K": null
+            }
+          }
+        },
+        "contexto_cx": {
+          "permite_k": false,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "diag_deposito"
+    },
+    {
+      "secuencia": 15,
+      "engine_version": "12.0",
+      "invocador_id": "test_paradoja_mentiroso",
+      "entrada": {
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_paradoja_mentiroso"
+    },
+    {
+      "secuencia": 16,
+      "engine_version": "12.0",
+      "invocador_id": "test_paradoja_mentiroso",
+      "entrada": {
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Análisis formal de discursos con autorreferencia lógica y paradojas de verdad. Evaluación rigurosa de consistencia interna.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_paradoja_mentiroso"
+    },
+    {
+      "secuencia": 17,
+      "engine_version": "12.0",
+      "invocador_id": "test_verdad_astronomica",
+      "entrada": {
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_verdad_astronomica"
+    },
+    {
+      "secuencia": 18,
+      "engine_version": "12.0",
+      "invocador_id": "test_verdad_astronomica",
+      "entrada": {
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Contraste de material astronómico: observaciones, modelos celestes y ubicación del Sol dentro del sistema solar y la galaxia Vía Láctea.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "test_verdad_astronomica"
+    },
+    {
+      "secuencia": 19,
+      "engine_version": "12.0",
+      "invocador_id": "core",
+      "entrada": {
+        "contexto": "test",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": false
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "test",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": false,
+          "pedir_anuncio": false,
+          "tipos_peticion": []
+        }
+      },
+      "origen": "core"
+    },
+    {
+      "secuencia": 20,
+      "engine_version": "12.0",
+      "invocador_id": "omega_report",
+      "entrada": {
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+        "tiene_C": false,
+        "tiene_L": false,
+        "tiene_K": false,
+        "pedir_anuncio": true
+      },
+      "resultado": {
+        "estado": "PARCIAL",
+        "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
+        "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+        "factores": {
+          "C": null,
+          "L": null,
+          "K": null
+        },
+        "ce_ids": [
+          "ce_mandato_aplicar_escala",
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_sujetos"
+        ],
+        "mandatos_aplicados": [
+          "ce_mandato_catalogo",
+          "ce_mandato_escala_tt",
+          "ce_mandato_aplicar_escala"
+        ],
+        "fallos": [],
+        "engine_version": "12.0",
+        "contexto_cx": {
+          "permite_k": true,
+          "pedir_anuncio": true,
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "dame_O",
+            "dame_limites",
+            "dame_evidencia",
+            "por_que_valor"
+          ]
+        },
+        "citacion": {
+          "estado": "OK",
+          "ok": true,
+          "n_citas": 1,
+          "n_anuncios": 1,
+          "anuncios": [
+            {
+              "titulo": "[citacion] CIT-CICLO",
+              "tipo": "citacion",
+              "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
+              "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
+              "evidencia_ref": "ciclo:omega_report:v12.0",
+              "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+              "contexto_ciclo": "PARCIAL"
+            }
+          ],
+          "tipos_peticion": [
+            "dame_cadena_completa",
+            "dame_normas",
+            "auto_auditoria"
+          ],
+          "evidencia_ref": "ciclo:omega_report:v12.0",
+          "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
+          "errores": [],
+          "engine_version": "12.0",
+          "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
+        }
+      },
+      "origen": "omega_report"
     }
   ],
   "fallos_engine": [],
   "inventario_engine": {
     "estado": "OPERATIVO",
-    "engine_version": "12.3",
+    "engine_version": "12.0",
     "invocador_id": "omega_report",
     "errores_arranque": [],
     "registro": {
@@ -503,10 +1377,10 @@
         {
           "nombre": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "requiere": [],
           "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/capacidades_engine/__init__.py",
-          "descripcion": "Capacidades del propio Engine (no un módulo ajeno). El INIT es el contrato exclusivo de Engine. Todo archivo bajo capacidades/ es un miembro del Engine: Engine los lee todos, a disposición, cuando quiera y como quiera. CE no calcula, no deposita, no restringe el uso. Solo declara qué brazos tiene el Engine y dónde están. Requisito: 'CE' en ROLES de core/engine.py.",
+          "descripcion": "Capacidades del propio Engine (extension, no modulo ajeno). El INIT es el contrato exclusivo de Engine. Todo archivo .py del directorio se lee automaticamente: SKILL/SKILLS, PUENTE_DEPOSITO, DEFINICION_SUJETO. Sujeto = hablante 'Nombre: mensaje', no sujeto gramatical. CE no calcula, no deposita, no restringe el uso. Requisito: 'CE' en ROLES de core/engine.py.",
           "capacidades": {
             "verificar": "barrer",
             "barrer": "barrer",
@@ -514,7 +1388,10 @@
             "skills": "skills",
             "ids": "ids",
             "por_id": "por_id",
-            "listar_archivos": "listar_archivos"
+            "listar_archivos": "listar_archivos",
+            "puente_deposito": "puente_deposito",
+            "definicion_sujeto": "definicion_sujeto",
+            "bornes_deposito_por_skill": "bornes_deposito_por_skill"
           }
         },
         {
@@ -1127,7 +2004,7 @@
       "capacidades_engine": {
         "contenedor": "capacidades_engine",
         "rol": "CE",
-        "version": "1.0",
+        "version": "1.1",
         "ids": [
           "ce_mandato_aplicar_escala",
           "ce_mandato_catalogo",
@@ -1136,52 +2013,304 @@
         ],
         "n": 4,
         "archivos": [
-          "ce_orquestar_tt.py",
-          "mandato_aplicar_escala.py",
-          "mandato_catalogo.py",
-          "mandato_sujetos.py"
+          "mandatos_ce.py"
         ],
         "coherente": true,
         "skills": [
           {
             "id": "ce_mandato_aplicar_escala",
-            "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
-            "version": "1.0",
-            "descripcion": "Mandato del Engine a todos los módulos de oficio: se pide valuación en la escala indicada por id (escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id declarado). El recorte de material sigue el descriptor del id; cada módulo aporta lo suyo en sincronía; si repetir_por es por_sujeto (u otro repetidor), el ciclo se repite por cada recorte y Engine deposita el resultado (incl. resultado.sujetos cuando aplique). CE no calcula.",
-            "archivo": "mandato_aplicar_escala.py",
+            "nombre": "Mandato: aplicar escala Tru por id",
+            "version": "2.0",
+            "descripcion": "Mandato del Engine: aplicar la escala indicada por id (mapa escalas_ids / catalogo TT). El descriptor de recorte lo aporta escalas_ids; cada modulo de oficio aporta lo suyo. CE no calcula.",
+            "archivo": "mandatos_ce.py",
             "oficio": null,
-            "material": null
+            "material": null,
+            "salida_esperada": [
+              "categoria_tru",
+              "escala_id",
+              "resultado_ciclo"
+            ],
+            "entrada": [
+              "escala_id",
+              "categoria_tru",
+              "material",
+              "O_id",
+              "enunciado_O"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CA",
+              "FO",
+              "CX",
+              "MC",
+              "CIT",
+              "CH",
+              "TX",
+              "AX"
+            ],
+            "raw": {
+              "id": "ce_mandato_aplicar_escala",
+              "nombre": "Mandato: aplicar escala Tru por id",
+              "version": "2.0",
+              "enunciado": "Mandato del Engine: aplicar la escala indicada por id (mapa escalas_ids / catalogo TT). El descriptor de recorte lo aporta escalas_ids; cada modulo de oficio aporta lo suyo. CE no calcula.",
+              "modulos_objetivo": [
+                "tru_totales",
+                "calculator",
+                "formulas",
+                "contexto",
+                "correlacion_mecanica",
+                "citacion",
+                "cache",
+                "taxonomia",
+                "axiomas"
+              ],
+              "requiere_roles": [
+                "TT",
+                "CA",
+                "FO",
+                "CX",
+                "MC",
+                "CIT",
+                "CH",
+                "TX",
+                "AX"
+              ],
+              "entrada": [
+                "escala_id",
+                "categoria_tru",
+                "material",
+                "O_id",
+                "enunciado_O"
+              ],
+              "salida_esperada": [
+                "categoria_tru",
+                "escala_id",
+                "resultado_ciclo"
+              ],
+              "sincroniza_con": [
+                "ce_mandato_catalogo",
+                "ce_mandato_escala_tt",
+                "ce_mandato_sujetos"
+              ],
+              "prioridad": 15,
+              "notas": "No declara C/L/K/Tru ni sujetos como producto de CE. Si la escala es tru_sujeto, el mandato de sujetos orienta el deposito de sujetos/n_sujetos cuando el ciclo los produce.",
+              "descripcion": "Mandato del Engine: aplicar la escala indicada por id (mapa escalas_ids / catalogo TT). El descriptor de recorte lo aporta escalas_ids; cada modulo de oficio aporta lo suyo. CE no calcula."
+            }
           },
           {
             "id": "ce_mandato_catalogo",
             "nombre": "Mandato: consultar catalogo TT",
             "version": "1.0",
-            "descripcion": "Mandato del Engine para descubrir las escalas de verdad declaradas. TT expone sus IDs; CA las registra para el ciclo. CE no calcula ni inventa escalas.",
-            "archivo": "mandato_catalogo.py",
+            "descripcion": "Mandato del Engine: descubrir las escalas de verdad declaradas en el catalogo TT (y registrables en CA). CE no calcula ni inventa escalas.",
+            "archivo": "mandatos_ce.py",
             "oficio": null,
-            "material": null
+            "material": null,
+            "salida_esperada": [
+              "escalas_disponibles",
+              "ids_tt"
+            ],
+            "entrada": [],
+            "requiere_roles": [
+              "TT",
+              "CA"
+            ],
+            "raw": {
+              "id": "ce_mandato_catalogo",
+              "nombre": "Mandato: consultar catalogo TT",
+              "version": "1.0",
+              "enunciado": "Mandato del Engine: descubrir las escalas de verdad declaradas en el catalogo TT (y registrables en CA). CE no calcula ni inventa escalas.",
+              "modulos_objetivo": [
+                "tru_totales",
+                "calculator"
+              ],
+              "requiere_roles": [
+                "TT",
+                "CA"
+              ],
+              "entrada": [],
+              "salida_esperada": [
+                "escalas_disponibles",
+                "ids_tt"
+              ],
+              "sincroniza_con": [
+                "ce_mandato_escala_tt",
+                "ce_mandato_aplicar_escala"
+              ],
+              "prioridad": 1,
+              "notas": "Paso previo a valuacion por escala. TT aporta ids; CA puede registrarlos. CE solo declara.",
+              "descripcion": "Mandato del Engine: descubrir las escalas de verdad declaradas en el catalogo TT (y registrables en CA). CE no calcula ni inventa escalas."
+            }
           },
           {
             "id": "ce_mandato_escala_tt",
             "nombre": "Mandato: escala TT por id",
             "version": "1.0",
-            "descripcion": "Mandato del Engine: valuacion en la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
-            "archivo": "ce_orquestar_tt.py",
+            "descripcion": "Mandato del Engine: valuacion orientada a la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+            "archivo": "mandatos_ce.py",
             "oficio": null,
-            "material": null
+            "material": null,
+            "salida_esperada": [
+              "categoria_tru",
+              "escala_id",
+              "citacion"
+            ],
+            "entrada": [
+              "categoria_tru",
+              "escala_id",
+              "O_id",
+              "enunciado_O",
+              "material"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CX",
+              "MC",
+              "CA",
+              "FO",
+              "CIT",
+              "CH",
+              "TX",
+              "AX"
+            ],
+            "raw": {
+              "id": "ce_mandato_escala_tt",
+              "nombre": "Mandato: escala TT por id",
+              "version": "1.0",
+              "enunciado": "Mandato del Engine: valuacion orientada a la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+              "modulos_objetivo": [
+                "tru_totales",
+                "contexto",
+                "correlacion_mecanica",
+                "calculator",
+                "formulas",
+                "citacion",
+                "cache",
+                "taxonomia",
+                "axiomas"
+              ],
+              "requiere_roles": [
+                "TT",
+                "CX",
+                "MC",
+                "CA",
+                "FO",
+                "CIT",
+                "CH",
+                "TX",
+                "AX"
+              ],
+              "entrada": [
+                "categoria_tru",
+                "escala_id",
+                "O_id",
+                "enunciado_O",
+                "material"
+              ],
+              "salida_esperada": [
+                "categoria_tru",
+                "escala_id",
+                "citacion"
+              ],
+              "sincroniza_con": [
+                "ce_mandato_catalogo",
+                "ce_mandato_sujetos",
+                "ce_mandato_aplicar_escala"
+              ],
+              "prioridad": 10,
+              "notas": "No declara C/L/K/Tru como producto de CE. Fija la escala; el ciclo de oficio aporta el resto.",
+              "descripcion": "Mandato del Engine: valuacion orientada a la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita."
+            }
           },
           {
             "id": "ce_mandato_sujetos",
-            "nombre": "Mandato: Tru total por sujeto S_1…S_N",
-            "version": "1.1",
-            "descripcion": "Mandato del Engine a los módulos de oficio: se pide valuación por sujeto (escala tru_sujeto del catálogo TT). Engine deposita resultado.sujetos = [{indice, nombre, C, L, K...}].",
-            "archivo": "mandato_sujetos.py",
+            "nombre": "Mandato: Tru por sujeto S_1..S_N",
+            "version": "2.0",
+            "descripcion": "Mandato del Engine: valuacion por sujeto bajo la escala tru_sujeto del catalogo TT. N y la identidad de cada S_i los aporta quien prepara el material del ciclo; este skill no segmenta. CE no calcula. Engine deposita sujetos y n_sujetos cuando el ciclo los produce.",
+            "archivo": "mandatos_ce.py",
             "oficio": null,
-            "material": null
+            "material": null,
+            "salida_esperada": [
+              "sujetos",
+              "n_sujetos"
+            ],
+            "entrada": [
+              "categoria_tru",
+              "escala_id",
+              "O_id",
+              "enunciado_O",
+              "material"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CX",
+              "MC",
+              "CA",
+              "FO",
+              "CIT",
+              "CH",
+              "TX",
+              "AX"
+            ],
+            "raw": {
+              "id": "ce_mandato_sujetos",
+              "nombre": "Mandato: Tru por sujeto S_1..S_N",
+              "version": "2.0",
+              "enunciado": "Mandato del Engine: valuacion por sujeto bajo la escala tru_sujeto del catalogo TT. N y la identidad de cada S_i los aporta quien prepara el material del ciclo; este skill no segmenta. CE no calcula. Engine deposita sujetos y n_sujetos cuando el ciclo los produce.",
+              "modulos_objetivo": [
+                "tru_totales",
+                "contexto",
+                "correlacion_mecanica",
+                "calculator",
+                "formulas",
+                "citacion",
+                "cache",
+                "taxonomia",
+                "axiomas"
+              ],
+              "requiere_roles": [
+                "TT",
+                "CX",
+                "MC",
+                "CA",
+                "FO",
+                "CIT",
+                "CH",
+                "TX",
+                "AX"
+              ],
+              "entrada": [
+                "categoria_tru",
+                "escala_id",
+                "O_id",
+                "enunciado_O",
+                "material"
+              ],
+              "salida_esperada": [
+                "sujetos",
+                "n_sujetos"
+              ],
+              "sincroniza_con": [
+                "ce_mandato_escala_tt",
+                "ce_mandato_aplicar_escala"
+              ],
+              "prioridad": 20,
+              "notas": "Bornes exactos: sujetos, n_sujetos. Sin por_sujeto. Sin ejecutor. Sin regex. Sin C/L/K/Tru como salida de CE.",
+              "descripcion": "Mandato del Engine: valuacion por sujeto bajo la escala tru_sujeto del catalogo TT. N y la identidad de cada S_i los aporta quien prepara el material del ciclo; este skill no segmenta. CE no calcula. Engine deposita sujetos y n_sujetos cuando el ciclo los produce."
+            }
           }
         ],
+        "puente_deposito": {},
+        "definicion_sujeto": {
+          "id": "ce_definicion_sujeto",
+          "termino": "sujeto",
+          "significa": "Hablante etiquetado en el material con la forma 'Nombre: mensaje'. No es sujeto gramatical.",
+          "bornes": [
+            "sujetos",
+            "n_sujetos"
+          ]
+        },
         "notas": [],
-        "funcion": "Cuerpo de capacidades del Engine. Cada archivo bajo capacidades/ es un mandato legible. Engine los usa a voluntad. CE no calcula ni deposita."
+        "funcion": "Cuerpo de capacidades del Engine (extension). Cada archivo .py con SKILL/SKILLS es un mandato legible. PUENTE_DEPOSITO y DEFINICION_SUJETO orientan el deposito de bornes (sujetos = hablantes Nombre:). Engine los usa a voluntad. CE no calcula ni deposita."
       },
       "catalogo_citaciones": {
         "contenedor": "catalogo_citaciones",
@@ -2403,6 +3532,11 @@
         "contenedor": "formulas",
         "version": "1.0",
         "formulas": {
+          "escalas_tru": {
+            "archivo": "escalas_tru.py",
+            "expresion": "Tru_Ri = C*L*K ; Tru_total = (Tru_Ri * ALPHA) + BETA  [misma ley bajo ids TT: tru_atomo … tru_repositorio]",
+            "fuente": "Teorema de la Verdad VPSI + catálogo TT (categorias/*.py)"
+          },
           "verdad": {
             "archivo": "truth.py",
             "expresion": "Tru_total(D) = (C(D) * L(D) * K(D) * ALPHA) + BETA",
@@ -3338,7 +4472,7 @@
     "resultados_evaluacion": [
       {
         "secuencia": 1,
-        "engine_version": "12.3",
+        "engine_version": "12.0",
         "invocador_id": "omega_report",
         "entrada": {
           "contexto": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
@@ -3362,16 +4496,13 @@
             "ce_mandato_escala_tt",
             "ce_mandato_sujetos"
           ],
-          "mandatos_ce": [
-            "ce_mandato_aplicar_escala",
+          "mandatos_aplicados": [
             "ce_mandato_catalogo",
             "ce_mandato_escala_tt",
-            "ce_mandato_sujetos"
+            "ce_mandato_aplicar_escala"
           ],
           "fallos": [],
-          "engine_version": "12.3",
-          "sujetos": [],
-          "n_sujetos": 0,
+          "engine_version": "12.0",
           "contexto_cx": {
             "permite_k": true,
             "pedir_anuncio": true,
@@ -3395,7 +4526,7 @@
                 "tipo": "citacion",
                 "enunciado": "CIT anunció la cadena del ciclo; estado_resultado=PARCIAL; tipos_peticion=['dame_cadena_completa', 'dame_normas', 'auto_auditoria'].",
                 "descripcion": "Auto-cita del oficio de citación; no calcula Tru; documenta que el cierre de anuncio se ejecutó.",
-                "evidencia_ref": "ciclo:omega_report:v12.3",
+                "evidencia_ref": "ciclo:omega_report:v12.0",
                 "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
                 "contexto_ciclo": "PARCIAL"
               }
@@ -3405,10 +4536,10 @@
               "dame_normas",
               "auto_auditoria"
             ],
-            "evidencia_ref": "ciclo:omega_report:v12.3",
+            "evidencia_ref": "ciclo:omega_report:v12.0",
             "o_ref": "Auditoría estructural del repositorio VPSI-TRUTH: coherencia axiomática, contratos, mecánica y correlación del sistema consigo mismo en este run.",
             "errores": [],
-            "engine_version": "12.3",
+            "engine_version": "12.0",
             "nota": "CIT: autoridad total de anuncio sobre el paquete; cero agencia sobre valores de Tru; sin recálculo."
           }
         }
@@ -3416,7 +4547,6 @@
     ],
     "resultados_evaluacion_n": 1,
     "ce": {
-      "disponible": true,
       "ids": [
         "ce_mandato_aplicar_escala",
         "ce_mandato_catalogo",
@@ -3426,79 +4556,287 @@
       "skills": [
         {
           "id": "ce_mandato_aplicar_escala",
-          "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
-          "version": "1.0",
-          "descripcion": "Mandato del Engine a todos los módulos de oficio: se pide valuación en la escala indicada por id (escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id declarado). El recorte de material sigue el descriptor del id; cada módulo aporta lo suyo en sincronía; si repetir_por es por_sujeto (u otro repetidor), el ciclo se repite por cada recorte y Engine deposita el resultado (incl. resultado.sujetos cuando aplique). CE no calcula.",
-          "archivo": "mandato_aplicar_escala.py",
+          "nombre": "Mandato: aplicar escala Tru por id",
+          "version": "2.0",
+          "descripcion": "Mandato del Engine: aplicar la escala indicada por id (mapa escalas_ids / catalogo TT). El descriptor de recorte lo aporta escalas_ids; cada modulo de oficio aporta lo suyo. CE no calcula.",
+          "archivo": "mandatos_ce.py",
           "oficio": null,
-          "material": null
+          "material": null,
+          "salida_esperada": [
+            "categoria_tru",
+            "escala_id",
+            "resultado_ciclo"
+          ],
+          "entrada": [
+            "escala_id",
+            "categoria_tru",
+            "material",
+            "O_id",
+            "enunciado_O"
+          ],
+          "requiere_roles": [
+            "TT",
+            "CA",
+            "FO",
+            "CX",
+            "MC",
+            "CIT",
+            "CH",
+            "TX",
+            "AX"
+          ],
+          "raw": {
+            "id": "ce_mandato_aplicar_escala",
+            "nombre": "Mandato: aplicar escala Tru por id",
+            "version": "2.0",
+            "enunciado": "Mandato del Engine: aplicar la escala indicada por id (mapa escalas_ids / catalogo TT). El descriptor de recorte lo aporta escalas_ids; cada modulo de oficio aporta lo suyo. CE no calcula.",
+            "modulos_objetivo": [
+              "tru_totales",
+              "calculator",
+              "formulas",
+              "contexto",
+              "correlacion_mecanica",
+              "citacion",
+              "cache",
+              "taxonomia",
+              "axiomas"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CA",
+              "FO",
+              "CX",
+              "MC",
+              "CIT",
+              "CH",
+              "TX",
+              "AX"
+            ],
+            "entrada": [
+              "escala_id",
+              "categoria_tru",
+              "material",
+              "O_id",
+              "enunciado_O"
+            ],
+            "salida_esperada": [
+              "categoria_tru",
+              "escala_id",
+              "resultado_ciclo"
+            ],
+            "sincroniza_con": [
+              "ce_mandato_catalogo",
+              "ce_mandato_escala_tt",
+              "ce_mandato_sujetos"
+            ],
+            "prioridad": 15,
+            "notas": "No declara C/L/K/Tru ni sujetos como producto de CE. Si la escala es tru_sujeto, el mandato de sujetos orienta el deposito de sujetos/n_sujetos cuando el ciclo los produce.",
+            "descripcion": "Mandato del Engine: aplicar la escala indicada por id (mapa escalas_ids / catalogo TT). El descriptor de recorte lo aporta escalas_ids; cada modulo de oficio aporta lo suyo. CE no calcula."
+          }
         },
         {
           "id": "ce_mandato_catalogo",
           "nombre": "Mandato: consultar catalogo TT",
           "version": "1.0",
-          "descripcion": "Mandato del Engine para descubrir las escalas de verdad declaradas. TT expone sus IDs; CA las registra para el ciclo. CE no calcula ni inventa escalas.",
-          "archivo": "mandato_catalogo.py",
+          "descripcion": "Mandato del Engine: descubrir las escalas de verdad declaradas en el catalogo TT (y registrables en CA). CE no calcula ni inventa escalas.",
+          "archivo": "mandatos_ce.py",
           "oficio": null,
-          "material": null
+          "material": null,
+          "salida_esperada": [
+            "escalas_disponibles",
+            "ids_tt"
+          ],
+          "entrada": [],
+          "requiere_roles": [
+            "TT",
+            "CA"
+          ],
+          "raw": {
+            "id": "ce_mandato_catalogo",
+            "nombre": "Mandato: consultar catalogo TT",
+            "version": "1.0",
+            "enunciado": "Mandato del Engine: descubrir las escalas de verdad declaradas en el catalogo TT (y registrables en CA). CE no calcula ni inventa escalas.",
+            "modulos_objetivo": [
+              "tru_totales",
+              "calculator"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CA"
+            ],
+            "entrada": [],
+            "salida_esperada": [
+              "escalas_disponibles",
+              "ids_tt"
+            ],
+            "sincroniza_con": [
+              "ce_mandato_escala_tt",
+              "ce_mandato_aplicar_escala"
+            ],
+            "prioridad": 1,
+            "notas": "Paso previo a valuacion por escala. TT aporta ids; CA puede registrarlos. CE solo declara.",
+            "descripcion": "Mandato del Engine: descubrir las escalas de verdad declaradas en el catalogo TT (y registrables en CA). CE no calcula ni inventa escalas."
+          }
         },
         {
           "id": "ce_mandato_escala_tt",
           "nombre": "Mandato: escala TT por id",
           "version": "1.0",
-          "descripcion": "Mandato del Engine: valuacion en la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
-          "archivo": "ce_orquestar_tt.py",
+          "descripcion": "Mandato del Engine: valuacion orientada a la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+          "archivo": "mandatos_ce.py",
           "oficio": null,
-          "material": null
+          "material": null,
+          "salida_esperada": [
+            "categoria_tru",
+            "escala_id",
+            "citacion"
+          ],
+          "entrada": [
+            "categoria_tru",
+            "escala_id",
+            "O_id",
+            "enunciado_O",
+            "material"
+          ],
+          "requiere_roles": [
+            "TT",
+            "CX",
+            "MC",
+            "CA",
+            "FO",
+            "CIT",
+            "CH",
+            "TX",
+            "AX"
+          ],
+          "raw": {
+            "id": "ce_mandato_escala_tt",
+            "nombre": "Mandato: escala TT por id",
+            "version": "1.0",
+            "enunciado": "Mandato del Engine: valuacion orientada a la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
+            "modulos_objetivo": [
+              "tru_totales",
+              "contexto",
+              "correlacion_mecanica",
+              "calculator",
+              "formulas",
+              "citacion",
+              "cache",
+              "taxonomia",
+              "axiomas"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CX",
+              "MC",
+              "CA",
+              "FO",
+              "CIT",
+              "CH",
+              "TX",
+              "AX"
+            ],
+            "entrada": [
+              "categoria_tru",
+              "escala_id",
+              "O_id",
+              "enunciado_O",
+              "material"
+            ],
+            "salida_esperada": [
+              "categoria_tru",
+              "escala_id",
+              "citacion"
+            ],
+            "sincroniza_con": [
+              "ce_mandato_catalogo",
+              "ce_mandato_sujetos",
+              "ce_mandato_aplicar_escala"
+            ],
+            "prioridad": 10,
+            "notas": "No declara C/L/K/Tru como producto de CE. Fija la escala; el ciclo de oficio aporta el resto.",
+            "descripcion": "Mandato del Engine: valuacion orientada a la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita."
+          }
         },
         {
           "id": "ce_mandato_sujetos",
-          "nombre": "Mandato: Tru total por sujeto S_1…S_N",
-          "version": "1.1",
-          "descripcion": "Mandato del Engine a los módulos de oficio: se pide valuación por sujeto (escala tru_sujeto del catálogo TT). Engine deposita resultado.sujetos = [{indice, nombre, C, L, K...}].",
-          "archivo": "mandato_sujetos.py",
+          "nombre": "Mandato: Tru por sujeto S_1..S_N",
+          "version": "2.0",
+          "descripcion": "Mandato del Engine: valuacion por sujeto bajo la escala tru_sujeto del catalogo TT. N y la identidad de cada S_i los aporta quien prepara el material del ciclo; este skill no segmenta. CE no calcula. Engine deposita sujetos y n_sujetos cuando el ciclo los produce.",
+          "archivo": "mandatos_ce.py",
           "oficio": null,
-          "material": null
+          "material": null,
+          "salida_esperada": [
+            "sujetos",
+            "n_sujetos"
+          ],
+          "entrada": [
+            "categoria_tru",
+            "escala_id",
+            "O_id",
+            "enunciado_O",
+            "material"
+          ],
+          "requiere_roles": [
+            "TT",
+            "CX",
+            "MC",
+            "CA",
+            "FO",
+            "CIT",
+            "CH",
+            "TX",
+            "AX"
+          ],
+          "raw": {
+            "id": "ce_mandato_sujetos",
+            "nombre": "Mandato: Tru por sujeto S_1..S_N",
+            "version": "2.0",
+            "enunciado": "Mandato del Engine: valuacion por sujeto bajo la escala tru_sujeto del catalogo TT. N y la identidad de cada S_i los aporta quien prepara el material del ciclo; este skill no segmenta. CE no calcula. Engine deposita sujetos y n_sujetos cuando el ciclo los produce.",
+            "modulos_objetivo": [
+              "tru_totales",
+              "contexto",
+              "correlacion_mecanica",
+              "calculator",
+              "formulas",
+              "citacion",
+              "cache",
+              "taxonomia",
+              "axiomas"
+            ],
+            "requiere_roles": [
+              "TT",
+              "CX",
+              "MC",
+              "CA",
+              "FO",
+              "CIT",
+              "CH",
+              "TX",
+              "AX"
+            ],
+            "entrada": [
+              "categoria_tru",
+              "escala_id",
+              "O_id",
+              "enunciado_O",
+              "material"
+            ],
+            "salida_esperada": [
+              "sujetos",
+              "n_sujetos"
+            ],
+            "sincroniza_con": [
+              "ce_mandato_escala_tt",
+              "ce_mandato_aplicar_escala"
+            ],
+            "prioridad": 20,
+            "notas": "Bornes exactos: sujetos, n_sujetos. Sin por_sujeto. Sin ejecutor. Sin regex. Sin C/L/K/Tru como salida de CE.",
+            "descripcion": "Mandato del Engine: valuacion por sujeto bajo la escala tru_sujeto del catalogo TT. N y la identidad de cada S_i los aporta quien prepara el material del ciclo; este skill no segmenta. CE no calcula. Engine deposita sujetos y n_sujetos cuando el ciclo los produce."
+          }
         }
       ],
-      "por_id": {
-        "ce_mandato_aplicar_escala": {
-          "id": "ce_mandato_aplicar_escala",
-          "nombre": "Mandato: aplicar escala Tru por id (sistema completo)",
-          "version": "1.0",
-          "descripcion": "Mandato del Engine a todos los módulos de oficio: se pide valuación en la escala indicada por id (escalas_ids / catálogo TT: tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id declarado). El recorte de material sigue el descriptor del id; cada módulo aporta lo suyo en sincronía; si repetir_por es por_sujeto (u otro repetidor), el ciclo se repite por cada recorte y Engine deposita el resultado (incl. resultado.sujetos cuando aplique). CE no calcula.",
-          "archivo": "mandato_aplicar_escala.py",
-          "oficio": null,
-          "material": null
-        },
-        "ce_mandato_catalogo": {
-          "id": "ce_mandato_catalogo",
-          "nombre": "Mandato: consultar catalogo TT",
-          "version": "1.0",
-          "descripcion": "Mandato del Engine para descubrir las escalas de verdad declaradas. TT expone sus IDs; CA las registra para el ciclo. CE no calcula ni inventa escalas.",
-          "archivo": "mandato_catalogo.py",
-          "oficio": null,
-          "material": null
-        },
-        "ce_mandato_escala_tt": {
-          "id": "ce_mandato_escala_tt",
-          "nombre": "Mandato: escala TT por id",
-          "version": "1.0",
-          "descripcion": "Mandato del Engine: valuacion en la escala indicada por id (tru_atomo, tru_frase, tru_sujeto, tru_conversacion, tru_repositorio u otro id del catalogo TT). CE no calcula. CA produce C/L/K; FO Tru; Engine deposita.",
-          "archivo": "ce_orquestar_tt.py",
-          "oficio": null,
-          "material": null
-        },
-        "ce_mandato_sujetos": {
-          "id": "ce_mandato_sujetos",
-          "nombre": "Mandato: Tru total por sujeto S_1…S_N",
-          "version": "1.1",
-          "descripcion": "Mandato del Engine a los módulos de oficio: se pide valuación por sujeto (escala tru_sujeto del catálogo TT). Engine deposita resultado.sujetos = [{indice, nombre, C, L, K...}].",
-          "archivo": "mandato_sujetos.py",
-          "oficio": null,
-          "material": null
-        }
-      },
+      "disponible": true,
       "n": 4
     }
   },
@@ -4838,7 +6176,10 @@
           "skills",
           "ids",
           "por_id",
-          "listar_archivos"
+          "listar_archivos",
+          "puente_deposito",
+          "definicion_sujeto",
+          "bornes_deposito_por_skill"
         ],
         "esperado": [],
         "resolucion": [
@@ -4847,7 +6188,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -4856,7 +6197,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "barrer"
           },
@@ -4865,7 +6206,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "inventario"
           },
@@ -4874,7 +6215,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "skills"
           },
@@ -4883,7 +6224,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "ids"
           },
@@ -4892,7 +6233,7 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "por_id"
           },
@@ -4901,13 +6242,40 @@
             "callable": true,
             "modulo": "capacidades_engine",
             "rol": "CE",
-            "version": "1.0",
+            "version": "1.1",
             "ok": true,
             "fn_name": "listar_archivos"
+          },
+          {
+            "clave": "puente_deposito",
+            "callable": true,
+            "modulo": "capacidades_engine",
+            "rol": "CE",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "puente_deposito"
+          },
+          {
+            "clave": "definicion_sujeto",
+            "callable": true,
+            "modulo": "capacidades_engine",
+            "rol": "CE",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "definicion_sujeto"
+          },
+          {
+            "clave": "bornes_deposito_por_skill",
+            "callable": true,
+            "modulo": "capacidades_engine",
+            "rol": "CE",
+            "version": "1.1",
+            "ok": true,
+            "fn_name": "bornes_deposito_por_skill"
           }
         ],
         "nombre": "capacidades_engine",
-        "version": "1.0"
+        "version": "1.1"
       }
     },
     "resumen": {
@@ -4916,7 +6284,7 @@
       "roles_obligatorios": 5,
       "contratos_validos": 19,
       "contratos_invalidos": 0,
-      "capacidades_verificadas": 108,
+      "capacidades_verificadas": 111,
       "capacidades_fallidas": 0,
       "pct_integridad_capacidades": 100.0,
       "resultados_evaluacion_n": 0,
@@ -4934,17 +6302,26 @@
     "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
     "evidencia_evaluacion": {
       "path": "diagnostics/evaluaciones.json",
-      "n": 1,
+      "n": 19,
       "propios": 0,
       "origenes": [
-        "desconocido"
+        "adv2",
+        "core",
+        "desconocido",
+        "diag_deposito",
+        "test_claude_dentro_del_repo",
+        "test_contradiccion_estructural_interna",
+        "test_conversacion",
+        "test_conversacion_estrellas",
+        "test_paradoja_mentiroso",
+        "test_verdad_astronomica"
       ],
       "modo": "fusion"
     }
   },
   "evidencia_evaluacion": {
-    "origen": null,
-    "n": 1,
+    "origen": "adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
+    "n": 20,
     "path": "evaluaciones.json",
     "invocador_id": "omega_report"
   },
@@ -4971,7 +6348,7 @@
     "n_anuncios": 1,
     "fuentes_usadas": [],
     "fallos": [],
-    "engine_version": "12.3",
+    "engine_version": "12.0",
     "modo_entrada": null,
     "ids_cx": [],
     "coherente_cx": null,
@@ -5004,13 +6381,13 @@
     ],
     "razon": "Faltan factores C/L/K (CA no los entrego o no vinieron en la peticion)",
     "permite_k": true,
-    "origen": "evaluaciones.json",
-    "secuencia": 1,
+    "origen": "adv2, core, desconocido, diag_deposito, omega_report, test_claude_dentro_del_repo, test_contradiccion_estructural_interna, test_conversacion, test_conversacion_estrellas, test_paradoja_mentiroso, test_verdad_astronomica",
+    "secuencia": 20,
     "n_citas": 1,
     "n_anuncios": 1,
     "fuentes_usadas": [],
     "fallos": [],
-    "engine_version": "12.3",
+    "engine_version": "12.0",
     "modo_entrada": null,
     "ids_cx": [],
     "coherente_cx": null,
@@ -5302,10 +6679,10 @@
       {
         "nombre": "capacidades_engine",
         "rol": "CE",
-        "version": "1.0",
+        "version": "1.1",
         "requiere": [],
         "ruta": "/home/runner/work/VPSI-TRUTH/VPSI-TRUTH/modules/capacidades_engine/__init__.py",
-        "descripcion": "Capacidades del propio Engine (no un módulo ajeno). El INIT es el contrato exclusivo de Engine. Todo archivo bajo capacidades/ es un miembro del Engine: Engine los lee todos, a disposición, cuando quiera y como quiera. CE no calcula, no deposita, no restringe el uso. Solo declara qué brazos tiene el Engine y dónde están. Requisito: 'CE' en ROLES de core/engine.py.",
+        "descripcion": "Capacidades del propio Engine (extension, no modulo ajeno). El INIT es el contrato exclusivo de Engine. Todo archivo .py del directorio se lee automaticamente: SKILL/SKILLS, PUENTE_DEPOSITO, DEFINICION_SUJETO. Sujeto = hablante 'Nombre: mensaje', no sujeto gramatical. CE no calcula, no deposita, no restringe el uso. Requisito: 'CE' en ROLES de core/engine.py.",
         "capacidades": {
           "verificar": "barrer",
           "barrer": "barrer",
@@ -5313,7 +6690,10 @@
           "skills": "skills",
           "ids": "ids",
           "por_id": "por_id",
-          "listar_archivos": "listar_archivos"
+          "listar_archivos": "listar_archivos",
+          "puente_deposito": "puente_deposito",
+          "definicion_sujeto": "definicion_sujeto",
+          "bornes_deposito_por_skill": "bornes_deposito_por_skill"
         }
       },
       {
@@ -5962,7 +7342,7 @@
     "nota": "Capa operativa = grafo del repo. Capa canonica = solo ids TR1 del paper. Dominio O/K: ver ids_dominio_k_o y cuerpos (no se clasifica entrada aquí).",
     "roles_vacios": [],
     "rechazados_n": 0,
-    "engine_version": "12.3",
+    "engine_version": "12.0",
     "u1_estado": "NO_STAGNANT",
     "estado": "OK"
   },
@@ -6005,10 +7385,10 @@
     "nota": "conteos.py produce k/m, r/p, f/c para la ruta operacional; ids_escala = sujeto/frase/conversacion/atomo/repo leidos del mapa; CA calcula C/L/K; Tru en FO; archivos_extra = candidatos"
   },
   "tests": {
-    "total": 148,
-    "pasados": 147,
+    "total": 150,
+    "pasados": 149,
     "fallidos": 0,
     "omitidos": 1,
-    "tasa": 99.32
+    "tasa": 99.33
   }
 }

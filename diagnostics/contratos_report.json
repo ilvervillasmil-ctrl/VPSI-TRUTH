@@ -1334,7 +1334,10 @@
         "skills",
         "ids",
         "por_id",
-        "listar_archivos"
+        "listar_archivos",
+        "puente_deposito",
+        "definicion_sujeto",
+        "bornes_deposito_por_skill"
       ],
       "esperado": [],
       "resolucion": [
@@ -1343,7 +1346,7 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -1352,7 +1355,7 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "barrer"
         },
@@ -1361,7 +1364,7 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "inventario"
         },
@@ -1370,7 +1373,7 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "skills"
         },
@@ -1379,7 +1382,7 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "ids"
         },
@@ -1388,7 +1391,7 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "por_id"
         },
@@ -1397,13 +1400,40 @@
           "callable": true,
           "modulo": "capacidades_engine",
           "rol": "CE",
-          "version": "1.0",
+          "version": "1.1",
           "ok": true,
           "fn_name": "listar_archivos"
+        },
+        {
+          "clave": "puente_deposito",
+          "callable": true,
+          "modulo": "capacidades_engine",
+          "rol": "CE",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "puente_deposito"
+        },
+        {
+          "clave": "definicion_sujeto",
+          "callable": true,
+          "modulo": "capacidades_engine",
+          "rol": "CE",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "definicion_sujeto"
+        },
+        {
+          "clave": "bornes_deposito_por_skill",
+          "callable": true,
+          "modulo": "capacidades_engine",
+          "rol": "CE",
+          "version": "1.1",
+          "ok": true,
+          "fn_name": "bornes_deposito_por_skill"
         }
       ],
       "nombre": "capacidades_engine",
-      "version": "1.0"
+      "version": "1.1"
     }
   },
   "resumen": {
@@ -1412,7 +1442,7 @@
     "roles_obligatorios": 5,
     "contratos_validos": 19,
     "contratos_invalidos": 0,
-    "capacidades_verificadas": 108,
+    "capacidades_verificadas": 111,
     "capacidades_fallidas": 0,
     "pct_integridad_capacidades": 100.0,
     "resultados_evaluacion_n": 0,
@@ -1430,10 +1460,19 @@
   "nota": "Sin humo: no se invocan capacidades. Solo arranque, callable y cobertura de claves. Valuación C/L/K/Tru = tests reales / uso real. evaluaciones.json se fusiona por origen (no se pisa).",
   "evidencia_evaluacion": {
     "path": "diagnostics/evaluaciones.json",
-    "n": 1,
+    "n": 19,
     "propios": 0,
     "origenes": [
-      "desconocido"
+      "adv2",
+      "core",
+      "desconocido",
+      "diag_deposito",
+      "test_claude_dentro_del_repo",
+      "test_contradiccion_estructural_interna",
+      "test_conversacion",
+      "test_conversacion_estrellas",
+      "test_paradoja_mentiroso",
+      "test_verdad_astronomica"
     ],
     "modo": "fusion"
   }
