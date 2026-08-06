@@ -15,16 +15,22 @@ Por que existe este archivo:
   que Omega la leyera.
 
   Este depositario FUSIONA por origen en vez de sobrescribir. Cada
-  productor de evidencia (tests, auditoria de contratos, lo que venga)
+  productor de evidencia (tests, auditoria de contratos, Engine)
   conserva la suya, y Omega las ve todas.
 
-Un solo escritor, no dos. Dos escritores de la misma estructura
-divergen: es el mismo defecto que ya tiene core/diagnostico.py
-duplicando la tabla de engine.py.
+Un solo escritor, no dos.
+
+Contrato de conservacion (inviolable):
+  - No reconstruye registros.
+  - No elimina claves del body ni de resultado.
+  - No interpreta sujetos / tru / factores.
+  - Solo etiqueta origen y rehace secuencia global.
+  - deepcopy de cada registro recibido → disco.
 
 Version:
   1.0  write_text plano (pisaba evidencia)
   1.1  fusion por origen + normalizacion de origen + paquete diagnostics
+  1.2  deepcopy + conservacion estructural del resultado (sujetos, etc.)
 ======================================================================
 """
 
@@ -32,6 +38,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -43,9 +50,8 @@ DIAGNOSTICS_DIR = Path(__file__).resolve().parent
 RUTA = DIAGNOSTICS_DIR / "evaluaciones.json"
 
 TIPO = "evidencia_evaluacion"
-VERSION = "1.1"
+VERSION = "1.2"
 
-# origen: identificador simple, sin comas, sin espacios extremos
 _ORIGEN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-.]{0,63}$")
 
 
@@ -99,18 +105,16 @@ def leer() -> Dict[str, Any]:
 def _con_origen(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Etiqueta las entradas que no traen origen con el del documento.
-    Sin esto, la evidencia escrita antes de que existiera este archivo
-    quedaria sin dueno y no seria reemplazable ni contable por origen.
+    Copia profunda de cada fila para no compartir refs con el doc en memoria.
     """
     heredado = doc.get("origen") or "desconocido"
     if isinstance(heredado, str) and "," in heredado:
-        # documento antiguo con lista ya aplanada: no heredar basura
         heredado = "desconocido"
-    filas = []
+    filas: List[Dict[str, Any]] = []
     for r in doc.get("resultados", []):
         if not isinstance(r, dict):
             continue
-        fila = dict(r)
+        fila = deepcopy(r)
         if not fila.get("origen"):
             fila["origen"] = heredado
         filas.append(fila)
@@ -127,6 +131,23 @@ def resultados_de(origen: str) -> List[Dict[str, Any]]:
 # SEGMENTO 3 --- DEPOSITO
 # ===============================================================
 
+def _conservar_registro(
+    r: Dict[str, Any],
+    origen: str,
+    invocador_id: Optional[str],
+) -> Dict[str, Any]:
+    """
+    Copia profunda del registro tal cual.
+    Solo anade/asegura 'origen' e invocador_id si falta.
+    No reconstruye resultado. No borra sujetos/n_sujetos/tru/factores.
+    """
+    fila = deepcopy(r)
+    fila["origen"] = origen
+    if invocador_id is not None:
+        fila.setdefault("invocador_id", invocador_id)
+    return fila
+
+
 def depositar(
     resultados: List[Dict[str, Any]],
     origen: str,
@@ -136,12 +157,14 @@ def depositar(
     """
     Funde `resultados` en evaluaciones.json bajo la etiqueta `origen`.
 
-    Lo de otros origenes se conserva. Lo del mismo origen se reemplaza,
-    para que volver a correr un test no duplique evidencia.
+    Lo de otros origenes se conserva. Lo del mismo origen se reemplaza.
 
-    La numeracion `secuencia` se rehace sobre el documento completo:
-    Omega imprime "seq k/n" y k tiene que ser global, no local a cada
-    productor.
+    Conservacion estructural:
+      registro recibido (con resultado.sujetos, n_sujetos, tru_*, ...)
+      se escribe igual; solo se etiqueta origen y se reenumera secuencia.
+
+    La numeracion `secuencia` se rehace sobre el documento completo
+    (Omega imprime "seq k/n" global).
     """
     origen = _normalizar_origen(origen)
 
@@ -152,11 +175,7 @@ def depositar(
     for r in resultados or []:
         if not isinstance(r, dict):
             continue
-        fila = dict(r)
-        fila["origen"] = origen
-        if invocador_id is not None:
-            fila.setdefault("invocador_id", invocador_id)
-        nuevos.append(fila)
+        nuevos.append(_conservar_registro(r, origen, invocador_id))
 
     fusionados = previos + nuevos
     for i, r in enumerate(fusionados, 1):
@@ -173,8 +192,12 @@ def depositar(
         "version": VERSION,
         "origen": ", ".join(origenes) if origenes else None,
         "origenes": origenes,
-        "invocador_id": invocador_id if invocador_id is not None else doc.get("invocador_id"),
-        "estado_engine": estado_engine if estado_engine is not None else doc.get("estado_engine"),
+        "invocador_id": (
+            invocador_id if invocador_id is not None else doc.get("invocador_id")
+        ),
+        "estado_engine": (
+            estado_engine if estado_engine is not None else doc.get("estado_engine")
+        ),
         "n": len(fusionados),
         "resultados": fusionados,
     }
@@ -232,12 +255,17 @@ def limpiar(origen: Optional[str] = None) -> Dict[str, Any]:
     return _escribir(quedan, doc)
 
 
-def _escribir(resultados: List[Dict[str, Any]], doc: Dict[str, Any]) -> Dict[str, Any]:
-    for i, r in enumerate(resultados, 1):
+def _escribir(
+    resultados: List[Dict[str, Any]],
+    doc: Dict[str, Any],
+) -> Dict[str, Any]:
+    # copia profunda para no mutar entradas vivas del caller
+    filas = [deepcopy(r) for r in resultados if isinstance(r, dict)]
+    for i, r in enumerate(filas, 1):
         r["secuencia"] = i
     origenes = sorted({
         str(r.get("origen"))
-        for r in resultados
+        for r in filas
         if isinstance(r, dict) and r.get("origen")
     })
     salida = {
@@ -247,8 +275,8 @@ def _escribir(resultados: List[Dict[str, Any]], doc: Dict[str, Any]) -> Dict[str
         "origenes": origenes,
         "invocador_id": doc.get("invocador_id"),
         "estado_engine": doc.get("estado_engine"),
-        "n": len(resultados),
-        "resultados": resultados,
+        "n": len(filas),
+        "resultados": filas,
     }
     DIAGNOSTICS_DIR.mkdir(parents=True, exist_ok=True)
     RUTA.write_text(
