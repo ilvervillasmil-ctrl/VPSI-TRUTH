@@ -105,14 +105,61 @@ class ContratoError(Exception):
     """Contrato CONTENEDOR invalido o capacidad no resoluble."""
 
 
-# ===============================================================
-# ROLES (admitidos al registrar; nuevos se agregan aqui cuando existan)
-# ===============================================================
-ROLES: Tuple[str, ...] = (
-    "CT", "AX", "FO", "MC", "SF", "DG", "CA", "CX", "DI",
-    "RE", "VX", "TX", "CH", "CIT", "UI", "GL", "TT", "CC", "CE",
-)
-OBLIGATORIOS: Tuple[str, ...] = ("CT", "AX", "FO", "MC", "SF")
+    # ===========================================================
+    # X) SECCIÓN: CONEXIÓN AUTOMÁTICA Y CÁLCULO DE TODOS LOS ROLES
+    # ===========================================================
+    roles_conectados = {}
+    
+    for rol in ROLES:
+        contenedores_rol = []
+        if hasattr(self, "registro") and self.registro and hasattr(self.registro, "por_rol"):
+            contenedores_rol = self.registro.por_rol.get(rol, [])
+
+        if not contenedores_rol:
+            retenido("ROL", f"{rol:<3} ✗ sin contenedor para conexión de cálculo")
+            continue
+
+        for cont in contenedores_rol:
+            if not hasattr(cont, "capacidades") or not isinstance(cont.capacidades, (list, set)):
+                retenido("CAPACIDAD", f"{rol:<3} ✗ contenedor sin capacidades para enlazar contratos")
+                continue
+
+            for cap in cont.capacidades:
+                resuelve_fn = False
+                fn_ejecutable = None
+                try:
+                    fn_candidata = cont.fn(cap)
+                    if callable(fn_candidata):
+                        resuelve_fn = True
+                        fn_ejecutable = fn_candidata
+                except Exception as e:
+                    retenido("EXCEPCION", f"{rol:<3} ✗ excepción resolviendo contrato {cont.nombre}.{cap}: {e}")
+
+                if not resuelve_fn:
+                    fn_oficio_attr = f"fn_oficio_{cap}"
+                    if hasattr(cont, fn_oficio_attr):
+                        resuelve_fn = True
+                        fn_ejecutable = getattr(cont, fn_oficio_attr)
+                    elif hasattr(cont, "fn_oficio"):
+                        resuelve_fn = True
+                        fn_ejecutable = cont.fn_oficio
+                    elif cap in capacidades_conocidas_engine and hasattr(self, cap):
+                        resuelve_fn = True
+                        fn_ejecutable = getattr(self, cap)
+
+                if resuelve_fn and fn_ejecutable:
+                    clave_conexion = f"{rol}_{cap}"
+                    roles_conectados[clave_conexion] = {
+                        "rol": rol,
+                        "contenedor": cont,
+                        "capacidad": cap,
+                        "funcion": fn_ejecutable,
+                        "ine": getattr(cont, "ine", None) or getattr(cont, "meta", {}),
+                    }
+                    ok("ROL", f"{rol:<3} ✓ conectado automáticamente para cálculo (capacidad: {cap})")
+                else:
+                    retenido("CAPACIDAD", f"{rol:<3} ✗ contrato no conectado: {cont.nombre}.{cap} sin función ejecutable válida")
+
 
 
 ALIAS_CAPACIDAD: Dict[str, Tuple[str, ...]] = {
